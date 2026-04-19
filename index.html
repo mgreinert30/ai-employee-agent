@@ -207,7 +207,7 @@
   <!-- HEADER -->
   <header>
     <div class="header-inner">
-      <div class="logo" id="site-logo">AI<span>Employee</span></div>
+      <div class="logo" id="site-logo" onclick="goHome()" style="cursor:pointer;">AI<span>Employee</span></div>
       <div class="header-right">
         <span id="header-username" class="header-user"></span>
         <button onclick="openOwnerDashboard()" class="btn-owner" id="btn-owner-panel" style="display:none;" data-de="⚙️ Owner Panel" data-en="⚙️ Owner Panel">⚙️ Owner Panel</button>
@@ -216,8 +216,8 @@
         <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
       </div>
     </div>
-    <p class="tagline" data-de="Dein KI-Mitarbeiter. 24/7. Günstiger als jeder Mensch." data-en="Your AI employee. 24/7. Cheaper than any human.">
-      Dein KI-Mitarbeiter. 24/7. Günstiger als jeder Mensch.
+    <p class="tagline" data-de="Dein KI-Mitarbeiter. 24/7. Kein Gehalt. Keine Pausen. Kein Vertrag." data-en="Your AI employee. 24/7. No salary. No breaks. No contract.">
+      Dein KI-Mitarbeiter. 24/7. Kein Gehalt. Keine Pausen. Kein Vertrag.
     </p>
   </header>
 
@@ -430,6 +430,48 @@
         <div class="step-number">4</div>
         <h3 data-de="Agent wird gelöscht" data-en="Agent gets deleted">Agent wird gelöscht</h3>
         <p data-de="Nach Abschluss wird der Agent vollständig von deinem PC entfernt. Kein Zugriff mehr. Keine Daten gespeichert." data-en="After completion the agent is fully removed from your PC. No access. No data kept.">Agent wird vollständig von deinem PC entfernt. Keine Daten gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR WHOM -->
+  <section class="forwho-section">
+    <div class="forwho-inner">
+      <span class="section-chip chip-dark" data-de="Für jeden Unternehmenstyp" data-en="For every business type">Für jeden Unternehmenstyp</span>
+      <h2 data-de="Wer profitiert am meisten?" data-en="Who benefits most?">Wer profitiert am meisten?</h2>
+      <p class="forwho-sub" data-de="Egal ob Freelancer, kleines Unternehmen oder Startup — dein KI-Mitarbeiter spart Zeit, die du nie zurückbekommst." data-en="Whether freelancer, small business or startup — your AI employee saves time you'll never get back.">Egal ob Freelancer, kleines Unternehmen oder Startup — dein KI-Mitarbeiter spart Zeit, die du nie zurückbekommst.</p>
+      <div class="forwho-grid">
+        <div class="forwho-card">
+          <div class="forwho-icon">🧑‍💻</div>
+          <h3 data-de="Selbstständige" data-en="Freelancers">Selbstständige</h3>
+          <p data-de="Du machst alles allein — E-Mails, Berichte, Dokumente. Der KI-Mitarbeiter übernimmt die Routine, damit du dich auf deine eigentliche Arbeit konzentrierst." data-en="You do everything alone — emails, reports, documents. The AI employee handles the routine so you can focus on your real work.">Du machst alles allein. Der KI-Mitarbeiter übernimmt die Routine, damit du Zeit für das Wesentliche hast.</p>
+          <div class="forwho-saving" data-de="⏱ Bis zu 3 Std./Tag gespart" data-en="⏱ Save up to 3 hrs/day">⏱ Bis zu 3 Std./Tag gespart</div>
+        </div>
+        <div class="forwho-card">
+          <div class="forwho-icon">🏪</div>
+          <h3 data-de="Kleine Unternehmen" data-en="Small Businesses">Kleine Unternehmen</h3>
+          <p data-de="Kein Budget für einen neuen Mitarbeiter, aber zu viel Arbeit? Der KI-Mitarbeiter erledigt Aufgaben in Minuten — ohne Vertrag, ohne Gehalt." data-en="No budget for a new hire but too much work? The AI employee completes tasks in minutes — no contract, no salary.">Kein Budget für Neueinstellungen? Der KI-Mitarbeiter arbeitet on-demand — ohne Vertrag, ohne Gehalt.</p>
+          <div class="forwho-saving" data-de="💶 Kein Festgehalt nötig" data-en="💶 No fixed salary needed">💶 Kein Festgehalt nötig</div>
+        </div>
+        <div class="forwho-card">
+          <div class="forwho-icon">🚀</div>
+          <h3 data-de="Startups" data-en="Startups">Startups</h3>
+          <p data-de="Schnell skalieren ohne zu viel auszugeben. Lass die KI Berichte schreiben, Daten auswerten und E-Mails bearbeiten — du fokussierst auf Wachstum." data-en="Scale fast without spending too much. Let the AI write reports, analyse data and handle emails — you focus on growth.">Schnell skalieren ohne Budget zu verbrennen. KI erledigt die Verwaltung — du fokussierst auf Wachstum.</p>
+          <div class="forwho-saving" data-de="📈 Schneller skalieren" data-en="📈 Scale faster">📈 Schneller skalieren</div>
+        </div>
+        <div class="forwho-card">
+          <div class="forwho-icon">📋</div>
+          <h3 data-de="Berater & Agenturen" data-en="Consultants & Agencies">Berater & Agenturen</h3>
+          <p data-de="Liefere deinen Kunden Analysen und Berichte in Rekordzeit. Der KI-Mitarbeiter liest und strukturiert Dokumente schneller als jeder Junior-Analyst." data-en="Deliver analyses and reports to your clients in record time. The AI employee reads and structures documents faster than any junior analyst.">Liefere Kunden-Berichte in Rekordzeit. Die KI liest und strukturiert Dokumente schneller als jeder Analyst.</p>
+          <div class="forwho-saving" data-de="⚡ Berichte in Minuten statt Stunden" data-en="⚡ Reports in minutes not hours">⚡ Berichte in Minuten statt Stunden</div>
+        </div>
+      </div>
+      <div class="forwho-improve">
+        <div class="improve-icon">🧠</div>
+        <div>
+          <strong data-de="Wird dein Agent besser mit der Zeit?" data-en="Does your agent improve over time?">Wird dein Agent besser mit der Zeit?</strong>
+          <p data-de="Ja — nach jeder abgeschlossenen Aufgabe kannst du Feedback geben. Dieses Feedback fließt direkt in zukünftige Aufgaben ein. Je mehr du den Agenten nutzt, desto besser versteht er deinen Arbeitsstil, deine Prioritäten und deine Sprache." data-en="Yes — after every completed task you can give feedback. This feedback flows directly into future tasks. The more you use the agent, the better it understands your work style, priorities and tone.">Ja — nach jeder abgeschlossenen Aufgabe kannst du Feedback geben. Dieses Feedback fließt direkt in zukünftige Aufgaben ein. Je mehr du den Agenten nutzt, desto besser versteht er deinen Arbeitsstil und deine Prioritäten.</p>
+        </div>
       </div>
     </div>
   </section>
