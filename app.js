@@ -365,17 +365,41 @@ function initCharacterSelection() {
 
 // =====================
 // PRICING
+// Max €5 per task. Fair, transparent, length-based.
+// Compared to ChatGPT Plus (~€20/month ÷ ~30 uses = €0.67/use for general access)
+// Our service is specialized, higher quality, pay-per-use — €0.99–€4.99 is very competitive.
 // =====================
+const TASK_PRICES = {
+  pdf:      { short: 0.99, medium: 1.99, long: 3.99 },
+  email:    { short: 0.99, medium: 1.49, long: 2.49 },
+  report:   { short: 1.49, medium: 2.49, long: 4.49 },
+  reply:    { short: 0.99, medium: 1.99, long: 2.99 },
+  document: { short: 1.49, medium: 2.99, long: 4.99 }
+};
+const TASK_TIMES = {
+  pdf:      { short: 1, medium: 2, long: 4 },
+  email:    { short: 2, medium: 3, long: 5 },
+  report:   { short: 2, medium: 3, long: 5 },
+  reply:    { short: 1, medium: 2, long: 3 },
+  document: { short: 2, medium: 4, long: 6 }
+};
+
+function detectTaskType(description) {
+  const d = description.toLowerCase();
+  if (d.includes('pdf') || d.includes('analysier') || d.includes('analyse')) return 'pdf';
+  if (d.includes('email') || d.includes('mail') || d.includes('postfach') || d.includes('inbox')) return 'email';
+  if (d.includes('bericht') || d.includes('report') || d.includes('summary') || d.includes('zusammenfassung')) return 'report';
+  if (d.includes('antwort') || d.includes('reply') || d.includes('respond')) return 'reply';
+  if (d.includes('dokument') || d.includes('document') || d.includes('schreib') || d.includes('write')) return 'document';
+  return 'report';
+}
+
 function estimateTask(description) {
-  const desc = description.toLowerCase();
-  let base = 5, complexity = 1.0;
-  if (desc.includes('email') || desc.includes('mail')) { base += 8; complexity = 1.5; }
-  if (desc.includes('sort') || desc.includes('sortier')) base += 5;
-  if (desc.includes('report') || desc.includes('bericht') || desc.includes('summary')) { base += 8; complexity = Math.max(complexity, 1.5); }
-  if (desc.includes('reply') || desc.includes('antwort')) { base += 10; complexity = 2.5; }
-  if (desc.includes('document') || desc.includes('dokument') || desc.includes('write')) { base += 12; complexity = Math.max(complexity, 1.5); }
-  const minutes = Math.ceil(base * complexity);
-  return { minutes, price: Math.round(Math.max(minutes * 0.20 * complexity, 2.00) * 100) / 100 };
+  const depth = window.selectedAnalysisLength || 'medium';
+  const type = detectTaskType(description);
+  const price = TASK_PRICES[type][depth];
+  const minutes = TASK_TIMES[type][depth];
+  return { minutes, price, type, depth };
 }
 
 // =====================
@@ -412,6 +436,91 @@ function selectShortcut(type) {
   event.target.classList.add('active');
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+}
+
+// =====================
+// PAGE NAVIGATION
+// =====================
+function showPage(page) {
+  const main = document.getElementById('page-main');
+  const task = document.getElementById('page-task');
+  const reviewCta = document.getElementById('review-cta-section');
+
+  if (page === 'main') {
+    main.style.display = 'block';
+    task.style.display = 'none';
+    if (reviewCta) reviewCta.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    main.style.display = 'none';
+    task.style.display = 'block';
+    if (reviewCta) reviewCta.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    if (page === 'pdf') {
+      document.getElementById('service-picker').style.display = 'none';
+      document.getElementById('task-page-icon').textContent = '📄';
+      document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'PDF analysieren' : 'Analyse PDF';
+      preselectPDF();
+    } else if (page === 'services') {
+      document.getElementById('service-picker').style.display = 'block';
+      document.getElementById('task-page-icon').textContent = '🛠️';
+      document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'Dienst auswählen' : 'Select Service';
+      showStep('step-form');
+    }
+    updateMiniCharButtons();
+  }
+}
+
+function updateMiniCharButtons() {
+  document.querySelectorAll('.mini-char-btn').forEach(b => b.classList.remove('active'));
+  const activeId = selectedCharacter === 'female' ? 'mini-char-female' : 'mini-char-male';
+  const el = document.getElementById(activeId);
+  if (el) el.classList.add('active');
+}
+
+function pickService(type) {
+  document.getElementById('service-picker').style.display = 'none';
+  const icons = { email: '📧', report: '📊', reply: '✉️', document: '📝' };
+  const titles = {
+    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'Antworten schreiben', document: 'Dokument erstellen' },
+    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Replies', document: 'Create Document' }
+  };
+  document.getElementById('task-page-icon').textContent = icons[type] || '🛠️';
+  document.getElementById('task-page-title').textContent = titles[currentLang]?.[type] || titles['de'][type];
+  const fakeEvent = { target: document.querySelector(`.task-shortcut[onclick*="${type}"]`) };
+  const descriptions = {
+    de: {
+      email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
+      report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
+      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
+      document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
+    },
+    en: {
+      email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
+      report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
+      reply:    'Write professional and friendly replies to the provided messages or emails.',
+      document: 'Create a professional, well-structured document with clear headings and sections.'
+    }
+  };
+  document.getElementById('task-description').value = descriptions[currentLang]?.[type] || descriptions['de'][type];
+  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
+  if (btn) btn.classList.add('active');
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  showStep('step-form');
+}
+
+function preselectPDF() {
+  const desc = currentLang === 'de'
+    ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
+    : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
+  document.getElementById('task-description').value = desc;
+  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  const pdfBtn = document.querySelector('.task-shortcut[onclick*="pdf"]');
+  if (pdfBtn) pdfBtn.classList.add('active');
+  document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
+  document.getElementById('depth-selector').style.display = 'block';
 }
 
 // =====================
@@ -801,20 +910,22 @@ async function startTask() {
   const taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
-  const useRealAI = isRealAIEnabled() && uploadedPDFs.length > 0;
+  const useRealAI = uploadedPDFs.length > 0;
 
   if (useRealAI) {
-    // Real AI mode: run steps faster (UI feedback while Gemini processes)
+    // Real AI mode — PDF uploaded, call server-side Gemini API
     for (const [pct, msg] of steps) { await delay(600); setProgress(pct, msg); }
     setProgress(95, currentLang === 'de' ? 'KI analysiert — bitte warten...' : 'AI is analysing — please wait...');
     try {
       currentResult = await runRealAI(taskDesc, businessDetails, analysisLength);
     } catch (err) {
-      console.error('Real AI failed, falling back to demo:', err);
-      currentResult = generateDemoResult(taskDesc);
+      console.error('Real AI failed:', err);
+      currentResult = currentLang === 'de'
+        ? `⚠️ Analyse konnte nicht abgeschlossen werden.\n\nFehler: ${err.message}\n\nBitte versuche es erneut oder kontaktiere den Support.`
+        : `⚠️ Analysis could not be completed.\n\nError: ${err.message}\n\nPlease try again or contact support.`;
     }
   } else {
-    // Demo mode: original timing
+    // Demo mode — no PDF uploaded, run without real document content
     for (const [pct, msg] of steps) { await delay(1200); setProgress(pct, msg); }
     await delay(800);
     currentResult = generateDemoResult(taskDesc);
@@ -1399,7 +1510,7 @@ function resetForm() {
   showStep('step-form');
 }
 
-function goHome() { resetForm(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function goHome() { resetForm(); showPage('main'); }
 
 // =====================
 // STEP NAVIGATION
@@ -2400,36 +2511,51 @@ NEXT STEPS
 [Clear action plan]`;
   }
 
-  const personaDE = `Du bist ein hochintelligenter, extrem fähiger KI-Assistent auf Senior-Management-Niveau. Du denkst kritisch mit, hinterfragst Zahlen und Dokumente, und lieferst keine generischen Floskeln, sondern harte, extrem präzise Fakten.
-WICHTIG — LIES DIE AUFGABE DES KUNDEN GENAU: ${taskDesc}
-Erfülle die Aufgabe EXAKT. Wenn der Kunde eine E-Mail oder einen spezifischen Text will, ignoriere das Standard-Format und liefere genau das Gewünschte! Das Format unten ist nur eine Strukturhilfe für Standard-Analysen.
+  const personaDE = `Du bist der präziseste PDF-Analyst und Dokumenten-Experte der Welt. Deine Analyse ist messbar besser als ChatGPT, Claude oder Gemini im Standard-Modus — weil du diese spezifischen Regeln befolgst:
+
+AUFGABE DES KUNDEN: ${taskDesc}
 ${businessCtx}
+
+KERNREGELN — NIEMALS BRECHEN:
+1. ZITIERE EXAKT: Nenne immer konkrete Zahlen, Daten, Namen, Seitenzahlen aus dem Dokument. Niemals Platzhalter wie "[Zahl aus Dokument]" — nutze die echten Werte.
+2. KEINE FLOSKELN: Verboten sind Sätze wie "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Ich habe das Dokument analysiert...". Fange direkt mit dem Inhalt an.
+3. KRITISCH DENKEN: Wenn du Widersprüche, Inkonsistenzen, versteckte Risiken oder ungewöhnliche Klauseln siehst — benenne sie explizit. Das ist der Mehrwert gegenüber anderen KI-Tools.
+4. PRÄZISE SPRACHE: Jeder Satz muss Information tragen. Keine Füllsätze.
+5. ANTWORTE AUF DEUTSCH — außer der Kunde fordert explizit Englisch.
+
 ${formatRules}
 
-ABSOLUTE REGELN:
-- Vermeide "KI-Gerede" (z.B. "Hier ist deine Analyse..."). Fange direkt mit dem Inhalt an.
-- Antworte IMMER auf Deutsch (außer der Kunde bittet explizit um eine andere Sprache im Text).`;
+QUALITÄTSPRÜFUNG vor der Ausgabe:
+- Habe ich mindestens 3 spezifische Fakten/Zahlen aus dem Dokument zitiert? Falls nein — ergänzen.
+- Habe ich etwas gefunden, das andere AIs wahrscheinlich übersehen würden (Fußnoten, Ausnahmen, versteckte Klauseln)? Falls nein — nochmal prüfen.
+- Ist jede Handlungsempfehlung konkret umsetzbar (mit Zeitangabe oder konkretem Schritt)? Falls nein — schärfer formulieren.`;
 
-  const personaEN = `You are a highly intelligent, extremely capable AI assistant at senior management level. You think critically, question numbers and documents, and deliver hard, precise facts instead of generic phrases.
-IMPORTANT — READ THE CLIENT'S TASK CAREFULLY: ${taskDesc}
-Fulfil the task EXACTLY. If the client wants an email drafted or a specific text, ignore the default format and deliver exactly what is requested! The format below is only a structural guide for standard analyses.
+  const personaEN = `You are the world's most precise PDF analyst and document expert. Your analysis is measurably better than ChatGPT, Claude, or standard Gemini — because you follow these specific rules:
+
+CLIENT TASK: ${taskDesc}
 ${businessCtx}
+
+CORE RULES — NEVER BREAK:
+1. CITE EXACTLY: Always reference concrete numbers, dates, names, page references from the document. Never use placeholders like "[number from document]" — use the actual values.
+2. NO FILLER PHRASES: Banned: "It is important to note...", "The document describes...", "I have analysed the document...". Start directly with the content.
+3. THINK CRITICALLY: If you spot contradictions, inconsistencies, hidden risks or unusual clauses — name them explicitly. This is the value over other AI tools.
+4. PRECISE LANGUAGE: Every sentence must carry information. No filler sentences.
+5. RESPOND IN ENGLISH at all times.
+
 ${formatRules}
 
-ABSOLUTE RULES:
-- Avoid "AI-speak" (e.g. "Here is your analysis..."). Start directly with the content.
-- ALWAYS respond in English (unless the client explicitly asks for another language in the text).`;
+QUALITY CHECK before output:
+- Have I cited at least 3 specific facts/numbers from the document? If not — add them.
+- Have I found something other AIs would likely miss (footnotes, exceptions, hidden clauses)? If not — look again.
+- Is every recommendation concretely actionable (with a timeframe or specific step)? If not — sharpen it.`;
 
-  return (isDE ? personaDE : personaEN) + `\n\nZU ANALYSIERENDES DOKUMENT / DOCUMENT TO ANALYSE:\n${docText}`;
+  return (isDE ? personaDE : personaEN) + `\n\n━━━ DOKUMENT / DOCUMENT ━━━\n${docText}`;
 }
 
 // =====================
 // REAL AI ENGINE — replaces demo mode when API key is set
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
-  const apiKey = getGeminiKey();
-  if (!apiKey) throw new Error('NO_KEY');
-
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name.toLowerCase() : '';
   const investorKws = ['investor','geschäftsbericht','geschaeftsbericht','jahresbericht',
     'annual report','finanzbericht','konzernabschluss','ifrs','gaap','ebit','ebitda',
@@ -2461,28 +2587,17 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(55, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 8192,
-          temperature: 0.7,
-          topP: 0.9,
-          topK: 40
-        }
-      })
-    }
-  );
+  // Call the Vercel serverless function — API key is stored securely server-side
+  const response = await fetch('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
 
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
-  const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!result) throw new Error('Keine Antwort von der KI erhalten');
-  return result;
+  if (data.error) throw new Error(data.error);
+  if (!data.result) throw new Error('Keine Antwort von der KI erhalten');
+  return data.result;
 }
 
 // =====================

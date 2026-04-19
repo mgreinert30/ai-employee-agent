@@ -197,20 +197,154 @@
     </div>
   </div>
 
+  <!-- MAIN LANDING PAGE -->
+  <div id="page-main">
+
   <!-- HERO -->
   <section class="hero">
+    <div class="hero-chip" data-de="✨ KI-Mitarbeiter · 5 Dienste · Sofort einsatzbereit" data-en="✨ AI Employee · 5 services · Ready now">✨ KI-Mitarbeiter · 5 Dienste · Sofort einsatzbereit</div>
     <h1 data-de="Gib deinem Unternehmen einen KI-Mitarbeiter" data-en="Give your business an AI employee">
       Gib deinem Unternehmen einen KI-Mitarbeiter
     </h1>
-    <p data-de="Beschreibe deine Aufgabe. Dein KI-Mitarbeiter erledigt sie — schneller als jeder Mensch, zu einem fairen Preis." data-en="Describe your task. Your AI employee handles it — faster than any human, at a fair price.">
-      Beschreibe deine Aufgabe. Dein KI-Mitarbeiter erledigt sie — schneller als jeder Mensch, zu einem fairen Preis.
+    <p data-de="Wähle zwischen Alex und Emma — dein persönlicher KI-Mitarbeiter erledigt deine Aufgabe schneller als jeder Mensch, zu einem fairen Preis." data-en="Choose between Alex and Emma — your personal AI employee handles your task faster than any human, at a fair price.">
+      Wähle zwischen Alex und Emma — dein persönlicher KI-Mitarbeiter erledigt deine Aufgabe schneller als jeder Mensch, zu einem fairen Preis.
     </p>
     <div class="hero-badges">
-      <span class="hero-badge">✅ <span data-de="Agent wird nach jeder Aufgabe automatisch von deinem PC gelöscht" data-en="Agent is automatically deleted from your PC after every task">Agent wird nach jeder Aufgabe automatisch von deinem PC gelöscht</span></span>
+      <span class="hero-badge">✅ <span data-de="Daten nach Abschluss automatisch gelöscht" data-en="Data automatically deleted after completion">Daten nach Abschluss automatisch gelöscht</span></span>
       <span class="hero-badge">🔒 <span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></span>
       <span class="hero-badge">💶 <span data-de="Faire Preise" data-en="Fair pricing">Faire Preise</span></span>
     </div>
-    <a href="#task-form" class="btn-primary" data-de="Aufgabe starten" data-en="Start a task">Aufgabe starten</a>
+    <div class="hero-agents">
+      <div class="hero-agent-pill">👨‍💼 <span data-de="Alex — Professionell & präzise" data-en="Alex — Professional & precise">Alex — Professionell & präzise</span></div>
+      <span class="hero-agent-or" data-de="oder" data-en="or">oder</span>
+      <div class="hero-agent-pill">👩‍💼 <span data-de="Emma — Effizient & zuverlässig" data-en="Emma — Efficient & reliable">Emma — Effizient & zuverlässig</span></div>
+    </div>
+    <div class="hero-ctas">
+      <a href="#" class="btn-primary btn-xl" onclick="showPage('pdf'); return false;" data-de="📄 PDF jetzt analysieren" data-en="📄 Analyse PDF now">📄 PDF jetzt analysieren</a>
+      <a href="#" class="btn-hero-outline" onclick="showPage('services'); return false;" data-de="Alle Dienste ansehen →" data-en="View all services →">Alle Dienste ansehen →</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><strong>5</strong><span data-de="Dienste" data-en="Services">Dienste</span></div>
+      <div class="hero-stat-sep">·</div>
+      <div class="hero-stat"><strong>24/7</strong><span data-de="verfügbar" data-en="available">verfügbar</span></div>
+      <div class="hero-stat-sep">·</div>
+      <div class="hero-stat"><strong>100%</strong><span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></div>
+    </div>
+  </section>
+
+  <!-- PDF HIGHLIGHT SECTION -->
+  <section class="pdf-highlight">
+    <div class="pdf-hl-wrap">
+      <div class="pdf-hl-left">
+        <span class="section-chip" data-de="📄 Direkt im Browser — kein Download nötig" data-en="📄 Runs in browser — no download needed">📄 Direkt im Browser — kein Download nötig</span>
+        <h2 data-de="PDF-Dokumente professionell analysieren" data-en="Analyse PDF documents professionally">PDF-Dokumente <span class="gradient-text" data-de="professionell analysieren" data-en="professionally analysed">professionell analysieren</span></h2>
+        <p data-de="Lade ein oder mehrere PDFs hoch — dein KI-Mitarbeiter liest jede Seite, extrahiert die wichtigsten Erkenntnisse und liefert dir in Minuten einen vollständigen, strukturierten Bericht als Download." data-en="Upload one or more PDFs — your AI employee reads every page, extracts the key findings and delivers a complete structured report as a download in minutes.">Lade ein oder mehrere PDFs hoch — dein KI-Mitarbeiter liest jede Seite, extrahiert die wichtigsten Erkenntnisse und liefert dir in Minuten einen vollständigen, strukturierten Bericht als Download.</p>
+        <ul class="pdf-hl-features">
+          <li>
+            <span class="feat-icon">📊</span>
+            <div>
+              <strong data-de="Executive Summary" data-en="Executive Summary">Executive Summary</strong>
+              <p data-de="Die wichtigsten Aussagen auf einen Blick — sofort verständlich." data-en="The key points at a glance — instantly understandable.">Die wichtigsten Aussagen auf einen Blick — sofort verständlich.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feat-icon">🔍</span>
+            <div>
+              <strong data-de="Tiefenanalyse" data-en="Deep Analysis">Tiefenanalyse</strong>
+              <p data-de="Alle Erkenntnisse, Risiken & kritischen Details vollständig erfasst." data-en="All findings, risks and critical details fully captured.">Alle Erkenntnisse, Risiken & kritischen Details vollständig erfasst.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feat-icon">✅</span>
+            <div>
+              <strong data-de="Handlungsempfehlungen" data-en="Action Recommendations">Handlungsempfehlungen</strong>
+              <p data-de="Konkrete nächste Schritte direkt aus dem Dokument abgeleitet." data-en="Concrete next steps derived directly from the document.">Konkrete nächste Schritte direkt aus dem Dokument abgeleitet.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feat-icon">📥</span>
+            <div>
+              <strong data-de="PDF-Download" data-en="PDF Download">PDF-Download</strong>
+              <p data-de="Fertiger Bericht als professionelles, strukturiertes Dokument." data-en="Finished report as a professional, structured document.">Fertiger Bericht als professionelles, strukturiertes Dokument.</p>
+            </div>
+          </li>
+        </ul>
+        <div class="pdf-hl-actions">
+          <a href="#" class="btn-primary btn-xl" onclick="showPage('pdf'); return false;" data-de="📄 PDF jetzt analysieren" data-en="📄 Analyse PDF now">📄 PDF jetzt analysieren</a>
+          <p class="pdf-hl-meta" data-de="Keine Installation · Ergebnis in 1–4 Min · DSGVO-konform" data-en="No install · Result in 1–4 min · GDPR compliant">Keine Installation · Ergebnis in 1–4 Min · DSGVO-konform</p>
+        </div>
+      </div>
+      <div class="pdf-hl-right">
+        <div class="pdf-preview-card">
+          <div class="pdf-preview-header">
+            <span class="pdf-preview-dot" style="background:#ef4444;"></span>
+            <span class="pdf-preview-dot" style="background:#f59e0b;"></span>
+            <span class="pdf-preview-dot" style="background:#10b981;"></span>
+            <span class="pdf-preview-title" data-de="Analyse-Bericht.pdf" data-en="Analysis-Report.pdf">Analyse-Bericht.pdf</span>
+          </div>
+          <div class="pdf-preview-body">
+            <div class="pdf-preview-badge">✅ <span data-de="Analyse abgeschlossen" data-en="Analysis complete">Analyse abgeschlossen</span></div>
+            <div class="pdf-preview-section">
+              <div class="pdf-preview-label" data-de="Executive Summary" data-en="Executive Summary">Executive Summary</div>
+              <div class="pdf-preview-line" style="width:95%"></div>
+              <div class="pdf-preview-line" style="width:82%"></div>
+              <div class="pdf-preview-line" style="width:68%"></div>
+            </div>
+            <div class="pdf-preview-section">
+              <div class="pdf-preview-label" data-de="Top-Erkenntnisse" data-en="Key Findings">Top-Erkenntnisse</div>
+              <div class="pdf-preview-finding"><span>🔍</span><div><div class="pdf-preview-line" style="width:88%"></div><div class="pdf-preview-line" style="width:72%"></div></div></div>
+              <div class="pdf-preview-finding"><span>⚠️</span><div><div class="pdf-preview-line" style="width:80%"></div><div class="pdf-preview-line" style="width:55%"></div></div></div>
+            </div>
+            <div class="pdf-preview-section">
+              <div class="pdf-preview-label" data-de="Handlungsempfehlungen" data-en="Recommendations">Handlungsempfehlungen</div>
+              <div class="pdf-preview-rec"><span class="rec-num">1</span><div class="pdf-preview-line" style="width:85%"></div></div>
+              <div class="pdf-preview-rec"><span class="rec-num">2</span><div class="pdf-preview-line" style="width:70%"></div></div>
+              <div class="pdf-preview-rec"><span class="rec-num">3</span><div class="pdf-preview-line" style="width:78%"></div></div>
+            </div>
+            <button class="pdf-preview-download" data-de="⬇️ Bericht herunterladen" data-en="⬇️ Download Report">⬇️ Bericht herunterladen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OTHER SERVICES SECTION -->
+  <section class="other-services" id="other-services">
+    <div class="os-inner">
+      <span class="section-chip chip-dark" data-de="💻 PC-Agent erforderlich" data-en="💻 PC Agent required">💻 PC-Agent erforderlich</span>
+      <h2 data-de="Weitere Dienste" data-en="More Services">Weitere Dienste</h2>
+      <p class="os-subtitle" data-de="Diese Dienste laufen direkt auf dem Computer deines Kunden — E-Mails, Dateien, Dokumente — vollständig automatisch erledigt." data-en="These services run directly on your customer's computer — emails, files, documents — handled completely automatically.">Diese Dienste laufen direkt auf dem Computer deines Kunden — E-Mails, Dateien, Dokumente — vollständig automatisch erledigt.</p>
+      <div class="os-grid">
+        <div class="os-card">
+          <div class="os-icon">📧</div>
+          <h3 data-de="E-Mails sortieren" data-en="Sort Emails">E-Mails sortieren</h3>
+          <p data-de="Sortiert E-Mails nach Dringlichkeit, fasst sie zusammen und schreibt Antwort-Entwürfe für die wichtigsten Nachrichten." data-en="Sorts emails by urgency, summarises them and writes draft replies for the most important messages.">Sortiert E-Mails nach Dringlichkeit, fasst sie zusammen und schreibt Antwort-Entwürfe für die wichtigsten Nachrichten.</p>
+          <span class="os-badge">Outlook · Gmail</span>
+        </div>
+        <div class="os-card">
+          <div class="os-icon">📊</div>
+          <h3 data-de="Bericht erstellen" data-en="Create Report">Bericht erstellen</h3>
+          <p data-de="Erstellt professionelle Geschäftsberichte mit Executive Summary, allen Erkenntnissen und konkreten Handlungsempfehlungen." data-en="Creates professional business reports with executive summary, all findings and concrete action recommendations.">Erstellt professionelle Geschäftsberichte mit Executive Summary, allen Erkenntnissen und konkreten Handlungsempfehlungen.</p>
+          <span class="os-badge">Word · PDF</span>
+        </div>
+        <div class="os-card">
+          <div class="os-icon">✉️</div>
+          <h3 data-de="Antworten schreiben" data-en="Write Replies">Antworten schreiben</h3>
+          <p data-de="Verfasst professionelle und freundliche Antworten auf Nachrichten, E-Mails und Kundenanfragen im passenden Ton." data-en="Composes professional and friendly replies to messages, emails and customer enquiries in the right tone.">Verfasst professionelle und freundliche Antworten auf Nachrichten, E-Mails und Kundenanfragen im passenden Ton.</p>
+          <span class="os-badge">E-Mail · Chat</span>
+        </div>
+        <div class="os-card">
+          <div class="os-icon">📝</div>
+          <h3 data-de="Dokument erstellen" data-en="Create Document">Dokument erstellen</h3>
+          <p data-de="Erstellt strukturierte, professionelle Dokumente mit klaren Überschriften, Abschnitten und formatiertem Inhalt." data-en="Creates structured, professional documents with clear headings, sections and formatted content.">Erstellt strukturierte, professionelle Dokumente mit klaren Überschriften, Abschnitten und formatiertem Inhalt.</p>
+          <span class="os-badge">Word · PDF</span>
+        </div>
+      </div>
+      <div class="os-cta">
+        <a href="#" class="btn-os-primary" onclick="showPage('services'); return false;" data-de="Alle Dienste ausprobieren →" data-en="Try all services →">Alle Dienste ausprobieren →</a>
+        <p class="os-cta-note" data-de="Der PC-Agent wird beim Start der Aufgabe bereitgestellt" data-en="The PC agent is provided when the task starts">Der PC-Agent wird beim Start der Aufgabe bereitgestellt</p>
+      </div>
+    </div>
   </section>
 
   <!-- CHARACTER SELECTOR -->
@@ -275,6 +409,58 @@
       <p class="empty-state" id="no-reviews-msg" data-de="Noch keine Bewertungen. Sei der Erste!" data-en="No reviews yet. Be the first!">Noch keine Bewertungen. Sei der Erste!</p>
     </div>
   </section>
+
+  </div><!-- end page-main -->
+
+  <!-- TASK PAGE (full screen, shows when user clicks PDF or Services) -->
+  <div id="page-task" style="display:none;">
+
+    <!-- TASK PAGE HEADER -->
+    <div class="task-page-header">
+      <button class="task-back-btn" onclick="showPage('main')">← <span data-de="Zurück" data-en="Back">Zurück</span></button>
+      <div class="task-page-title-wrap">
+        <div id="task-page-icon">📄</div>
+        <h2 id="task-page-title" data-de="PDF analysieren" data-en="Analyse PDF">PDF analysieren</h2>
+      </div>
+      <div class="task-mini-chars">
+        <button class="mini-char-btn" id="mini-char-male" onclick="selectCharacter('male')">👨‍💼 Alex</button>
+        <button class="mini-char-btn" id="mini-char-female" onclick="selectCharacter('female')">👩‍💼 Emma</button>
+      </div>
+    </div>
+
+    <!-- SERVICE PICKER (shown when coming from "Alle Dienste") -->
+    <div id="service-picker" style="display:none;">
+      <div class="sp-inner">
+        <h3 data-de="Welchen Dienst möchtest du nutzen?" data-en="Which service do you want to use?">Welchen Dienst möchtest du nutzen?</h3>
+        <p data-de="Wähle eine Option — wir erledigen den Rest." data-en="Choose an option — we handle the rest.">Wähle eine Option — wir erledigen den Rest.</p>
+        <div class="sp-grid">
+          <button class="sp-card" onclick="pickService('email')">
+            <div class="sp-icon">📧</div>
+            <strong data-de="E-Mails sortieren" data-en="Sort Emails">E-Mails sortieren</strong>
+            <p data-de="Sortiert & fasst deine E-Mails zusammen" data-en="Sorts & summarises your emails">Sortiert & fasst deine E-Mails zusammen</p>
+            <span class="sp-price" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
+          </button>
+          <button class="sp-card" onclick="pickService('report')">
+            <div class="sp-icon">📊</div>
+            <strong data-de="Bericht erstellen" data-en="Create Report">Bericht erstellen</strong>
+            <p data-de="Professioneller Geschäftsbericht" data-en="Professional business report">Professioneller Geschäftsbericht</p>
+            <span class="sp-price" data-de="ab €1,49" data-en="from €1.49">ab €1,49</span>
+          </button>
+          <button class="sp-card" onclick="pickService('reply')">
+            <div class="sp-icon">✉️</div>
+            <strong data-de="Antworten schreiben" data-en="Write Replies">Antworten schreiben</strong>
+            <p data-de="Professionelle Antworten auf Nachrichten" data-en="Professional replies to messages">Professionelle Antworten auf Nachrichten</p>
+            <span class="sp-price" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
+          </button>
+          <button class="sp-card" onclick="pickService('document')">
+            <div class="sp-icon">📝</div>
+            <strong data-de="Dokument erstellen" data-en="Create Document">Dokument erstellen</strong>
+            <p data-de="Strukturiertes, professionelles Dokument" data-en="Structured, professional document">Strukturiertes, professionelles Dokument</p>
+            <span class="sp-price" data-de="ab €1,49" data-en="from €1.49">ab €1,49</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
   <!-- TASK FORM -->
   <section class="form-section" id="task-form">
@@ -570,12 +756,16 @@
 
   </section>
 
-  <!-- LEAVE A REVIEW SECTION -->
+  </div><!-- end page-task -->
+
+  <!-- LEAVE A REVIEW SECTION (on main page) -->
+  <div id="review-cta-section">
   <section class="review-section" id="leave-review">
     <h2 data-de="Bewertung hinterlassen" data-en="Leave a Review">Bewertung hinterlassen</h2>
     <p data-de="Hast du unseren Service genutzt? Teile deine Erfahrung." data-en="Have you used our service? Share your experience.">Hast du unseren Service genutzt? Teile deine Erfahrung.</p>
-    <a href="#task-form" class="btn-primary" data-de="Jetzt starten & bewerten" data-en="Start now & review">Jetzt starten & bewerten</a>
+    <a href="#" onclick="showPage('pdf'); return false;" class="btn-primary" data-de="Jetzt starten & bewerten" data-en="Start now & review">Jetzt starten & bewerten</a>
   </section>
+  </div>
 
   <!-- FOOTER -->
   <footer>
