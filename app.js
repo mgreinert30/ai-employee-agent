@@ -129,8 +129,8 @@ function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-my-tasks').style.display = 'inline-block';
-  // Show owner panel button only for owner account
   document.getElementById('btn-owner-panel').style.display = currentUser.isOwner ? 'inline-block' : 'none';
+  document.getElementById('btn-my-account').style.display = currentUser.isOwner ? 'none' : 'inline-block';
   renderTestimonials();
 }
 
@@ -146,8 +146,90 @@ function handleLogout() {
 // =====================
 // MY TASKS PANEL
 // =====================
+function toggleMyTasks() {
+  const panel = document.getElementById('my-tasks-panel');
+  if (panel.style.display === 'none' || !panel.style.display) { panel.style.display = 'block'; renderTaskHistory(); }
+  else { panel.style.display = 'none'; }
+}
 function openMyTasks() { document.getElementById('my-tasks-panel').style.display = 'block'; renderTaskHistory(); }
 function closeMyTasks() { document.getElementById('my-tasks-panel').style.display = 'none'; }
+// =====================
+// ACCOUNT SETTINGS
+// =====================
+function openAccount() {
+  document.getElementById('account-overlay').classList.remove('hidden');
+  document.getElementById('account-name').value = currentUser?.name || '';
+  document.getElementById('account-email').value = currentUser?.email || '';
+  document.getElementById('account-password-old').value = '';
+  document.getElementById('account-password-new').value = '';
+  ['account-name-msg','account-email-msg','account-password-msg'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+}
+function closeAccount() { document.getElementById('account-overlay').classList.add('hidden'); }
+
+function saveAccountName() {
+  const name = document.getElementById('account-name').value.trim();
+  if (!name) return;
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx !== -1) { users[idx].name = name; localStorage.setItem('ai_agent_users', JSON.stringify(users)); }
+  currentUser.name = name;
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${name}` : `Hello, ${name}`;
+  const msg = document.getElementById('account-name-msg');
+  msg.textContent = currentLang === 'de' ? '✓ Name gespeichert!' : '✓ Name saved!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function saveAccountEmail() {
+  const newEmail = document.getElementById('account-email').value.trim();
+  const msg = document.getElementById('account-email-msg');
+  if (!newEmail || newEmail === currentUser.email) return;
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  if (users.find(u => u.email === newEmail)) {
+    msg.textContent = currentLang === 'de' ? '❌ E-Mail bereits vergeben.' : '❌ Email already taken.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx !== -1) {
+    const tasks = localStorage.getItem(`ai_tasks_${currentUser.email}`);
+    if (tasks) { localStorage.setItem(`ai_tasks_${newEmail}`, tasks); localStorage.removeItem(`ai_tasks_${currentUser.email}`); }
+    const payment = localStorage.getItem(`ai_payment_${currentUser.email}`);
+    if (payment) { localStorage.setItem(`ai_payment_${newEmail}`, payment); localStorage.removeItem(`ai_payment_${currentUser.email}`); }
+    users[idx].email = newEmail;
+    localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  }
+  currentUser.email = newEmail;
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  msg.textContent = currentLang === 'de' ? '✓ E-Mail gespeichert!' : '✓ Email saved!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function saveAccountPassword() {
+  const oldPw = document.getElementById('account-password-old').value;
+  const newPw = document.getElementById('account-password-new').value;
+  const msg = document.getElementById('account-password-msg');
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx === -1) return;
+  if (users[idx].password !== oldPw) {
+    msg.textContent = currentLang === 'de' ? '❌ Aktuelles Passwort falsch.' : '❌ Current password incorrect.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  if (newPw.length < 8) {
+    msg.textContent = currentLang === 'de' ? '❌ Neues Passwort muss mindestens 8 Zeichen haben.' : '❌ New password must be at least 8 characters.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  users[idx].password = newPw;
+  localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  msg.textContent = currentLang === 'de' ? '✓ Passwort geändert!' : '✓ Password changed!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  document.getElementById('account-password-old').value = '';
+  document.getElementById('account-password-new').value = '';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
 function getTaskHistory() { return JSON.parse(localStorage.getItem(`ai_tasks_${currentUser?.email}`) || '[]'); }
 function saveTaskToHistory(description, price) {
   if (!currentUser) return;
@@ -354,6 +436,7 @@ function selectCharacter(type) {
   const btnFemale = document.getElementById('charbtn-female');
   btnMale.textContent = type === 'male' ? (currentLang === 'de' ? '✓ Alex ausgewählt' : '✓ Alex selected') : (currentLang === 'de' ? 'Alex wählen' : 'Choose Alex');
   btnFemale.textContent = type === 'female' ? (currentLang === 'de' ? '✓ Emma ausgewählt' : '✓ Emma selected') : (currentLang === 'de' ? 'Emma wählen' : 'Choose Emma');
+  updateMiniCharButtons();
 }
 
 function getCharacterEmoji() { return selectedCharacter === 'female' ? '👩‍💼' : '👨‍💼'; }
@@ -462,10 +545,12 @@ function showPage(page) {
       document.getElementById('task-page-icon').textContent = '📄';
       document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'PDF analysieren' : 'Analyse PDF';
       preselectPDF();
+      showStep('step-form');
     } else if (page === 'services') {
       document.getElementById('service-picker').style.display = 'block';
       document.getElementById('task-page-icon').textContent = '🛠️';
       document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'Dienst auswählen' : 'Select Service';
+      document.querySelectorAll('.task-shortcut').forEach(b => b.style.display = 'inline-block');
       showStep('step-form');
     }
     updateMiniCharButtons();
@@ -516,9 +601,11 @@ function preselectPDF() {
     ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
     : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
   document.getElementById('task-description').value = desc;
-  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
-  const pdfBtn = document.querySelector('.task-shortcut[onclick*="pdf"]');
-  if (pdfBtn) pdfBtn.classList.add('active');
+  document.querySelectorAll('.task-shortcut').forEach(b => {
+    const isPDF = b.getAttribute('onclick')?.includes("'pdf'");
+    b.style.display = isPDF ? 'inline-block' : 'none';
+    b.classList.toggle('active', isPDF);
+  });
   document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
   document.getElementById('depth-selector').style.display = 'block';
 }
@@ -588,6 +675,7 @@ function submitTask(e) {
   updateActivity();
   currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
   showStep('step-price');
+  document.getElementById('price-icon').textContent = getCharacterEmoji();
   const name = getCharacterName();
   document.getElementById('price-time-text').textContent = currentLang === 'de' ? `${name} braucht ca. ${currentEstimate.minutes} Minute${currentEstimate.minutes !== 1 ? 'n' : ''}` : `${name} needs about ${currentEstimate.minutes} minute${currentEstimate.minutes !== 1 ? 's' : ''}`;
   document.getElementById('price-amount').textContent = `€${currentEstimate.price.toFixed(2)}`;
@@ -951,10 +1039,7 @@ function downloadResult() {
   const isEmail = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || (window.selectedApps && window.selectedApps.email);
 
   if (isPDF) {
-    // Show length selector before generating PDF
-    document.getElementById('length-char-icon').textContent = getCharacterEmoji();
-    document.getElementById('length-selector-overlay').classList.remove('hidden');
-    document.querySelectorAll('[data-de]').forEach(el => { el.textContent = el.getAttribute(`data-${currentLang}`); });
+    downloadPDF(window.selectedAnalysisLength || 'medium');
   } else if (isEmail) {
     downloadEmailResult();
   } else {
@@ -1479,9 +1564,22 @@ function downloadHTMLReport() {
 
 async function deleteData() {
   showStep('step-deleting');
-  const items = currentLang === 'de'
-    ? [{icon:'🗑',text:'Aufgabendaten werden gelöscht...'},{icon:'📧',text:'E-Mail-Zugriff wird entzogen...'},{icon:'📁',text:'Dateizugriff wird entzogen...'},{icon:'🌐',text:'Browser-Zugriff wird entzogen...'},{icon:'🔌',text:'Agent wird vom Computer getrennt...'}]
-    : [{icon:'🗑',text:'Deleting task data...'},{icon:'📧',text:'Revoking email access...'},{icon:'📁',text:'Revoking file access...'},{icon:'🌐',text:'Revoking browser access...'},{icon:'🔌',text:'Disconnecting agent from computer...'}];
+  const emailChecked    = document.getElementById('perm-email')?.checked;
+  const filesChecked    = document.getElementById('perm-files')?.checked;
+  const browserChecked  = document.getElementById('perm-browser')?.checked;
+  const calendarChecked = document.getElementById('perm-calendar')?.checked;
+  const agentInstalled  = !window.skippedSetup;
+
+  const de = currentLang === 'de';
+  const items = [
+    { icon: '🗑', text: de ? 'Aufgabendaten werden gelöscht...' : 'Deleting task data...' },
+    ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff wird entzogen...'   : 'Revoking email access...' }]    : []),
+    ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff wird entzogen...'     : 'Revoking file access...' }]     : []),
+    ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff wird entzogen...' : 'Revoking browser access...' }]  : []),
+    ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff wird entzogen...' : 'Revoking calendar access...' }] : []),
+    ...(agentInstalled  ? [{ icon: '🔌', text: de ? 'Agent wird vom Computer getrennt...' : 'Disconnecting agent...' }]    : [])
+  ];
+
   const list = document.getElementById('revoke-list');
   list.innerHTML = '';
   for (const item of items) {
@@ -1495,6 +1593,20 @@ async function deleteData() {
     el.querySelector('span:last-child').textContent = item.text.replace('...', ' ✓');
   }
   await delay(600);
+
+  const checklist = document.getElementById('deleted-checklist');
+  if (checklist) {
+    const doneItems = [
+      { icon: '🗑', text: de ? 'Alle Aufgabendaten gelöscht' : 'All task data deleted' },
+      ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff entzogen'   : 'Email access revoked' }]    : []),
+      ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff entzogen'     : 'File access revoked' }]     : []),
+      ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff entzogen' : 'Browser access revoked' }]  : []),
+      ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff entzogen' : 'Calendar access revoked' }] : []),
+      ...(agentInstalled  ? [{ icon: '🔌', text: de ? 'Agent vom Computer getrennt' : 'Agent disconnected' }]    : [])
+    ];
+    checklist.innerHTML = doneItems.map(i => `<div class="deleted-check"><span>${i.icon}</span><span>${i.text}</span></div>`).join('');
+  }
+
   currentResult = null;
   showStep('step-deleted');
 }
@@ -1503,7 +1615,7 @@ function resetForm() {
   document.getElementById('task-description').value = '';
   document.getElementById('business-details').value = '';
   document.getElementById('pdf-file-list').innerHTML = '';
-  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.task-shortcut').forEach(b => { b.classList.remove('active'); b.style.display = 'inline-block'; });
   uploadedPDFs = [];
   window.selectedApps = {};
   selectedPaymentMethod = null; currentEstimate = null;

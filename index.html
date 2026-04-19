@@ -130,6 +130,39 @@
     </div>
   </div>
 
+  <!-- ACCOUNT SETTINGS MODAL -->
+  <div id="account-overlay" class="overlay hidden" onclick="if(event.target===this)closeAccount()">
+    <div class="modal">
+      <div class="modal-logo">Mein<span>Konto</span></div>
+      <div style="display:flex;flex-direction:column;gap:18px;margin-top:20px;">
+
+        <div class="settings-section" style="padding:16px;border:1.5px solid rgba(255,255,255,0.08);border-radius:12px;">
+          <h4 style="margin-bottom:10px;font-size:14px;" data-de="👤 Name ändern" data-en="👤 Change name">👤 Name ändern</h4>
+          <input type="text" id="account-name" placeholder="Dein Name" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;" />
+          <button onclick="saveAccountName()" class="btn-primary" style="width:100%;margin-top:8px;" data-de="Name speichern" data-en="Save name">Name speichern</button>
+          <p id="account-name-msg" style="display:none;color:#10b981;font-size:13px;margin-top:6px;"></p>
+        </div>
+
+        <div class="settings-section" style="padding:16px;border:1.5px solid rgba(255,255,255,0.08);border-radius:12px;">
+          <h4 style="margin-bottom:10px;font-size:14px;" data-de="📧 E-Mail ändern" data-en="📧 Change email">📧 E-Mail ändern</h4>
+          <input type="email" id="account-email" placeholder="Neue E-Mail-Adresse" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;" />
+          <button onclick="saveAccountEmail()" class="btn-primary" style="width:100%;margin-top:8px;" data-de="E-Mail speichern" data-en="Save email">E-Mail speichern</button>
+          <p id="account-email-msg" style="display:none;font-size:13px;margin-top:6px;"></p>
+        </div>
+
+        <div class="settings-section" style="padding:16px;border:1.5px solid rgba(255,255,255,0.08);border-radius:12px;">
+          <h4 style="margin-bottom:10px;font-size:14px;" data-de="🔑 Passwort ändern" data-en="🔑 Change password">🔑 Passwort ändern</h4>
+          <input type="password" id="account-password-old" placeholder="Aktuelles Passwort" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;margin-bottom:8px;" />
+          <input type="password" id="account-password-new" placeholder="Neues Passwort (min. 8 Zeichen)" minlength="8" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;" />
+          <button onclick="saveAccountPassword()" class="btn-primary" style="width:100%;margin-top:8px;" data-de="Passwort ändern" data-en="Change password">Passwort ändern</button>
+          <p id="account-password-msg" style="display:none;font-size:13px;margin-top:6px;"></p>
+        </div>
+
+        <button onclick="closeAccount()" class="btn-ghost full-width" data-de="Schließen" data-en="Close">Schließen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- USER LOGIN / SIGNUP MODAL -->
   <div id="auth-overlay" class="overlay">
     <div class="modal">
@@ -177,7 +210,8 @@
       <div class="header-right">
         <span id="header-username" class="header-user"></span>
         <button onclick="openOwnerDashboard()" class="btn-owner" id="btn-owner-panel" style="display:none;" data-de="⚙️ Owner Panel" data-en="⚙️ Owner Panel">⚙️ Owner Panel</button>
-        <button onclick="openMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
+        <button onclick="toggleMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
+        <button onclick="openAccount()" class="btn-ghost" id="btn-my-account" data-de="Mein Konto" data-en="My Account" style="display:none;">Mein Konto</button>
         <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
       </div>
     </div>
@@ -225,8 +259,6 @@
     </div>
     <div class="hero-stats">
       <div class="hero-stat"><strong>5</strong><span data-de="Dienste" data-en="Services">Dienste</span></div>
-      <div class="hero-stat-sep">·</div>
-      <div class="hero-stat"><strong>24/7</strong><span data-de="verfügbar" data-en="available">verfügbar</span></div>
       <div class="hero-stat-sep">·</div>
       <div class="hero-stat"><strong>100%</strong><span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></div>
     </div>
@@ -423,8 +455,9 @@
         <h2 id="task-page-title" data-de="PDF analysieren" data-en="Analyse PDF">PDF analysieren</h2>
       </div>
       <div class="task-mini-chars">
-        <button class="mini-char-btn" id="mini-char-male" onclick="selectCharacter('male')">👨‍💼 Alex</button>
-        <button class="mini-char-btn" id="mini-char-female" onclick="selectCharacter('female')">👩‍💼 Emma</button>
+        <button class="mini-char-btn" id="mini-char-male" onclick="selectCharacter('male')" title="Alex wählen">👨‍💼 Alex<small data-de="Professionell & präzise" data-en="Professional & precise">Professionell & präzise</small></button>
+        <span class="char-switch-sep">⇄</span>
+        <button class="mini-char-btn" id="mini-char-female" onclick="selectCharacter('female')" title="Emma wählen">👩‍💼 Emma<small data-de="Effizient & zuverlässig" data-en="Efficient & reliable">Effizient & zuverlässig</small></button>
       </div>
     </div>
 
@@ -520,7 +553,7 @@
     <!-- STEP 2: PRICE -->
     <div id="step-price" style="display:none;">
       <div class="price-box">
-        <div class="price-icon">🤖</div>
+        <div class="price-icon" id="price-icon">🤖</div>
         <p id="price-time-text" class="price-time"></p>
         <p id="price-amount" class="price-amount"></p>
         <p class="price-note" data-de="Alle deine Daten werden nach Abschluss gelöscht." data-en="All your data will be deleted after the job is done.">Alle deine Daten werden nach Abschluss gelöscht.</p>
@@ -637,7 +670,7 @@
         <button onclick="goToAppSelection()" class="btn-primary full-width" data-de="Ich habe alles eingerichtet — Weiter ✓" data-en="I have set everything up — Continue ✓">Ich habe alles eingerichtet — Weiter ✓</button>
         <div class="bottom-links">
           <button onclick="cancelTask()" class="btn-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
-          <a href="#" onclick="goHome(); return false;" class="btn-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+          <a href="#" onclick="goHome(); return false;" class="btn-link" data-de="← Zurück zur Startseite" data-en="← Back to Home">← Zurück zur Startseite</a>
         </div>
       </div>
     </div>
@@ -701,19 +734,13 @@
       <div class="deleted-box">
         <div class="deleted-icon">✅</div>
         <h3 data-de="Vollständig entfernt." data-en="Fully removed.">Vollständig entfernt.</h3>
-        <div class="deleted-checklist">
-          <div class="deleted-check"><span>🗑</span><span data-de="Alle Aufgabendaten gelöscht" data-en="All task data deleted">Alle Aufgabendaten gelöscht</span></div>
-          <div class="deleted-check"><span>📧</span><span data-de="E-Mail-Zugriff entzogen" data-en="Email access revoked">E-Mail-Zugriff entzogen</span></div>
-          <div class="deleted-check"><span>📁</span><span data-de="Dateizugriff entzogen" data-en="File access revoked">Dateizugriff entzogen</span></div>
-          <div class="deleted-check"><span>🌐</span><span data-de="Browser-Zugriff entzogen" data-en="Browser access revoked">Browser-Zugriff entzogen</span></div>
-          <div class="deleted-check"><span>🔌</span><span data-de="Agent vom Computer getrennt" data-en="Agent disconnected from computer">Agent vom Computer getrennt</span></div>
-        </div>
+        <div class="deleted-checklist" id="deleted-checklist"></div>
         <p class="deleted-note" data-de="Der KI-Mitarbeiter hat keine Kontrolle mehr über deinen Computer." data-en="The AI employee no longer has any control over your computer.">Der KI-Mitarbeiter hat keine Kontrolle mehr über deinen Computer.</p>
         <div class="deleted-actions">
           <button onclick="goToFeedback()" class="btn-primary" data-de="⭐ Bewertung hinterlassen" data-en="⭐ Leave a review">⭐ Bewertung hinterlassen</button>
           <button onclick="resetForm()" class="btn-secondary" data-de="Neue Aufgabe starten" data-en="Start a new task">Neue Aufgabe starten</button>
         </div>
-        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="← Zurück zur Startseite" data-en="← Back to Home">← Zurück zur Startseite</a>
       </div>
     </div>
 
@@ -750,7 +777,7 @@
         <h3 data-de="Danke für deine Bewertung!" data-en="Thank you for your review!">Danke für deine Bewertung!</h3>
         <p data-de="Deine Bewertung wurde eingereicht." data-en="Your review has been submitted.">Deine Bewertung wurde eingereicht.</p>
         <button onclick="resetForm()" class="btn-primary" data-de="Neue Aufgabe starten" data-en="Start a new task">Neue Aufgabe starten</button>
-        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="← Zurück zur Startseite" data-en="← Back to Home">← Zurück zur Startseite</a>
       </div>
     </div>
 
