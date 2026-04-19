@@ -12,6 +12,16 @@
 </head>
 <body>
 
+  <!-- DUE TASK BANNER (#3 Proaktivität + #7 Zeitplan) -->
+  <div id="due-task-banner" class="due-banner" style="display:none;">
+    <span class="due-banner-icon">⏰</span>
+    <div class="due-banner-content">
+      <strong data-de="Geplante Aufgabe bereit!" data-en="Scheduled task ready!">Geplante Aufgabe bereit!</strong>
+      <span id="due-task-text"></span>
+    </div>
+    <button onclick="startDueTask()" class="due-banner-btn" data-de="Jetzt starten →" data-en="Start now →">Jetzt starten →</button>
+    <button onclick="dismissDueBanner()" class="due-banner-dismiss">✕</button>
+  </div>
 
   <!-- PDF LENGTH SELECTOR -->
   <div id="length-selector-overlay" class="overlay hidden" onclick="if(event.target===this)closeLengthSelector()">
@@ -899,6 +909,26 @@
       </div>
     </div>
 
+    <!-- STEP 4d: GOOGLE CALENDAR (#6 Tool-Integration) -->
+    <div id="step-calendar" style="display:none;">
+      <div class="setup-box">
+        <div class="setup-header">
+          <span class="setup-icon" id="calendar-step-icon">📅</span>
+          <div>
+            <h3 data-de="Google Kalender verbinden" data-en="Connect Google Calendar">Google Kalender verbinden</h3>
+            <p data-de="Die KI liest deine nächsten Termine und analysiert sie — Konflikte, Prioritäten, Vorbereitungsbedarf." data-en="The AI reads your upcoming events and analyses them — conflicts, priorities, preparation needed.">Die KI liest deine nächsten Termine und analysiert sie.</p>
+          </div>
+        </div>
+        <button onclick="connectCalendar()" class="btn-primary full-width" id="calendar-connect-btn">📅 Mit Google Kalender verbinden</button>
+        <p id="calendar-status" style="display:none;text-align:center;margin-top:12px;font-size:14px;color:var(--gray);"></p>
+        <div class="setup-note" style="margin-top:20px;">
+          <span>🔒</span>
+          <p data-de="Nur Lesezugriff. Keine Änderungen. Alle Daten werden nach der Analyse sofort verworfen." data-en="Read-only access. No changes. All data discarded after analysis.">Nur Lesezugriff. Keine Änderungen. Alle Daten sofort verworfen.</p>
+        </div>
+        <button onclick="cancelTask()" class="btn-link center-link">← Zurück</button>
+      </div>
+    </div>
+
     <!-- STEP 5: PROGRESS BAR -->
     <div id="step-progress" style="display:none;">
       <div class="progress-box">
@@ -922,6 +952,28 @@
         <div class="result-buttons">
           <button onclick="downloadResult()" class="btn-primary" id="btn-download-result" data-de="⬇️ Ergebnis runterladen und in Dateien sichern" data-en="⬇️ Download result and save to files">⬇️ Ergebnis runterladen und in Dateien sichern</button>
           <button onclick="deleteData()" class="btn-delete" data-de="🗑 Alle meine Daten löschen" data-en="🗑 Delete all my data">🗑 Alle meine Daten löschen</button>
+        </div>
+
+        <!-- CHAIN ACTIONS (#5 Multi-Step) -->
+        <div class="chain-section">
+          <div class="chain-label" data-de="↩️ Ergebnis weiterverarbeiten:" data-en="↩️ Process result further:">↩️ Ergebnis weiterverarbeiten:</div>
+          <div class="chain-buttons">
+            <button onclick="chainTask('shorten')" class="btn-chain" data-de="📝 Kürzer fassen" data-en="📝 Shorten">📝 Kürzer fassen</button>
+            <button onclick="chainTask('translate')" class="btn-chain" data-de="🌍 Übersetzen" data-en="🌍 Translate">🌍 Übersetzen</button>
+            <button onclick="chainTask('report')" class="btn-chain" data-de="📊 Als Bericht" data-en="📊 As Report">📊 Als Bericht</button>
+            <button onclick="chainTask('bullets')" class="btn-chain" data-de="• Stichpunkte" data-en="• Bullet points">• Stichpunkte</button>
+          </div>
+        </div>
+
+        <!-- SCHEDULE (#7 Zeitplan + #3 Proaktivität) -->
+        <div class="schedule-section">
+          <div class="chain-label" data-de="⏰ Aufgabe automatisch wiederholen:" data-en="⏰ Repeat task automatically:">⏰ Aufgabe automatisch wiederholen:</div>
+          <div class="chain-buttons">
+            <button onclick="scheduleCurrentTask('daily')"   class="btn-chain" data-de="📅 Täglich"       data-en="📅 Daily">📅 Täglich</button>
+            <button onclick="scheduleCurrentTask('weekly')"  class="btn-chain" data-de="📅 Wöchentlich"   data-en="📅 Weekly">📅 Wöchentlich</button>
+            <button onclick="scheduleCurrentTask('monthly')" class="btn-chain" data-de="📅 Monatlich"     data-en="📅 Monthly">📅 Monatlich</button>
+          </div>
+          <p id="schedule-confirm" style="display:none;font-size:13px;color:var(--green);margin-top:8px;text-align:center;"></p>
         </div>
       </div>
     </div>
@@ -967,6 +1019,9 @@
           <span class="star" data-val="4" onclick="setStars(4)">★</span>
           <span class="star" data-val="5" onclick="setStars(5)">★</span>
         </div>
+        <!-- #4 Feedback-Lernen -->
+        <label style="font-size:13px;color:var(--blue);font-weight:700;" data-de="🧠 Was soll die KI beim nächsten Mal besser machen?" data-en="🧠 What should the AI improve next time?">🧠 Was soll die KI beim nächsten Mal besser machen?</label>
+        <textarea id="improvement-text" rows="2" style="margin-bottom:12px;" placeholder="z.B. Mehr Zahlen nennen, kürzer formulieren, mehr Details zu Risiken..."></textarea>
         <label data-de="Dein Kommentar (optional)" data-en="Your comment (optional)">Dein Kommentar (optional)</label>
         <textarea id="review-text" rows="3" placeholder="z.B. Sehr schnell und präzise! Würde ich weiterempfehlen."></textarea>
         <label data-de="Dein Name (für die Bewertung)" data-en="Your name (for the review)">Dein Name (für die Bewertung)</label>

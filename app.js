@@ -343,11 +343,223 @@ function submitReview() {
   if (!selectedStars) { alert(currentLang === 'de' ? 'Bitte wähle eine Sternebewertung.' : 'Please select a star rating.'); return; }
   const text = document.getElementById('review-text').value.trim();
   const name = document.getElementById('review-name').value.trim() || (currentLang === 'de' ? 'Anonym' : 'Anonymous');
+  // #4 Feedback-Lernen: save improvement note
+  const improvement = document.getElementById('improvement-text')?.value?.trim();
+  if (improvement) saveFeedbackToLearning(improvement);
   const reviews = getAllReviews();
   reviews.push({ id: Date.now(), name, text, stars: selectedStars, date: new Date().toISOString(), featured: false, hidden: false });
   localStorage.setItem('ai_reviews', JSON.stringify(reviews));
   showStep('step-review-done');
   renderTestimonials();
+}
+
+// =====================
+// #4 FEEDBACK-LERNEN
+// =====================
+function saveFeedbackToLearning(text) {
+  if (!text || text.trim().length < 5) return;
+  const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  notes.push(text.trim().slice(0, 300));
+  if (notes.length > 5) notes.shift();
+  localStorage.setItem('ai_improvement_notes', JSON.stringify(notes));
+}
+
+function getLearningContext(isDE) {
+  const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  if (!notes.length) return '';
+  return (isDE
+    ? '\nNUTZER-PRÄFERENZEN (aus früherem Feedback — bitte berücksichtigen):\n'
+    : '\nUSER PREFERENCES (from previous feedback — please apply):\n')
+    + notes.map(n => `- ${n}`).join('\n') + '\n';
+}
+
+// =====================
+// #5 MULTI-STEP (Task Chaining)
+// =====================
+function chainTask(type) {
+  const de = currentLang === 'de';
+  const instructions = {
+    shorten:  de ? 'Fasse folgenden Text in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen:\n\n'
+                 : 'Summarise the following text in 50% shorter — keep all key points, remove filler:\n\n',
+    translate:de ? 'Übersetze folgenden Text vollständig und professionell ins Englische:\n\n'
+                 : 'Translate the following text completely and professionally into German:\n\n',
+    report:   de ? 'Erstelle aus folgendem Text einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n'
+                 : 'Create a professional report with executive summary, key findings and recommendations from the following text:\n\n',
+    bullets:  de ? 'Forme folgenden Text in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n'
+                 : 'Convert the following text into concise, clearly structured bullet points — no prose:\n\n'
+  };
+  const prefix = instructions[type] || instructions.shorten;
+  const input = currentResult ? currentResult.slice(0, 5000) : '';
+  document.getElementById('task-description').value = prefix + input;
+  window.selectedAnalysisLength = 'medium';
+  window.skippedSetup = true;
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  startTask();
+}
+
+// =====================
+// #7 ZEITPLAN + #3 PROAKTIVITÄT
+// =====================
+const SCHEDULE_KEY = 'ai_scheduled_tasks';
+
+function calcNextRun(frequency) {
+  const d = new Date();
+  if (frequency === 'daily')   { d.setDate(d.getDate() + 1); }
+  else if (frequency === 'weekly')  { d.setDate(d.getDate() + 7); }
+  else if (frequency === 'monthly') { d.setMonth(d.getMonth() + 1); d.setDate(1); }
+  d.setHours(8, 0, 0, 0);
+  return d.getTime();
+}
+
+function scheduleCurrentTask(frequency) {
+  const taskDesc = document.getElementById('task-description')?.value || '';
+  if (!taskDesc.trim()) return;
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  tasks.push({
+    id: Date.now().toString(36),
+    task: taskDesc,
+    frequency,
+    analysisLength: window.selectedAnalysisLength || 'medium',
+    nextRun: calcNextRun(frequency),
+    created: Date.now()
+  });
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(tasks));
+  if ('Notification' in window) Notification.requestPermission();
+  const labels = { de: { daily:'Täglich', weekly:'Wöchentlich', monthly:'Monatlich' }, en: { daily:'Daily', weekly:'Weekly', monthly:'Monthly' } };
+  const lbl = labels[currentLang][frequency];
+  const el = document.getElementById('schedule-confirm');
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = currentLang === 'de'
+      ? `✅ Aufgabe geplant: ${lbl} — nächste Ausführung ${new Date(calcNextRun(frequency)).toLocaleDateString('de-DE')}`
+      : `✅ Task scheduled: ${lbl} — next run ${new Date(calcNextRun(frequency)).toLocaleDateString('en-GB')}`;
+  }
+}
+
+function checkDueTasks() {
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  const now = Date.now();
+  const due = tasks.filter(t => t.nextRun <= now);
+  if (!due.length) return;
+  const task = due[0];
+  const banner = document.getElementById('due-task-banner');
+  const textEl = document.getElementById('due-task-text');
+  if (banner && textEl) {
+    textEl.textContent = `"${task.task.slice(0, 70)}${task.task.length > 70 ? '…' : ''}"`;
+    banner.style.display = 'flex';
+    window._duePendingTask = task;
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('AI Employee Agent', {
+      body: (currentLang === 'de' ? 'Geplante Aufgabe bereit: ' : 'Scheduled task ready: ') + task.task.slice(0, 60),
+    });
+  }
+}
+
+function startDueTask() {
+  const task = window._duePendingTask;
+  if (!task) return;
+  // Update nextRun
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  const idx = tasks.findIndex(t => t.id === task.id);
+  if (idx >= 0) tasks[idx].nextRun = calcNextRun(tasks[idx].frequency);
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(tasks));
+  document.getElementById('due-task-banner').style.display = 'none';
+  window._duePendingTask = null;
+  showPage('services');
+  document.getElementById('task-description').value = task.task;
+  window.selectedAnalysisLength = task.analysisLength || 'medium';
+}
+
+function dismissDueBanner() {
+  document.getElementById('due-task-banner').style.display = 'none';
+}
+
+// =====================
+// #6 GOOGLE CALENDAR
+// =====================
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
+function connectCalendar() {
+  const btn = document.getElementById('calendar-connect-btn');
+  const status = document.getElementById('calendar-status');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'de' ? '⏳ Verbinde...' : '⏳ Connecting...';
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    status.textContent = currentLang === 'de' ? 'Google-Bibliothek lädt — bitte Seite neu laden.' : 'Google library loading — please reload.';
+    status.style.display = 'block';
+    btn.disabled = false; btn.textContent = '📅 Mit Google Kalender verbinden';
+    return;
+  }
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GMAIL_CLIENT_ID,
+    scope: CALENDAR_SCOPE,
+    callback: async (response) => {
+      if (response.error) {
+        status.textContent = 'Fehler: ' + response.error;
+        status.style.display = 'block';
+        btn.disabled = false; btn.textContent = '📅 Mit Google Kalender verbinden';
+        return;
+      }
+      btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analysiere Termine...' : '✓ Connected — Analysing events...';
+      status.style.display = 'none';
+      await startCalendarTask(response.access_token);
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchCalendarEvents(token) {
+  const now = new Date().toISOString();
+  const future = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=20&singleEvents=true&orderBy=startTime`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  return (data.items || []).map(e => {
+    const start = e.start?.dateTime || e.start?.date || '';
+    const end   = e.end?.dateTime   || e.end?.date   || '';
+    return `Termin: ${e.summary || '(kein Titel)'}\nStart: ${start}\nEnde: ${end}\nOrt: ${e.location || '—'}\nBeschreibung: ${e.description?.slice(0,100) || '—'}`;
+  });
+}
+
+async function startCalendarTask(token) {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  const de = currentLang === 'de';
+
+  setProgress(10, de ? `${name} liest deinen Kalender...` : `${name} reading your calendar...`);
+  let events = [];
+  try { events = await fetchCalendarEvents(token); } catch (err) {
+    currentResult = (de ? 'Fehler beim Lesen des Kalenders: ' : 'Error reading calendar: ') + err.message;
+    setProgress(100, 'Fertig.'); showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    return;
+  }
+
+  setProgress(50, de ? `KI analysiert ${events.length} Termine...` : `AI analysing ${events.length} events...`);
+  const prompt = de
+    ? `Analysiere die folgenden ${events.length} Kalendertermine der nächsten 14 Tage. Identifiziere: Terminkonzflikte, Termine die Vorbereitung brauchen, Lücken für fokussierte Arbeit, empfohlene Prioritäten. Antworte strukturiert mit konkreten Empfehlungen.\n\nTermine:\n${events.join('\n\n---\n\n')}`
+    : `Analyse the following ${events.length} calendar events for the next 14 days. Identify: scheduling conflicts, events needing preparation, gaps for focused work, recommended priorities. Respond structured with concrete recommendations.\n\nEvents:\n${events.join('\n\n---\n\n')}`;
+
+  try {
+    setProgress(75, de ? 'KI analysiert...' : 'AI analysing...');
+    const res = await fetch('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result;
+  } catch (err) {
+    currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
+  }
+
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
 }
 
 function skipReview() { showStep('step-review-done'); }
@@ -1918,7 +2130,7 @@ function goHome() { resetForm(); showPage('main'); }
 // =====================
 // STEP NAVIGATION
 // =====================
-const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
+const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
 function showStep(id) { ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; }); }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -3109,6 +3321,7 @@ NEXT STEPS
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
   const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
+  const learningCtx = getLearningContext(isDE);
 
   const docTypeLabels = {
     de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
@@ -3121,7 +3334,7 @@ NEXT STEPS
     ? `Du bist ein professioneller Texter und Dokumentenersteller. Deine Aufgabe ist es, ein hochwertiges Dokument zu erstellen — kein Analyse, sondern echte Erstellung.
 
 AUFGABE: ${taskDesc}
-${businessCtx}
+${businessCtx}${learningCtx}
 
 KERNREGELN:
 1. Erstelle ein vollständiges, professionelles Dokument — direkt verwendbar.
@@ -3140,8 +3353,7 @@ QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung?
 
 AUFGABE DES KUNDEN: ${taskDesc}
 DOKUMENTTYP: ${dtLabel}
-${businessCtx}
-
+${businessCtx}${learningCtx}
 KERNREGELN — NIEMALS BRECHEN:
 1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
 2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
@@ -3164,8 +3376,7 @@ QUALITÄTSPRÜFUNG:
     ? `You are a professional writer and document creator. Your task is to create a high-quality document — not an analysis, but actual creation.
 
 TASK: ${taskDesc}
-${businessCtx}
-
+${businessCtx}${learningCtx}
 CORE RULES:
 1. Create a complete, professional document — directly usable.
 2. NO FILLER: Never "I will now...", "Here is the document:". Start directly with content.
@@ -3183,8 +3394,7 @@ QUALITY CHECK: Is the document directly usable without further editing? If not �
 
 CLIENT TASK: ${taskDesc}
 DOCUMENT TYPE: ${dtLabel}
-${businessCtx}
-
+${businessCtx}${learningCtx}
 CORE RULES — NEVER BREAK:
 1. PAGE REFERENCES MANDATORY: After EVERY important claim write "(see page X)".
 2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
@@ -3263,6 +3473,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAuth();
   renderTestimonials();
   initCharacterSelection();
+  checkDueTasks();
 
   // Show API key status in owner settings when it loads
   const existingKey = getGeminiKey();
