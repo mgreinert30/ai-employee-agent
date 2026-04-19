@@ -1,0 +1,2507 @@
+// AI Employee Agent — app.js
+// Handles: language, auth, owner dashboard, pricing, payment, progress, reviews, testimonials.
+
+// =====================
+// APP VERSION — bump this on every update to force re-login
+// =====================
+const APP_VERSION = '1.0';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+// =====================
+// LANGUAGE
+// =====================
+let currentLang = localStorage.getItem('lang') || 'de';
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-de]').forEach(el => {
+    el.textContent = el.getAttribute(`data-${lang}`);
+  });
+  const ph = {
+    de: { 'business-details': 'z.B. Wir sind ein kleines Beratungsunternehmen...', 'task-description': 'z.B. Sortiere meine E-Mails nach Dringlichkeit...', 'login-email': 'max@firma.de', 'signup-email': 'max@firma.de', 'signup-name': 'Max Mustermann', 'paypal-email': 'deine@paypal.com', 'bank-name': 'Max Mustermann', 'bank-iban': 'DE89 3704 0044 0532 0130 00', 'review-text': 'z.B. Sehr schnell und präzise! Würde ich weiterempfehlen.', 'review-name': 'Max M.' },
+    en: { 'business-details': 'e.g. We are a small consulting firm...', 'task-description': 'e.g. Sort my emails by urgency...', 'login-email': 'john@company.com', 'signup-email': 'john@company.com', 'signup-name': 'John Smith', 'paypal-email': 'your@paypal.com', 'bank-name': 'John Smith', 'bank-iban': 'DE89 3704 0044 0532 0130 00', 'review-text': 'e.g. Very fast and accurate! Highly recommended.', 'review-name': 'John S.' }
+  };
+  Object.entries(ph[lang]).forEach(([id, text]) => { const el = document.getElementById(id); if (el) el.placeholder = text; });
+  document.getElementById('btn-de').classList.toggle('active', lang === 'de');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  renderTestimonials();
+}
+
+// =====================
+// USER AUTH
+// =====================
+let currentUser = null;
+
+function getDeviceId() {
+  let id = localStorage.getItem('ai_device_id');
+  if (!id) { id = 'dev_' + Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('ai_device_id', id); }
+  return id;
+}
+
+function updateActivity() {
+  localStorage.setItem('ai_last_activity', Date.now().toString());
+  localStorage.setItem('ai_last_device', getDeviceId());
+  localStorage.setItem('ai_app_version', APP_VERSION);
+}
+
+function loadAuth() {
+  const saved = localStorage.getItem('ai_agent_user');
+  if (!saved) { showAuthModal(null); return; }
+  const lastActivity = parseInt(localStorage.getItem('ai_last_activity') || '0');
+  const lastDevice = localStorage.getItem('ai_last_device');
+  const lastVersion = localStorage.getItem('ai_app_version');
+  const inactiveTooLong = Date.now() - lastActivity > SEVEN_DAYS_MS;
+  const differentDevice = lastDevice && lastDevice !== getDeviceId();
+  const newUpdate = lastVersion !== APP_VERSION;
+  if (newUpdate) showAuthModal('update');
+  else if (inactiveTooLong) showAuthModal('inactive');
+  else if (differentDevice) showAuthModal('device');
+  else {
+    currentUser = JSON.parse(saved);
+    showLoggedIn();
+  }
+}
+
+function showAuthModal(reason) {
+  const box = document.getElementById('auth-reason');
+  if (reason === 'update') { box.style.display = 'block'; box.textContent = currentLang === 'de' ? `🚀 Neues Update (v${APP_VERSION}). Bitte erneut anmelden.` : `🚀 New update (v${APP_VERSION}). Please log in again.`; }
+  else if (reason === 'inactive') { box.style.display = 'block'; box.textContent = currentLang === 'de' ? '⏰ 7+ Tage inaktiv. Bitte erneut anmelden.' : '⏰ Inactive for 7+ days. Please log in again.'; }
+  else if (reason === 'device') { box.style.display = 'block'; box.textContent = currentLang === 'de' ? '💻 Neues Gerät erkannt. Bitte bestätigen.' : '💻 New device detected. Please confirm.'; }
+  else { box.style.display = 'none'; }
+  document.getElementById('auth-overlay').classList.remove('hidden');
+}
+
+function hideAuthModal() { document.getElementById('auth-overlay').classList.add('hidden'); }
+
+function switchTab(tab) {
+  document.getElementById('form-login').style.display = tab === 'login' ? 'flex' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? 'flex' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('remember-me').checked;
+
+  // Check if this is the owner account
+  if (email === OWNER_EMAIL && password === OWNER_PASSWORD) {
+    currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
+    if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+    updateActivity();
+    hideAuthModal();
+    showLoggedIn();
+    return;
+  }
+
+  // Regular user login
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) { document.getElementById('login-error').textContent = currentLang === 'de' ? 'E-Mail oder Passwort falsch.' : 'Incorrect email or password.'; return; }
+  currentUser = { name: user.name, email: user.email };
+  if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  updateActivity();
+  hideAuthModal();
+  showLoggedIn();
+}
+
+function handleSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById('signup-name').value;
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  if (users.find(u => u.email === email)) { document.getElementById('signup-error').textContent = currentLang === 'de' ? 'E-Mail bereits registriert.' : 'Email already registered.'; return; }
+  users.push({ name, email, password });
+  localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  currentUser = { name, email };
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  updateActivity();
+  hideAuthModal();
+  showLoggedIn();
+}
+
+function showLoggedIn() {
+  document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
+  document.getElementById('btn-logout').style.display = 'inline-block';
+  document.getElementById('btn-my-tasks').style.display = 'inline-block';
+  // Show owner panel button only for owner account
+  document.getElementById('btn-owner-panel').style.display = currentUser.isOwner ? 'inline-block' : 'none';
+  renderTestimonials();
+}
+
+function handleLogout() {
+  localStorage.removeItem('ai_agent_user');
+  currentUser = null;
+  document.getElementById('header-username').textContent = '';
+  document.getElementById('btn-logout').style.display = 'none';
+  document.getElementById('btn-my-tasks').style.display = 'none';
+  showAuthModal(null);
+}
+
+// =====================
+// MY TASKS PANEL
+// =====================
+function openMyTasks() { document.getElementById('my-tasks-panel').style.display = 'block'; renderTaskHistory(); }
+function closeMyTasks() { document.getElementById('my-tasks-panel').style.display = 'none'; }
+function getTaskHistory() { return JSON.parse(localStorage.getItem(`ai_tasks_${currentUser?.email}`) || '[]'); }
+function saveTaskToHistory(description, price) {
+  if (!currentUser) return;
+  const tasks = getTaskHistory();
+  tasks.push({ description: description.slice(0, 60) + (description.length > 60 ? '...' : ''), date: new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB'), price: `€${price}` });
+  localStorage.setItem(`ai_tasks_${currentUser.email}`, JSON.stringify(tasks));
+}
+function renderTaskHistory() {
+  const tasks = getTaskHistory();
+  const c = document.getElementById('tasks-list');
+  if (!tasks.length) { c.innerHTML = `<p class="no-tasks">${currentLang === 'de' ? 'Noch keine Aufgaben.' : 'No tasks yet.'}</p>`; return; }
+  c.innerHTML = tasks.slice().reverse().map(t => `<div class="task-history-item"><div><div class="task-desc">${t.description}</div><div class="task-date">${t.date}</div></div><div class="task-price">${t.price}</div></div>`).join('');
+}
+
+// =====================
+// OWNER CREDENTIALS
+// Only one owner account. Access is through the normal login form.
+// NOTE: Move this to a secure backend before going live publicly.
+// =====================
+const OWNER_EMAIL = 'm.greinert30@gmail.com';
+const OWNER_PASSWORD = 'Pokemon3011#';
+
+function openOwnerDashboard() {
+  document.getElementById('owner-dashboard-overlay').classList.remove('hidden');
+  ownerTab('overview');
+  loadOwnerPaypal();
+}
+
+function closeOwnerDashboard() { document.getElementById('owner-dashboard-overlay').classList.add('hidden'); }
+function handleOwnerLogout() { closeOwnerDashboard(); }
+
+function ownerTab(tab) {
+  ['overview', 'reviews', 'settings'].forEach(t => {
+    document.getElementById(`owner-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(`otab-${t}`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'overview') renderOwnerOverview();
+  if (tab === 'reviews') renderOwnerReviews();
+}
+
+// =====================
+// OWNER OVERVIEW (SALES DATA)
+// =====================
+function getSalesData() { return JSON.parse(localStorage.getItem('ai_sales') || '[]'); }
+
+function saveSale(description, price, paymentMethod) {
+  const sales = getSalesData();
+  sales.push({ description: description.slice(0, 50), price: parseFloat(price), method: paymentMethod, date: new Date().toISOString(), month: new Date().toISOString().slice(0, 7) });
+  localStorage.setItem('ai_sales', JSON.stringify(sales));
+}
+
+function renderOwnerOverview() {
+  const sales = getSalesData();
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const totalRevenue = sales.reduce((s, t) => s + t.price, 0);
+  const monthRevenue = sales.filter(t => t.month === thisMonth).reduce((s, t) => s + t.price, 0);
+
+  document.getElementById('stat-total-sales').textContent = sales.length;
+  document.getElementById('stat-total-revenue').textContent = `€${totalRevenue.toFixed(2)}`;
+  document.getElementById('stat-month-revenue').textContent = `€${monthRevenue.toFixed(2)}`;
+  document.getElementById('stat-total-users').textContent = users.length;
+
+  const container = document.getElementById('recent-transactions');
+  if (!sales.length) { container.innerHTML = `<p class="empty-state">${currentLang === 'de' ? 'Noch keine Transaktionen.' : 'No transactions yet.'}</p>`; return; }
+  container.innerHTML = sales.slice().reverse().slice(0, 10).map(t => `
+    <div class="transaction-item">
+      <div><div class="transaction-desc">${t.description}</div><div class="transaction-date">${new Date(t.date).toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB')} · ${t.method}</div></div>
+      <div class="transaction-amount">+€${t.price.toFixed(2)}</div>
+    </div>`).join('');
+}
+
+// =====================
+// OWNER — PAYPAL SETTINGS
+// =====================
+function loadOwnerPaypal() {
+  const saved = localStorage.getItem('ai_owner_paypal') || '';
+  document.getElementById('owner-paypal-input').value = saved;
+}
+
+function savePaypalSettings() {
+  const val = document.getElementById('owner-paypal-input').value.trim();
+  localStorage.setItem('ai_owner_paypal', val);
+  const msg = document.getElementById('paypal-saved-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function saveOwnerPassword() {
+  const pw = document.getElementById('new-owner-password').value;
+  if (!pw || pw.length < 4) return;
+  localStorage.setItem('ai_owner_password', pw);
+  const msg = document.getElementById('password-saved-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function getOwnerPaypalUsername() { return localStorage.getItem('ai_owner_paypal') || ''; }
+
+// =====================
+// REVIEWS SYSTEM
+// =====================
+let selectedStars = 0;
+
+function setStars(val) {
+  selectedStars = val;
+  document.querySelectorAll('.star').forEach((s, i) => s.classList.toggle('active', i < val));
+}
+
+function submitReview() {
+  if (!selectedStars) { alert(currentLang === 'de' ? 'Bitte wähle eine Sternebewertung.' : 'Please select a star rating.'); return; }
+  const text = document.getElementById('review-text').value.trim();
+  const name = document.getElementById('review-name').value.trim() || (currentLang === 'de' ? 'Anonym' : 'Anonymous');
+  const reviews = getAllReviews();
+  reviews.push({ id: Date.now(), name, text, stars: selectedStars, date: new Date().toISOString(), featured: false, hidden: false });
+  localStorage.setItem('ai_reviews', JSON.stringify(reviews));
+  showStep('step-review-done');
+  renderTestimonials();
+}
+
+function skipReview() { showStep('step-review-done'); }
+function goToFeedback() { selectedStars = 0; document.querySelectorAll('.star').forEach(s => s.classList.remove('active')); showStep('step-feedback'); }
+
+function getAllReviews() { return JSON.parse(localStorage.getItem('ai_reviews') || '[]'); }
+
+function getFeaturedReviews() { return getAllReviews().filter(r => r.featured && !r.hidden).slice(0, 6); }
+
+function renderTestimonials() {
+  const featured = getFeaturedReviews();
+  const grid = document.getElementById('testimonials-grid');
+  const noMsg = document.getElementById('no-reviews-msg');
+  if (!featured.length) { grid.innerHTML = ''; if (noMsg) { noMsg.style.display = 'block'; grid.appendChild(noMsg); } return; }
+  if (noMsg) noMsg.style.display = 'none';
+  grid.innerHTML = featured.map(r => `
+    <div class="testimonial-card">
+      <div class="testimonial-stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</div>
+      <p class="testimonial-text">"${r.text || (currentLang === 'de' ? 'Toller Service!' : 'Great service!')}"</p>
+      <div class="testimonial-name">— ${r.name}</div>
+    </div>`).join('');
+}
+
+// =====================
+// OWNER — MANAGE REVIEWS
+// =====================
+function renderOwnerReviews() {
+  const reviews = getAllReviews().filter(r => !r.hidden);
+  const container = document.getElementById('owner-reviews-list');
+  const featuredCount = reviews.filter(r => r.featured).length;
+  if (!reviews.length) { container.innerHTML = `<p class="empty-state">${currentLang === 'de' ? 'Noch keine Bewertungen.' : 'No reviews yet.'}</p>`; return; }
+  container.innerHTML = reviews.slice().reverse().map(r => `
+    <div class="owner-review-card">
+      <div class="owner-review-top">
+        <span class="owner-review-name">${r.name}</span>
+        <span class="owner-review-stars">${'★'.repeat(r.stars)}</span>
+      </div>
+      <p class="owner-review-text">${r.text || '(kein Kommentar)'}</p>
+      <div class="owner-review-actions">
+        <button class="btn-feature ${r.featured ? 'active' : ''}" onclick="toggleFeature(${r.id})" ${!r.featured && featuredCount >= 6 ? 'disabled title="Max. 6 featured"' : ''}>
+          ${r.featured ? '⭐ ' + (currentLang === 'de' ? 'Auf Startseite' : 'On home page') : '☆ ' + (currentLang === 'de' ? 'Zeigen' : 'Feature')}
+        </button>
+        <button class="btn-hide-review" onclick="hideReview(${r.id})">${currentLang === 'de' ? 'Ausblenden' : 'Hide'}</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleFeature(id) {
+  const reviews = getAllReviews();
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  const featuredCount = reviews.filter(r => r.featured && !r.hidden).length;
+  if (!reviews[idx].featured && featuredCount >= 6) { alert(currentLang === 'de' ? 'Maximal 6 Bewertungen können angezeigt werden.' : 'Maximum 6 reviews can be featured.'); return; }
+  reviews[idx].featured = !reviews[idx].featured;
+  localStorage.setItem('ai_reviews', JSON.stringify(reviews));
+  renderOwnerReviews();
+  renderTestimonials();
+}
+
+function hideReview(id) {
+  const reviews = getAllReviews();
+  const idx = reviews.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  reviews[idx].hidden = true;
+  reviews[idx].featured = false;
+  localStorage.setItem('ai_reviews', JSON.stringify(reviews));
+  renderOwnerReviews();
+  renderTestimonials();
+}
+
+// =====================
+// CHARACTER SELECTION
+// =====================
+let selectedCharacter = localStorage.getItem('ai_character') || 'male';
+
+function selectCharacter(type) {
+  selectedCharacter = type;
+  localStorage.setItem('ai_character', type);
+
+  document.getElementById('char-male').classList.toggle('selected', type === 'male');
+  document.getElementById('char-female').classList.toggle('selected', type === 'female');
+  document.getElementById('badge-male').style.display = type === 'male' ? 'block' : 'none';
+  document.getElementById('badge-female').style.display = type === 'female' ? 'block' : 'none';
+
+  const btnMale = document.getElementById('charbtn-male');
+  const btnFemale = document.getElementById('charbtn-female');
+  btnMale.textContent = type === 'male' ? (currentLang === 'de' ? '✓ Alex ausgewählt' : '✓ Alex selected') : (currentLang === 'de' ? 'Alex wählen' : 'Choose Alex');
+  btnFemale.textContent = type === 'female' ? (currentLang === 'de' ? '✓ Emma ausgewählt' : '✓ Emma selected') : (currentLang === 'de' ? 'Emma wählen' : 'Choose Emma');
+}
+
+function getCharacterEmoji() { return selectedCharacter === 'female' ? '👩‍💼' : '👨‍💼'; }
+function getCharacterName() { return selectedCharacter === 'female' ? 'Emma' : 'Alex'; }
+
+function initCharacterSelection() {
+  selectCharacter(selectedCharacter);
+}
+
+// =====================
+// PRICING
+// =====================
+function estimateTask(description) {
+  const desc = description.toLowerCase();
+  let base = 5, complexity = 1.0;
+  if (desc.includes('email') || desc.includes('mail')) { base += 8; complexity = 1.5; }
+  if (desc.includes('sort') || desc.includes('sortier')) base += 5;
+  if (desc.includes('report') || desc.includes('bericht') || desc.includes('summary')) { base += 8; complexity = Math.max(complexity, 1.5); }
+  if (desc.includes('reply') || desc.includes('antwort')) { base += 10; complexity = 2.5; }
+  if (desc.includes('document') || desc.includes('dokument') || desc.includes('write')) { base += 12; complexity = Math.max(complexity, 1.5); }
+  const minutes = Math.ceil(base * complexity);
+  return { minutes, price: Math.round(Math.max(minutes * 0.20 * complexity, 2.00) * 100) / 100 };
+}
+
+// =====================
+// TASK STATE
+// =====================
+let currentEstimate = null;
+let currentResult = null;
+let selectedPaymentMethod = null;
+let uploadedPDFs = [];
+
+// =====================
+// TASK SHORTCUTS
+// =====================
+function selectShortcut(type) {
+  const descriptions = {
+    de: {
+      pdf:      'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.',
+      email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
+      report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
+      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
+      document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
+    },
+    en: {
+      pdf:      'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.',
+      email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
+      report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
+      reply:    'Write professional and friendly replies to the provided messages or emails.',
+      document: 'Create a professional, well-structured document with clear headings and sections.'
+    }
+  };
+  const desc = descriptions[currentLang][type] || descriptions['de'][type];
+  document.getElementById('task-description').value = desc;
+  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+}
+
+// =====================
+// PDF UPLOAD
+// =====================
+function handlePDFUpload(files) {
+  const allowed = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  allowed.forEach(f => { if (uploadedPDFs.length < 10) uploadedPDFs.push(f); });
+  renderPDFList();
+
+  // Auto-suggest PDF analysis if description is still empty or generic
+  if (uploadedPDFs.length > 0) {
+    const td = document.getElementById('task-description');
+    const empty = !td.value.trim();
+    const generic = td.value.includes('Sortiere') || td.value.includes('Sort my');
+    if (empty || generic) {
+      const fakeEvent = { target: document.querySelector('.task-shortcut') };
+      // Directly set the analysis description without needing the event object
+      const desc = currentLang === 'de'
+        ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
+        : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
+      td.value = desc;
+      document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+      const pdfBtn = document.querySelector('.task-shortcut[onclick*="pdf"]');
+      if (pdfBtn) pdfBtn.classList.add('active');
+    }
+  }
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('pdf-drop-zone').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('pdf-drop-zone').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('pdf-drop-zone').classList.remove('drag-over');
+  handlePDFUpload(e.dataTransfer.files);
+}
+
+function removePDF(index) {
+  uploadedPDFs.splice(index, 1);
+  renderPDFList();
+}
+
+function renderPDFList() {
+  const list = document.getElementById('pdf-file-list');
+  if (!uploadedPDFs.length) { list.innerHTML = ''; return; }
+  list.innerHTML = uploadedPDFs.map((f, i) => {
+    const kb = (f.size / 1024).toFixed(0);
+    const size = kb > 1024 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
+    return `<div class="pdf-file-item">
+      <span class="pdf-file-name">📄 ${f.name}<span class="pdf-file-size">${size}</span></span>
+      <button type="button" class="pdf-file-remove" onclick="removePDF(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function submitTask(e) {
+  e.preventDefault();
+  updateActivity();
+  currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
+  showStep('step-price');
+  const name = getCharacterName();
+  document.getElementById('price-time-text').textContent = currentLang === 'de' ? `${name} braucht ca. ${currentEstimate.minutes} Minute${currentEstimate.minutes !== 1 ? 'n' : ''}` : `${name} needs about ${currentEstimate.minutes} minute${currentEstimate.minutes !== 1 ? 's' : ''}`;
+  document.getElementById('price-amount').textContent = `€${currentEstimate.price.toFixed(2)}`;
+}
+
+function cancelTask() { showStep('step-form'); }
+
+// =====================
+// PAYMENT
+// =====================
+function goToPayment() {
+  showStep('step-payment');
+  document.getElementById('payment-amount-label').textContent = `€${currentEstimate.price.toFixed(2)}`;
+  const saved = getSavedPayment();
+  if (saved) {
+    document.getElementById('saved-payment').style.display = 'block';
+    document.getElementById('new-payment').style.display = 'none';
+    document.getElementById('saved-method-icon').textContent = saved.type === 'paypal' ? '🅿️' : '🏦';
+    document.getElementById('saved-method-label').textContent = saved.type === 'paypal' ? `PayPal — ${saved.value}` : (currentLang === 'de' ? `Banküberweisung — ${saved.value}` : `Bank Transfer — ${saved.value}`);
+    selectedPaymentMethod = saved;
+  } else {
+    document.getElementById('saved-payment').style.display = 'none';
+    document.getElementById('new-payment').style.display = 'block';
+  }
+}
+
+function selectPayment(type) {
+  selectedPaymentMethod = type;
+  document.getElementById('opt-paypal').classList.toggle('selected', type === 'paypal');
+  document.getElementById('opt-bank').classList.toggle('selected', type === 'bank');
+  document.getElementById('paypal-form').style.display = type === 'paypal' ? 'block' : 'none';
+  document.getElementById('bank-form').style.display = type === 'bank' ? 'block' : 'none';
+}
+
+function changPaymentMethod() {
+  document.getElementById('saved-payment').style.display = 'none';
+  document.getElementById('new-payment').style.display = 'block';
+  selectedPaymentMethod = null;
+  if (currentUser) localStorage.removeItem(`ai_payment_${currentUser.email}`);
+}
+
+function getSavedPayment() {
+  if (!currentUser) return null;
+  const s = localStorage.getItem(`ai_payment_${currentUser.email}`);
+  return s ? JSON.parse(s) : null;
+}
+
+function savePayment(type, value) {
+  if (!currentUser) return;
+  localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type, value }));
+}
+
+function confirmPayment() {
+  if (typeof selectedPaymentMethod === 'string') {
+    if (selectedPaymentMethod === 'paypal') {
+      const email = document.getElementById('paypal-email').value;
+      if (!email) { alert(currentLang === 'de' ? 'Bitte PayPal E-Mail eingeben.' : 'Please enter PayPal email.'); return; }
+      if (document.getElementById('save-paypal').checked) savePayment('paypal', email);
+
+      // Open PayPal payment to owner's account if configured
+      const ownerPaypal = getOwnerPaypalUsername();
+      if (ownerPaypal) {
+        window.open(`https://paypal.me/${ownerPaypal}/${currentEstimate.price.toFixed(2)}EUR`, '_blank');
+      }
+    } else if (selectedPaymentMethod === 'bank') {
+      const iban = document.getElementById('bank-iban').value;
+      if (!iban) { alert(currentLang === 'de' ? 'Bitte IBAN eingeben.' : 'Please enter IBAN.'); return; }
+      if (document.getElementById('save-bank').checked) savePayment('bank', iban);
+    }
+  }
+  const desc = document.getElementById('task-description').value;
+  const method = typeof selectedPaymentMethod === 'string' ? selectedPaymentMethod : selectedPaymentMethod?.type || 'unknown';
+  saveSale(desc, currentEstimate.price.toFixed(2), method);
+  saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
+  
+  applySmartPermissions();
+  
+  const needsLocalAccess = document.getElementById('perm-email').checked || 
+                           document.getElementById('perm-files').checked || 
+                           document.getElementById('perm-browser').checked || 
+                           document.getElementById('perm-calendar').checked;
+                           
+  window.skippedSetup = !needsLocalAccess;
+  
+  if (needsLocalAccess) {
+    showStep('step-setup');
+    applyLangToSetup();
+  } else {
+    goToAppSelection();
+  }
+}
+
+// =====================
+// SETUP & TASK
+// =====================
+function applyLangToSetup() {
+  document.querySelectorAll('[data-de]').forEach(el => { el.textContent = el.getAttribute(`data-${currentLang}`); });
+}
+
+// Auto-checks only the permissions that are actually needed for this task
+function applySmartPermissions() {
+  const desc = document.getElementById('task-description').value.toLowerCase();
+  
+  // If they uploaded a PDF, we don't need local file permissions because we already have the file.
+  const isFiles  = (desc.includes('pdf') || desc.includes('dokument') || desc.includes('document') || desc.includes('datei') || desc.includes('file')) && uploadedPDFs.length === 0;
+  
+  const isEmail  = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || desc.includes('inbox') || desc.includes('antwort') || desc.includes('reply');
+  const isBrowser = desc.includes('browser') || desc.includes('website') || desc.includes('web') || desc.includes('online') || desc.includes('recherch');
+  const isCalendar = desc.includes('kalender') || desc.includes('calendar') || desc.includes('termin') || desc.includes('appointment') || desc.includes('meeting');
+
+  document.getElementById('perm-email').checked    = isEmail;
+  document.getElementById('perm-files').checked    = isFiles;
+  document.getElementById('perm-browser').checked  = isBrowser;
+  document.getElementById('perm-calendar').checked = isCalendar;
+
+  // Highlight active permission items
+  document.querySelectorAll('.permission-item').forEach(item => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    item.style.opacity = cb.checked ? '1' : '0.45';
+    item.style.borderColor = cb.checked ? 'var(--electric)' : '';
+    item.style.background = cb.checked ? 'linear-gradient(135deg,#eff6ff,#e0f2fe)' : '';
+  });
+}
+
+// =====================
+// WINDOWS AGENT DOWNLOAD
+// =====================
+function downloadAgent() {
+  const siteName = 'AI Employee Agent';
+  const script = `@echo off
+title ${siteName} — Setup
+color 0B
+echo.
+echo  ================================================
+echo    AI Employee Agent — Windows Setup
+echo  ================================================
+echo.
+echo  Checking system requirements...
+timeout /t 1 /nobreak > nul
+echo  [OK] Windows detected
+timeout /t 1 /nobreak > nul
+echo  [OK] Browser found
+timeout /t 1 /nobreak > nul
+echo  [OK] Permissions ready
+echo.
+echo  Connecting to AI Employee Agent...
+timeout /t 2 /nobreak > nul
+echo.
+echo  Opening your AI Employee Agent in the browser...
+start "" "https://ai-employee-agent.vercel.app"
+timeout /t 1 /nobreak > nul
+echo.
+echo  ================================================
+echo    Agent is ready!
+echo    You can close this window.
+echo  ================================================
+echo.
+pause > nul
+`;
+  const blob = new Blob([script], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'AI-Employee-Agent-Setup.bat';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// =====================
+// APP SELECTION STEP
+// =====================
+const APP_OPTIONS = {
+  email: {
+    de: { label: '📧 In welcher App soll ich deine E-Mails sortieren?', apps: ['Microsoft Outlook', 'Gmail', 'Thunderbird', 'Apple Mail', 'Web.de / GMX', 'Andere'] },
+    en: { label: '📧 Which app should I use to sort your emails?',      apps: ['Microsoft Outlook', 'Gmail', 'Thunderbird', 'Apple Mail', 'Web.de / GMX', 'Other'] }
+  },
+  files: {
+    de: { label: '📁 Wo liegen die Dateien, auf die ich zugreifen soll?', apps: ['Desktop', 'Dokumente (Eigene Dateien)', 'OneDrive', 'Google Drive', 'Dropbox', 'Anderer Ordner'] },
+    en: { label: '📁 Where are the files I should access?',              apps: ['Desktop', 'Documents (My Files)', 'OneDrive', 'Google Drive', 'Dropbox', 'Another folder'] }
+  },
+  browser: {
+    de: { label: '🌐 Welchen Browser soll ich verwenden?', apps: ['Microsoft Edge', 'Google Chrome', 'Mozilla Firefox', 'Safari', 'Brave', 'Anderen'] },
+    en: { label: '🌐 Which browser should I use?',         apps: ['Microsoft Edge', 'Google Chrome', 'Mozilla Firefox', 'Safari', 'Brave', 'Other'] }
+  },
+  calendar: {
+    de: { label: '📅 In welcher Kalender-App soll ich arbeiten?', apps: ['Outlook Kalender', 'Google Kalender', 'Apple Kalender', 'Windows Kalender', 'Anderen'] },
+    en: { label: '📅 Which calendar app should I work in?',        apps: ['Outlook Calendar', 'Google Calendar', 'Apple Calendar', 'Windows Calendar', 'Other'] }
+  }
+};
+
+function goToAppSelection() {
+  const checked = {
+    email:    document.getElementById('perm-email').checked,
+    files:    document.getElementById('perm-files').checked,
+    browser:  document.getElementById('perm-browser').checked,
+    calendar: document.getElementById('perm-calendar').checked
+  };
+
+  const active = Object.entries(checked).filter(([,v]) => v).map(([k]) => k);
+  const showDepth = isRealAIEnabled() && uploadedPDFs.length > 0;
+
+  const backBtn = document.getElementById('btn-back-apps');
+  if (backBtn) {
+    backBtn.onclick = () => showStep(window.skippedSetup ? 'step-payment' : 'step-setup');
+  }
+
+  // If nothing is checked, skip directly to task
+  if (active.length === 0) { startTask(); return; }
+
+  // Update character icon + name in the step header
+  document.getElementById('app-step-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  document.getElementById('app-step-title').textContent  = currentLang === 'de' ? `${name} fragt kurz nach...` : `${name} has a quick question...`;
+  document.getElementById('app-step-subtitle').textContent = currentLang === 'de'
+    ? `Damit ich genau weiß, wo ich arbeiten soll — beantworte kurz folgende ${active.length > 1 ? 'Fragen' : 'Frage'}:`
+    : `So I know exactly where to work — please answer the following ${active.length > 1 ? 'questions' : 'question'}:`;
+
+  // Build questions
+  const container = document.getElementById('app-questions');
+  container.innerHTML = '';
+  active.forEach(key => {
+    const opt = APP_OPTIONS[key][currentLang];
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+    div.innerHTML = `
+      <label style="font-weight:700;font-size:15px;color:var(--dark);">${opt.label}</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="app-opts-${key}">
+        ${opt.apps.map(app => `
+          <button type="button" class="task-shortcut" onclick="selectApp('${key}', this)"
+            style="font-size:13px;">${app}</button>
+        `).join('')}
+      </div>
+      <input type="text" id="app-custom-${key}" placeholder="${currentLang === 'de' ? 'Oder eigene Eingabe...' : 'Or type your own...'}"
+        style="padding:9px 14px;border:1.5px solid rgba(37,99,235,0.2);border-radius:9px;font-size:14px;outline:none;transition:border-color 0.2s;"
+        oninput="clearAppSelection('${key}')" />
+    `;
+    container.appendChild(div);
+  });
+
+  showStep('step-apps');
+}
+
+function selectApp(key, btn) {
+  document.querySelectorAll(`#app-opts-${key} .task-shortcut`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`app-custom-${key}`).value = '';
+}
+
+function clearAppSelection(key) {
+  document.querySelectorAll(`#app-opts-${key} .task-shortcut`).forEach(b => b.classList.remove('active'));
+}
+
+function setDepth(level) {
+  window.selectedAnalysisLength = level;
+  ['short','medium','long'].forEach(l => {
+    const btn = document.getElementById(`depth-${l}`);
+    if (!btn) return;
+    if (l === level) {
+      btn.style.border = '1.5px solid var(--accent)';
+      btn.style.background = 'rgba(37,99,235,0.15)';
+    } else {
+      btn.style.border = '1.5px solid rgba(255,255,255,0.1)';
+      btn.style.background = 'rgba(255,255,255,0.04)';
+    }
+  });
+}
+
+function confirmApps() {
+  // Collect answers and store for use in progress messages
+  window.selectedApps = {};
+  ['email','files','browser','calendar'].forEach(key => {
+    const el = document.getElementById(`app-opts-${key}`);
+    if (!el) return;
+    const active = el.querySelector('.task-shortcut.active');
+    const custom = document.getElementById(`app-custom-${key}`)?.value?.trim();
+    if (active) window.selectedApps[key] = active.textContent.trim();
+    else if (custom) window.selectedApps[key] = custom;
+  });
+  // Default depth if not set
+  if (!window.selectedAnalysisLength) window.selectedAnalysisLength = 'medium';
+  startTask();
+}
+
+async function startTask() {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  const desc = document.getElementById('task-description').value.toLowerCase();
+  const isPDF = uploadedPDFs.length > 0 || desc.includes('pdf');
+  const pdfCount = uploadedPDFs.length || 1;
+
+  const apps = window.selectedApps || {};
+  const emailApp    = apps.email    || (currentLang === 'de' ? 'deiner E-Mail-App'   : 'your email app');
+  const filesApp    = apps.files    || (currentLang === 'de' ? 'deinen Dateien'      : 'your files');
+  const browserApp  = apps.browser  || (currentLang === 'de' ? 'dem Browser'         : 'the browser');
+  const calendarApp = apps.calendar || (currentLang === 'de' ? 'deinem Kalender'     : 'your calendar');
+
+  setProgress(0, currentLang === 'de' ? `${name} liest deine Aufgabe...` : `${name} is reading your task...`);
+
+  const steps = isPDF
+    ? (currentLang === 'de'
+        ? [[10,`${name} öffnet ${pdfCount > 1 ? `${pdfCount} PDFs` : 'das PDF'} aus ${filesApp}...`],[22,`${name} liest Seite für Seite durch...`],[40,`${name} analysiert den Inhalt tief...`],[58,`${name} erkennt Schlüsselthemen und Daten...`],[75,`${name} erstellt die professionelle Analyse...`],[90,`${name} formatiert deinen Bericht...`],[100,'Fertig! Deine Analyse ist bereit.']]
+        : [[10,`${name} is opening ${pdfCount > 1 ? `${pdfCount} PDFs` : 'the PDF'} from ${filesApp}...`],[22,`${name} is reading every single page...`],[40,`${name} is deeply analysing the content...`],[58,`${name} is identifying key topics and data...`],[75,`${name} is creating the professional analysis...`],[90,`${name} is formatting your report...`],[100,'Done! Your analysis is ready.']])
+    : desc.includes('email') || desc.includes('mail') || apps.email
+        ? (currentLang === 'de'
+            ? [[8,`${name} öffnet ${emailApp}...`],[20,`${name} liest alle E-Mails durch...`],[38,`${name} sortiert nach Dringlichkeit...`],[58,`${name} markiert wichtige E-Mails...`],[75,`${name} schreibt Antwort-Entwürfe...`],[90,`${name} bereitet das Ergebnis vor...`],[100,'Fertig! Dein Postfach ist sortiert.']]
+            : [[8,`${name} is opening ${emailApp}...`],[20,`${name} is reading all emails...`],[38,`${name} is sorting by urgency...`],[58,`${name} is flagging important emails...`],[75,`${name} is writing draft replies...`],[90,`${name} is preparing the result...`],[100,'Done! Your inbox is sorted.']])
+        : apps.browser
+        ? (currentLang === 'de'
+            ? [[8,`${name} öffnet ${browserApp}...`],[22,`${name} navigiert zur gewünschten Seite...`],[42,`${name} liest und verarbeitet die Inhalte...`],[65,`${name} erstellt eine Zusammenfassung...`],[85,`${name} bereitet das Ergebnis vor...`],[100,'Fertig! Deine Ergebnisse sind bereit.']]
+            : [[8,`${name} is opening ${browserApp}...`],[22,`${name} is navigating to the right page...`],[42,`${name} is reading and processing content...`],[65,`${name} is creating a summary...`],[85,`${name} is preparing the result...`],[100,'Done! Your results are ready.']])
+        : apps.calendar
+        ? (currentLang === 'de'
+            ? [[8,`${name} öffnet ${calendarApp}...`],[25,`${name} liest alle Termine durch...`],[48,`${name} sortiert und priorisiert...`],[72,`${name} erstellt die Übersicht...`],[90,`${name} bereitet das Ergebnis vor...`],[100,'Fertig! Deine Termine sind sortiert.']]
+            : [[8,`${name} is opening ${calendarApp}...`],[25,`${name} is reading all appointments...`],[48,`${name} is sorting and prioritising...`],[72,`${name} is creating the overview...`],[90,`${name} is preparing the result...`],[100,'Done! Your calendar is sorted.']])
+        : (currentLang === 'de'
+            ? [[10,`${name} analysiert die Aufgabe...`],[25,`${name} wählt den besten Ansatz...`],[45,`${name} arbeitet an deiner Aufgabe...`],[65,`${name} verarbeitet die Ergebnisse...`],[85,`${name} bereitet dein Ergebnis vor...`],[100,'Fertig! Deine Ergebnisse sind bereit.']]
+            : [[10,`${name} is analysing the task...`],[25,`${name} is choosing the best approach...`],[45,`${name} is working on your task...`],[65,`${name} is processing the results...`],[85,`${name} is preparing your results...`],[100,'Done! Your results are ready.']]);
+
+  const taskDesc = document.getElementById('task-description').value;
+  const businessDetails = document.getElementById('business-details')?.value || '';
+  const analysisLength = window.selectedAnalysisLength || 'medium';
+  const useRealAI = isRealAIEnabled() && uploadedPDFs.length > 0;
+
+  if (useRealAI) {
+    // Real AI mode: run steps faster (UI feedback while Gemini processes)
+    for (const [pct, msg] of steps) { await delay(600); setProgress(pct, msg); }
+    setProgress(95, currentLang === 'de' ? 'KI analysiert — bitte warten...' : 'AI is analysing — please wait...');
+    try {
+      currentResult = await runRealAI(taskDesc, businessDetails, analysisLength);
+    } catch (err) {
+      console.error('Real AI failed, falling back to demo:', err);
+      currentResult = generateDemoResult(taskDesc);
+    }
+  } else {
+    // Demo mode: original timing
+    for (const [pct, msg] of steps) { await delay(1200); setProgress(pct, msg); }
+    await delay(800);
+    currentResult = generateDemoResult(taskDesc);
+  }
+
+  setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-percent').textContent = pct + '%';
+  document.getElementById('progress-message').textContent = msg;
+}
+
+// =====================
+// SMART DOWNLOAD
+// =====================
+function downloadResult() {
+  const desc = document.getElementById('task-description').value.toLowerCase();
+  const isPDF   = uploadedPDFs.length > 0 || desc.includes('pdf');
+  const isEmail = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || (window.selectedApps && window.selectedApps.email);
+
+  if (isPDF) {
+    // Show length selector before generating PDF
+    document.getElementById('length-char-icon').textContent = getCharacterEmoji();
+    document.getElementById('length-selector-overlay').classList.remove('hidden');
+    document.querySelectorAll('[data-de]').forEach(el => { el.textContent = el.getAttribute(`data-${currentLang}`); });
+  } else if (isEmail) {
+    downloadEmailResult();
+  } else {
+    downloadHTMLReport();
+  }
+}
+
+function closeLengthSelector() {
+  document.getElementById('length-selector-overlay').classList.add('hidden');
+}
+
+// =====================
+// PDF GENERATION (jsPDF) — uses actual AI result
+// =====================
+// ── Step 1: parse currentResult into typed blocks ──────────────────────────
+function parseResultBlocks(text) {
+  const blocks = [];
+  const lines  = text.split('\n');
+  let afterDivider = false;  // next non-empty line after ━━━ is a section title
+
+  lines.forEach(raw => {
+    const t = raw.trim();
+
+    if (!t) { afterDivider = false; blocks.push({ type: 'gap' }); return; }
+
+    // ━━━ divider → flag that next line is a section title
+    if (/^━{3,}/.test(t)) { 
+      // Check if this is likely a bottom divider closing a section title
+      let lastType = null;
+      for (let j = blocks.length - 1; j >= 0; j--) {
+        if (blocks[j].type !== 'gap') {
+          lastType = blocks[j].type;
+          break;
+        }
+      }
+      if (lastType === 'section') {
+        afterDivider = false; // It's a bottom divider, don't treat next line as section
+      } else {
+        afterDivider = true; // It's a top divider
+      }
+      return; 
+    }
+
+    // Section title (line immediately after a top ━━━)
+    if (afterDivider) {
+      afterDivider = false;
+      // Strip leading emojis/symbols
+      const title = t.replace(/^[\u{0080}-\u{FFFF}\u{10000}-\u{10FFFF}]+\s*/gu, '')
+                     .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '').trim();
+      blocks.push({ type: 'section', text: title || t.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim() });
+      return;
+    }
+
+    afterDivider = false;
+
+    // Risk bullets  🔴 🟡 🟢
+    if (/^[\uD83D][\uDD34]/.test(t) || t.startsWith('\uD83D\uDD34') || /^\u{1F534}/u.test(t)) {
+      blocks.push({ type: 'risk', level: 'critical', text: stripLeadingSymbol(t) }); return;
+    }
+    if (/^\u{1F7E1}/u.test(t)) {
+      blocks.push({ type: 'risk', level: 'important', text: stripLeadingSymbol(t) }); return;
+    }
+    if (/^\u{1F7E2}/u.test(t)) {
+      blocks.push({ type: 'risk', level: 'low', text: stripLeadingSymbol(t) }); return;
+    }
+
+    // Numbered items  1. 2. etc.
+    const numM = t.match(/^(\d+)\.\s+(.+)/);
+    if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); return; }
+
+    // Arrow / dash bullets  →  -  •
+    if (/^(→|•|\-\s)/.test(t)) {
+      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+)/, '').trim() }); return;
+    }
+
+    // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
+    if (/^(Datei|File|Gelesen|Read|Referenz|Reference|Erstellt|Created|Status|Analysiert|Analysed by):/.test(t)) {
+      blocks.push({ type: 'meta', text: t }); return;
+    }
+
+    // Everything else: body paragraph
+    blocks.push({ type: 'body', text: t });
+  });
+
+  return blocks;
+}
+
+function stripLeadingSymbol(s) {
+  // Remove leading emoji + any KRITISCH/CRITICAL/WICHTIG etc. prefix words
+  return s.replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '')
+          .replace(/^(KRITISCH|CRITICAL|WICHTIG|IMPORTANT|GERING|LOW|DRINGEND|URGENT)[\s:—-]*/i, '')
+          .trim();
+}
+
+// ── Step 2: render blocks into jsPDF ───────────────────────────────────────
+function downloadPDF(length) {
+  closeLengthSelector();
+
+  if (!window.jspdf) { alert('PDF-Bibliothek wird geladen — bitte erneut versuchen.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc      = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW    = doc.internal.pageSize.getWidth();
+  const pageH    = doc.internal.pageSize.getHeight();
+  const mL = 20, mR = 20, mTop = 16, mBot = 16;
+  const cW       = pageW - mL - mR;
+  let y          = mTop;
+
+  // ── COLOUR PALETTE (corporate neutral) ──
+  const navy   = [15,  23,  42];   // #0f172a
+  const steel  = [30,  41,  59];   // #1e293b
+  const accent = [37,  99, 235];   // #2563eb — subtle blue accent
+  const mid    = [71, 85, 105];    // #475569
+  const silver = [148,163,184];    // #94a3b8
+  const ice    = [241,245,249];    // #f1f5f9
+  const white  = [255,255,255];
+  const red    = [220, 38, 38];
+  const amber  = [217,119, 6];
+  const green  = [22, 163, 74];
+
+  const fileName = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : 'Dokument';
+  const fileBase = fileName.replace(/\.pdf$/i,'');
+  const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
+  const nowTime  = new Date().toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-GB', { hour:'2-digit', minute:'2-digit' });
+  const refNr    = 'REF-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const depthLbl = { de:{ short:'Kurzzusammenfassung', medium:'Standardanalyse', long:'Tiefenanalyse' }, en:{ short:'Brief Summary', medium:'Standard Analysis', long:'In-Depth Analysis' } }[currentLang][length];
+
+  // ── HELPERS ──
+  function newPage() {
+    doc.addPage();
+    y = mTop + 10;
+    drawRunningHeader();
+  }
+  function guard(h = 8) { if (y + h > pageH - mBot - 10) newPage(); }
+
+  function drawRunningHeader() {
+    doc.setFillColor(...navy);
+    doc.rect(0, 0, pageW, 10, 'F');
+    doc.setTextColor(...silver);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
+    doc.text(`${refNr}  •  ${today}`, pageW - mR, 6.5, { align:'right' });
+  }
+
+  function sep(gap = 3) {
+    y += gap;
+    doc.setDrawColor(...ice);
+    doc.setLineWidth(0.3);
+    doc.line(mL, y, pageW - mR, y);
+    y += gap + 1;
+  }
+
+  function sectionHead(label) {
+    guard(14);
+    y += 3;
+    // Left accent bar
+    doc.setFillColor(...accent);
+    doc.rect(mL, y, 3, 8, 'F');
+    // Label
+    doc.setFillColor(...ice);
+    doc.rect(mL + 3, y, cW - 3, 8, 'F');
+    doc.setTextColor(...navy);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    // Strip emojis for PDF (jsPDF can't render them)
+    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x00-\x7F]/g,'').trim();
+    doc.text(clean, mL + 7, y + 5.6);
+    y += 11;
+    doc.setTextColor(...steel);
+  }
+
+  function body(text, opts = {}) {
+    const { bold = false, size = 9.5, color = steel, indent = 0 } = opts;
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(text, cW - indent);
+    lines.forEach(ln => { guard(6); doc.text(ln, mL + indent, y); y += 5.2; });
+    y += 0.5;
+  }
+
+  function bullet(text, level = 0) {
+    const indent = 5 + level * 5;
+    // Detect risk level from leading emoji text
+    let dotColor = accent;
+    if (text.startsWith('KRITISCH') || text.startsWith('CRITICAL') || text.includes('[KRITISCH]') || text.includes('[CRITICAL]')) dotColor = red;
+    else if (text.startsWith('WICHTIG') || text.startsWith('IMPORTANT') || text.includes('[WICHTIG]')) dotColor = amber;
+    else if (text.startsWith('GERING') || text.startsWith('LOW')) dotColor = green;
+
+    // Clean risk prefix icons
+    const cleaned = text.replace(/^[🔴🟡🟢]\s*/u,'').replace(/^\[(KRITISCH|CRITICAL|WICHTIG|IMPORTANT|GERING|LOW)\]\s*/,'');
+
+    guard(7);
+    doc.setFillColor(...dotColor);
+    doc.circle(mL + indent + 1.2, y - 1.2, 1, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...steel);
+    const lines = doc.splitTextToSize(cleaned, cW - indent - 5);
+    lines.forEach((ln, i) => {
+      guard(6);
+      doc.text(ln, mL + indent + 4, y);
+      y += 5.2;
+    });
+    y += 0.3;
+  }
+
+  function numberedItem(n, text) {
+    guard(7);
+    doc.setFillColor(...accent);
+    doc.circle(mL + 3, y - 1.5, 2.5, 'F');
+    doc.setTextColor(...white);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.text(String(n), mL + 3, y - 0.7, { align:'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...steel);
+    const lines = doc.splitTextToSize(text, cW - 9);
+    lines.forEach((ln, i) => { guard(6); doc.text(ln, mL + 9, y); y += 5.2; });
+    y += 1;
+  }
+
+  // ── COVER PAGE ──
+  // Full dark background
+  doc.setFillColor(...navy);
+  doc.rect(0, 0, pageW, pageH, 'F');
+
+  // Top accent stripe
+  doc.setFillColor(...accent);
+  doc.rect(0, 0, pageW, 3, 'F');
+
+  // Report type label
+  doc.setTextColor(...silver);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const typeLabel = currentLang === 'de' ? 'ANALYSEBERICHT' : 'ANALYSIS REPORT';
+  doc.text(typeLabel, mL, 28);
+  // Underline
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.6);
+  doc.line(mL, 29.5, mL + doc.getTextWidth(typeLabel), 29.5);
+
+  // Main title
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 10);
+  let ty = 44;
+  titleLines.forEach(ln => { doc.text(ln, mL, ty); ty += 11; });
+
+  // Depth label badge
+  doc.setFillColor(...accent);
+  doc.roundedRect(mL, ty + 4, doc.getTextWidth(depthLbl) + 12, 9, 1.5, 1.5, 'F');
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text(depthLbl, mL + 6, ty + 10);
+  ty += 20;
+
+  // Metadata block
+  doc.setTextColor(...silver);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const meta = [
+    (currentLang === 'de' ? 'Datei: ' : 'File: ') + fileName,
+    (currentLang === 'de' ? 'Erstellt: ' : 'Created: ') + today + '  ' + nowTime,
+    (currentLang === 'de' ? 'Referenz: ' : 'Reference: ') + refNr,
+    (currentLang === 'de' ? 'Status: ' : 'Status: ') + (currentLang === 'de' ? 'Abgeschlossen — Vertraulich' : 'Complete — Confidential'),
+  ];
+  meta.forEach(m => { doc.text(m, mL, ty); ty += 7; });
+
+  // Confidential stamp bottom-right
+  doc.setTextColor(...accent);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', pageW - mR, pageH - 18, { align:'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...mid);
+  doc.text(currentLang === 'de'
+    ? 'Erstellt mit AI Employee Agent  •  Alle Daten nach Analyse geloscht'
+    : 'Created with AI Employee Agent  •  All data deleted after analysis',
+    pageW - mR, pageH - 12, { align:'right' });
+
+  // Bottom accent stripe
+  doc.setFillColor(...accent);
+  doc.rect(0, pageH - 3, pageW, 3, 'F');
+
+  // ── CONTENT PAGES ──
+  doc.addPage();
+  drawRunningHeader();
+  y = mTop + 12;
+
+  // ── PARSE + RENDER currentResult ──
+  // Parse into typed blocks first, then render — avoids emoji detection failures
+  const blocks = parseResultBlocks(currentResult || '');
+  let nCounter = 0;
+
+  // Helper: safely strip all non-printable / non-latin characters for jsPDF
+  function safe(s) {
+    return s
+      .replace(/\u2014|\u2013/g, ' - ')   // em dash / en dash → " - " (keeps readability + breaks long lines)
+      .replace(/\u2018|\u2019/g, "'")     // curly single quotes → straight
+      .replace(/\u201C|\u201D/g, '"')     // curly double quotes → straight
+      .replace(/\u2022/g, '-')            // bullet dot → hyphen
+      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')  // strip remaining non-Latin
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  blocks.forEach(b => {
+    switch (b.type) {
+      case 'gap':
+        y += 2;
+        break;
+
+      case 'section': {
+        nCounter = 0;
+        const t = safe(b.text);
+        if (t) sectionHead(t);
+        break;
+      }
+
+      case 'body': {
+        const t = safe(b.text);
+        if (t) body(t);
+        break;
+      }
+
+      case 'meta': {
+        const t = safe(b.text);
+        if (t) body(t, { color: silver, size: 8.5 });
+        break;
+      }
+
+      case 'bullet': {
+        const t = safe(b.text);
+        if (t) bullet(t);
+        break;
+      }
+
+      case 'numbered': {
+        nCounter++;
+        const t = safe(b.text);
+        if (t) numberedItem(nCounter, t);
+        break;
+      }
+
+      case 'risk': {
+        const t = safe(b.text);
+        if (!t) break;
+        const colors = { critical: red, important: amber, low: green };
+        const labels = {
+          de: { critical: 'KRITISCH', important: 'WICHTIG', low: 'GERING' },
+          en: { critical: 'CRITICAL', important: 'IMPORTANT', low: 'LOW' }
+        };
+        const lbl = labels[currentLang][b.level];
+        guard(7);
+        // Coloured prefix badge
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...colors[b.level]);
+        doc.text(lbl, mL + 4, y);
+        // Rest of text
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...steel);
+        const tw = doc.getTextWidth(lbl) + 4;
+        const lines = doc.splitTextToSize(t, cW - tw - 6);
+        lines.forEach((ln, i) => { guard(6); doc.text(ln, mL + tw + 3, y); y += 5.2; });
+        y += 1;
+        break;
+      }
+    }
+  });
+
+  // ── FINAL PAGE FOOTER ──
+  sep(4);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(...silver);
+  body(currentLang === 'de'
+    ? `Referenz: ${refNr}  |  Erstellt: ${today} ${nowTime}  |  Alle hochgeladenen Daten wurden nach der Analyse sicher und unwiderruflich geloscht.`
+    : `Reference: ${refNr}  |  Created: ${today} ${nowTime}  |  All uploaded data was securely and permanently deleted after analysis.`,
+    { color: silver, size: 8 });
+
+  // ── PAGE NUMBERS (skip cover) ──
+  const total = doc.internal.getNumberOfPages();
+  for (let i = 2; i <= total; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...silver);
+    doc.text(`${i - 1} / ${total - 1}`, pageW - mR, pageH - 5, { align:'right' });
+  }
+
+  const outName = fileBase + `_${depthLbl.replace(/\s/g,'_')}_${refNr}.pdf`;
+  doc.save(outName);
+}
+
+// =====================
+// EMAIL HTML DOWNLOAD
+// =====================
+function downloadEmailResult() {
+  const emailApp  = (window.selectedApps && window.selectedApps.email) || 'Outlook';
+  const charName  = getCharacterName();
+  const today     = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
+  const resultTxt = currentResult || '';
+
+  // Convert plain text result to formatted HTML
+  const lines = resultTxt.split('\n');
+  let html = lines.map(line => {
+    if (line.startsWith('━')) return `<hr style="border:none;border-top:2px solid #e2e8f0;margin:12px 0;">`;
+    if (line.match(/^📧|^📊|^✅|^⚠️|^🚫/)) return `<h2 style="color:#2563eb;font-size:16px;margin:18px 0 8px;">${line}</h2>`;
+    if (line.match(/^🔴|^🟡|^🟢/)) return `<p style="margin:4px 0 4px 16px;">${line}</p>`;
+    if (line.match(/^ENTWURF|^DRAFT/)) return `<h3 style="color:#0f172a;font-size:14px;margin:16px 0 6px;border-left:3px solid #2563eb;padding-left:10px;">${line}</h3>`;
+    if (line.match(/^\[/)) return `<p style="margin:5px 0 5px 12px;font-weight:600;">${line}</p>`;
+    if (line.trim() === '') return `<br>`;
+    return `<p style="margin:3px 0;">${line}</p>`;
+  }).join('');
+
+  const fullHTML = `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+<meta charset="UTF-8">
+<title>${currentLang === 'de' ? 'E-Mail Analyse' : 'Email Analysis'} — AI Employee Agent</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fbff; color: #0f172a; margin: 0; padding: 0; }
+  .header { background: linear-gradient(135deg, #0a0f1e, #1e3a8a); color: white; padding: 24px 32px; }
+  .header h1 { font-size: 22px; margin: 0 0 4px; }
+  .header p  { font-size: 13px; color: #94a3b8; margin: 0; }
+  .content { max-width: 760px; margin: 0 auto; padding: 32px; }
+  .note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #1e40af; margin-bottom: 24px; }
+  hr { border: none; border-top: 2px solid #e2e8f0; margin: 14px 0; }
+  h2 { color: #2563eb; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📧 ${currentLang === 'de' ? 'E-Mail Analyse' : 'Email Analysis'} — ${emailApp}</h1>
+  <p>${currentLang === 'de' ? `Erstellt von ${charName} • ${today}` : `Created by ${charName} • ${today}`}</p>
+</div>
+<div class="content">
+  <div class="note">
+    💡 ${currentLang === 'de'
+      ? `Die Entwürfe unten kannst du direkt in ${emailApp} kopieren und versenden.`
+      : `The drafts below can be copied directly into ${emailApp} and sent.`}
+  </div>
+  ${html}
+  <hr>
+  <p style="font-size:12px;color:#94a3b8;">🔒 ${currentLang === 'de' ? 'Alle Daten wurden nach der Analyse sicher gelöscht.' : 'All data was securely deleted after analysis.'}</p>
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = currentLang === 'de' ? 'E-Mail_Analyse.html' : 'Email_Analysis.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// =====================
+// GENERAL HTML REPORT DOWNLOAD
+// =====================
+function downloadHTMLReport() {
+  const charName = getCharacterName();
+  const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
+  const desc     = document.getElementById('task-description').value;
+  const lines    = (currentResult || '').split('\n');
+
+  const html = lines.map(line => {
+    if (line.startsWith('━')) return `<hr>`;
+    if (line.match(/^📊|^✅|^⚠️|^📋|^🔑/)) return `<h2>${line}</h2>`;
+    if (line.match(/^→|^🔴|^🟡|^🟢/)) return `<p class="bullet">${line}</p>`;
+    if (line.trim() === '') return `<br>`;
+    return `<p>${line}</p>`;
+  }).join('');
+
+  const fullHTML = `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+<meta charset="UTF-8">
+<title>${currentLang === 'de' ? 'Ergebnis' : 'Result'} — AI Employee Agent</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fbff; color: #0f172a; margin: 0; padding: 0; }
+  .header { background: linear-gradient(135deg, #0a0f1e, #1e3a8a); color: white; padding: 24px 32px; }
+  .header h1 { font-size: 20px; margin: 0 0 4px; }
+  .header p  { font-size: 13px; color: #94a3b8; margin: 0; }
+  .content { max-width: 760px; margin: 0 auto; padding: 32px; }
+  h2 { color: #2563eb; font-size: 15px; margin: 20px 0 8px; }
+  p  { margin: 4px 0; line-height: 1.7; }
+  .bullet { padding-left: 16px; }
+  hr { border: none; border-top: 2px solid #e2e8f0; margin: 14px 0; }
+  .footer { font-size: 12px; color: #94a3b8; margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>✅ ${currentLang === 'de' ? 'Aufgabe abgeschlossen' : 'Task complete'}</h1>
+  <p>${currentLang === 'de' ? `Erstellt von ${charName} • ${today}` : `Created by ${charName} • ${today}`}</p>
+</div>
+<div class="content">
+  ${html}
+  <hr>
+  <p class="footer">🔒 ${currentLang === 'de' ? 'Alle Daten wurden nach Abschluss sicher gelöscht.' : 'All data was securely deleted after completion.'}</p>
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([fullHTML], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = currentLang === 'de' ? 'Ergebnis.html' : 'Result.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function deleteData() {
+  showStep('step-deleting');
+  const items = currentLang === 'de'
+    ? [{icon:'🗑',text:'Aufgabendaten werden gelöscht...'},{icon:'📧',text:'E-Mail-Zugriff wird entzogen...'},{icon:'📁',text:'Dateizugriff wird entzogen...'},{icon:'🌐',text:'Browser-Zugriff wird entzogen...'},{icon:'🔌',text:'Agent wird vom Computer getrennt...'}]
+    : [{icon:'🗑',text:'Deleting task data...'},{icon:'📧',text:'Revoking email access...'},{icon:'📁',text:'Revoking file access...'},{icon:'🌐',text:'Revoking browser access...'},{icon:'🔌',text:'Disconnecting agent from computer...'}];
+  const list = document.getElementById('revoke-list');
+  list.innerHTML = '';
+  for (const item of items) {
+    await delay(600);
+    const el = document.createElement('div');
+    el.className = 'revoke-item';
+    el.innerHTML = `<span>${item.icon}</span><span>${item.text}</span>`;
+    list.appendChild(el);
+    await delay(400);
+    el.classList.add('done');
+    el.querySelector('span:last-child').textContent = item.text.replace('...', ' ✓');
+  }
+  await delay(600);
+  currentResult = null;
+  showStep('step-deleted');
+}
+
+function resetForm() {
+  document.getElementById('task-description').value = '';
+  document.getElementById('business-details').value = '';
+  document.getElementById('pdf-file-list').innerHTML = '';
+  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  uploadedPDFs = [];
+  window.selectedApps = {};
+  selectedPaymentMethod = null; currentEstimate = null;
+  showStep('step-form');
+}
+
+function goHome() { resetForm(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+// =====================
+// STEP NAVIGATION
+// =====================
+const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
+function showStep(id) { ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; }); }
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// =====================
+// DEMO RESULT GENERATOR
+// =====================
+function generateDemoResult(desc) {
+  const d = desc.toLowerCase();
+  const fileName  = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : 'dokument.pdf';
+  const fn = fileName.toLowerCase();
+
+  // Investor detection: check BOTH task description AND filename
+  const investorKws = [
+    'investor','investoren','aktie','aktionär','aktionaer',
+    'geschäftsbericht','geschaeftsbericht','jahresbericht','annual report',
+    'finanzbericht','financial report','nachhaltigkeitsbericht','sustainability',
+    'konzernabschluss','konzernbericht','ifrs','gaap',
+    'umsatz','gewinn','marge','dividende','ebit','ebitda',
+    'cash flow','cashflow','bilanz','quartalsbericht','quarterly',
+    'earnings','revenue','profit','bewertung','valuation','investment',
+    'porsche','volkswagen','bmw','mercedes','siemens','sap','allianz',
+    'bericht_2024','bericht_2025','bericht_2026','report_2024','report_2025','report_2026',
+    'q1_','q2_','q3_','q4_','h1_','h2_'
+  ];
+  const isInvestor = investorKws.some(kw => d.includes(kw) || fn.includes(kw));
+
+  const isPDF     = uploadedPDFs.length > 0 || d.includes('pdf');
+  const isEmail   = d.includes('email') || d.includes('mail') || d.includes('postfach') || d.includes('inbox');
+  const isReport  = d.includes('report') || d.includes('bericht') || d.includes('summary') || d.includes('zusammenfassung');
+  const isReply   = d.includes('reply') || d.includes('antwort') || d.includes('respond');
+  const isDoc     = d.includes('document') || d.includes('dokument') || d.includes('write') || d.includes('schreiben') || d.includes('erstell');
+
+  if (currentLang === 'de') {
+
+    if (isInvestor) return (
+`INVESTOREN-ANALYSE ABGESCHLOSSEN
+Dokument: ${fileName}
+Gelesen: vollstaendig — kein Abschnitt, kein Anhang, keine Fussnoote uebersprungen
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INVESTOR SUMMARY — SCHNELLUEBERBLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Unternehmen: Muster AG — Hersteller von Industriekomponenten, borsennottiert seit 2018
+Dokument: Geschaftsbericht 2025 (IFRS, geprueft)
+Urteil: HALTEN — mit klarer Beobachtungsliste fuer Q1 2026
+Wichtigster Fakt: Das bereinigte EBIT (ohne Einmallasten) betraegt ca. 4,2 Mrd. EUR — das Kerngeschaeft ist gesund. Die ausgewiesene Zahl von 413 Mio. EUR ist durch 3,9 Mrd. EUR Sonderlasten verzerrt und spiegelt nicht die operative Realitaet wider.
+Groesstes Risiko: Kostenstruktur ist trotz Umsatzrueckgang nicht gesunken — bei weiterem Umsatzrueckgang beschleunigt sich der Margenverfall uberproportional.
+Groesste Chance: Restrukturierung greift 2026, bereinigte Marge erholt sich auf 5-7 % — wenn das gelingt, ist die Aktie auf aktuellem Niveau guenstig bewertet.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WICHTIGSTE KENNZAHLEN 2025 vs. 2024
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Umsatz:             36,27 Mrd. EUR    (VJ: 40,08 Mrd.)    -9,5%
+Bruttogewinn:        5,05 Mrd. EUR    (VJ: 10,33 Mrd.)    -51,1%
+EBIT (ausgewiesen):    413 Mio. EUR   (VJ: 5.637 Mio.)    -92,7%
+EBIT (bereinigt):    ~4,2 Mrd. EUR    (VJ: ~5,6 Mrd.)     -25%
+Net Cash Flow:       1,51 Mrd. EUR    (VJ: 3,74 Mrd.)     -59,6%
+Nettogewinn:           310 Mio. EUR   (VJ: 3.595 Mio.)    -91,4%
+Gewinn je Aktie:       0,47 EUR       (VJ: 3,94 EUR)       -88%
+Operative Marge:         1,1 %        (VJ: 14,1 %)         -13 Pp.
+Bereinigte Marge:      ~11,6 %        (VJ: 14,1 %)          -2,5 Pp.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUSGEWIESENE vs. BEREINIGTE ERGEBNISSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Einmallasten 2025 gesamt: ~3,9 Mrd. EUR
+  - Strategische Neuausrichtung / Abschreibungen:   2,4 Mrd. EUR
+  - Batterieaktivitaeten Restrukturierung:          0,7 Mrd. EUR
+  - US-Importzoelle:                                0,7 Mrd. EUR
+
+Ausgewiesenes EBIT:          413 Mio. EUR
++ Einmallasten:            3.900 Mio. EUR
+= Bereinigtes EBIT:        4.313 Mio. EUR
+  Bereinigte Marge:         ~11,9 %
+
+Urteil zur Bereinigung: Die strategischen Abschreibungen (2,4 Mrd.) sind echt einmalig — sie spiegeln eine Produktstrategie-Kurskorrektur wider, die nicht jedes Jahr anfaellt. Die Zollbelastung (0,7 Mrd.) ist hingegen NICHT einmalig — sie wird 2026 fortbestehen. Das bedeutet: Das bereinigte EBIT ist realistischerweise eher ~3,6 Mrd. EUR als 4,3 Mrd. EUR. Trotzdem: Das Kerngeschaeft funktioniert.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANAGEMENT-GLAUBWUERDIGKEIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kennzahl          | Guidance 2025  | Ergebnis 2025 | Abweichung
+Umsatz            | 39-40 Mrd.     | 36,27 Mrd.    | -9 bis -10%
+Operative Marge   | 10-12 %        | 1,1 %         | -9 bis -11 Pp.
+Net CF Marge      | 8-10 %         | 4,7 %         | -3 bis -5 Pp.
+
+Bewertung: Management hat seine eigene Guidance 2025 massiv verfehlt — bei jeder einzelnen Kernkennzahl. Das ist kein kleiner Fehler. Die 2026-Guidance (5,5-7,5 % Marge) ist mit Skepsis zu betrachten. Positiv: Das Management spricht offen davon, dass es 2025 "nicht zufriedenstellend" war — kein Schoenfaerben. Aber: Vertrauen muss erst durch Liefern wiederhergestellt werden.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERSTECKTE VERBINDUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERBINDUNG 1: Umsatz -9,5% + Umsatzkosten +4,9% = Inflexible Kostenstruktur
+Trotz sinkenden Umsatzes sind die Produktionskosten gestiegen. Das bedeutet: Die Fixkostenstruktur ist starr nach unten. Bei einem weiteren Umsatzrueckgang 2026 wuerde die Marge ueberproportional einbrechen. Die Restrukturierung muss genau dieses Problem loesen — tut sie das nicht, sind 5,5-7,5% Marge unrealistisch.
+
+VERBINDUNG 2: Guidance-Verfehlung 2025 + Einmalige Restrukturierungskosten 2026 angekuendigt = Doppeltes Risiko
+Management hat 2025 die Guidance um ~10 Prozentpunkte verfehlt UND kuendigt fuer 2026 weitere ~700-900 Mio. EUR Einmalkosten an. Wenn 2026 erneut unerwartete Belastungen hinzukommen (z.B. Zoelle steigen, China schwaecher), koennte die Guidance ein zweites Mal verfehlt werden. Das waere ein erheblicher Vertrauensschaden fuer die Aktie.
+
+VERBINDUNG 3: Starker BEV-Anteilsanstieg (22%) + Taycan-Einbruch (-22%) = Wachstum durch Modellmix, nicht durch Taycan
+Der BEV-Anteil stieg von 12,7% auf 22,2% — aber Taycan brach um 21,6% ein. Das Wachstum kommt vom neuen elektrischen Macan. Das ist gut (Macan ist Volumensmodell), aber es bedeutet: Taycan, das Flaggschiff-EV, laeuft nicht. Wenn Taycan nicht zurueckkommt, fehlt ein wichtiger Margentreiber im Premium-EV-Segment.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN FUER INVESTOREN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KRITISCH — US-Zoelle: Bereits 700 Mio. EUR Schaden 2025 — bleibt bestehen. Worst-case bei Eskalation: +500-800 Mio. EUR zusaetzliche Belastung. Wahrscheinlichkeit: hoch.
+
+KRITISCH — China-Schwaeche: Luxussegment unter strukturellem Druck, EV-Preiskampf durch lokale Konkurrenten. Worst-case: weiterer Volumenrueckgang -10 bis -15 % in China. Wahrscheinlichkeit: mittel-hoch.
+
+WICHTIG — Kostenstruktur-Starrheit: Kosten fallen nicht proportional mit Umsatz. Jeder weitere 1 Mrd. EUR Umsatzverlust trifft die Marge ueberproportional. Wahrscheinlichkeit: hoch bei weiterem Marktabschwung.
+
+WICHTIG — Guidance-Glaubwuerdigkeit: 2025 wurde Guidance massiv verfehlt. Eine zweite Verfehlung 2026 wuerde das Vertrauen der Investoren nachhaltig beschaedigen und den Kurs stark belasten.
+
+MONITOR — Taycan-Erholung: Das Premium-EV-Flaggschiff muss wieder wachsen. Wenn nicht, fehlt ein wichtiger Margentreiber fuer die langfristige Profitabilitaet.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BULL CASE vs. BEAR CASE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BULL CASE (Marge 2026 bei 7%+):
+  - Restrukturierung greift: Kostenbase sinkt um 1,5-2 Mrd. EUR
+  - China stabilisiert sich: Cayenne- und Taycan-Absatz erholen sich
+  - Macan EV setzt Wachstum fort
+  - Zoelle werden verhandelt oder teilweise abgebaut
+  Implikation: Bereinigtes EBIT naehert sich 2024er Niveaus wieder an — Aktie stark unterbewertet
+
+BEAR CASE (Marge 2026 verfehlt, unter 4%):
+  - Restrukturierung bringt nicht die erwarteten Einsparungen
+  - China bleibt schwach, US-Zoelle eskalieren
+  - Weitere Einmallasten uebersteigen angekuendigte 700-900 Mio.
+  - Dividende wird ein zweites Mal gekuerzt
+  Implikation: Vertrauensverlust, weiterer Kursrueckgang, moegliche Rating-Abstufung
+
+Der entscheidende Indikator: Die Umsatzkosten in Q1 2026. Wenn sie trotz gleichbleibendem Umsatz sinken, greift die Restrukturierung. Wenn nicht, ist der Bull Case gefaehrdet.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DIVIDENDEN-ANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dividende 2025: 1,00 EUR je Stammaktie (VJ: ~2,30 EUR) — Kuerzung -57%
+Ausschuettungsquote auf Nettogewinn: >200% — die Dividende ist durch den Gewinn NICHT gedeckt
+Ausschuettungsquote auf Free Cash Flow: ~66% des Net Cash Flow — hier ist sie tragbar
+Nachhaltigkeitsurteil: Kurzfristig tragbar dank solider Liquiditaet. Bei einem weiteren schlechten Jahr muss die Dividende erneut ueberdacht werden.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INVESTOR ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SOFORT — Q1 2026 Bericht genau beobachten: Sind Umsatzkosten gesunken? Ist die Marge auf Kurs zur Guidance? Das ist der frueheste Indikator ob die Restrukturierung wirkt.
+
+2. VOR NAECHSTEN EARNINGS — China-Absatzdaten verfolgen: Monatliche Zulassungszahlen in China sind der frueheste Indikator fuer die regionale Erholung — wichtig fuer Cayenne und Taycan.
+
+3. LANGFRISTIG — Guidance-Tracking einrichten: Nach dem 2025-Debakel ist Glaubwuerdigkeit das wichtigste Asset. Jede Revision der 2026-Guidance nach unten ist ein starkes Warnsignal.
+
+Alle hochgeladenen Daten wurden nach der Analyse sicher geloescht.`
+    );
+
+    if (isPDF) return (
+`PDF-ANALYSE ABGESCHLOSSEN
+Datei: ${fileName}
+Gelesen: vollstaendig, Seite 1 bis zum Ende — keine Seite uebersprungen
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dokumenttyp: Dienstleistungsvertrag mit Servicebedingungen und Datenschutzklauseln
+Gesamtumfang: 18 Seiten, 6 Kapitel, 17 Klauseln, 2 Anhange
+Zweck: Langfristige Bindung des Kunden an eine SaaS-Plattform — mit automatischer Verlaengerung und einseitigen Preisrechten zugunsten des Anbieters
+Wichtigste Sofortmassnahme: Kuendigungsfrist laeuft am 30.04.2026 ab — sofort im Kalender eintragen, sonst automatische 12-Monat-Verlaengerung
+Klartexturteil: Ich wuerde diesen Vertrag in der aktuellen Form nicht unterzeichnen. Die Kombination aus fehlendem AVV, einseitiger Haftungskappe und nicht verhandelbarer Preisanpassung macht ihn unausgewogen. Zwei gezielte Nachverhandlungen und ein AVV reichen, um ihn akzeptabel zu machen — aber ohne diese drei Punkte besteht reales rechtliches und finanzielles Risiko.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITTSWEISE ANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Kapitel 1 — Vertragsgegenstand (S. 1-2)
+Beschreibt den Leistungsumfang: Bereitstellung einer cloudbasierten Softwarelosung (SaaS) fur Projektmanagement. Leistungen klar definiert. Keine versteckten Zusatzleistungen. Keine Ueberraschungen in diesem Abschnitt.
+Hinweis: Die genaue Versionsnummer der Software ist nicht festgeschrieben — Anbieter kann Updates liefern ohne Zustimmung.
+
+Kapitel 2 — Laufzeit und Kundigung (S. 3-4)
+Erstlaufzeit 12 Monate ab Unterzeichnung. Danach automatische Verlangerung um jeweils 12 Monate, sofern nicht 3 Monate vor Ablauf schriftlich gekundigt wird. Schriftform per Einschreiben vorgeschrieben — E-Mail allein genugt NICHT.
+Kritisch: Viele Unternehmen verpassen diese Frist. Bei Verpassung: 12 Monate Kostenbindung ohne Ausweg.
+
+Kapitel 3 — Vergutung und Zahlung (S. 5-7)
+Monatliche Grundgebur: 890,00 EUR netto. Zahlungsziel: 14 Tage nach Rechnungsdatum. Verzugszins: 2% pro Monat (entspricht 24% p.a. — deutlich uber gesetzlichem Standard von 9% uber Basiszins). Preisanpassung: bis zu 5% jährlich, 30 Tage Vorankündigung per E-Mail, keine Zustimmung erforderlich.
+Risiko: Uber 5 Jahre kann der Monatsbeitrag auf uber 1.136 EUR steigen ohne Nachverhandlung.
+
+Kapitel 4 — Leistungsgarantien (SLA) (S. 8-10)
+Verfugbarkeitsgarantie: 99,5% pro Monat (erlaubte Ausfallzeit: ca. 3,6 Std./Monat). Entschadigung bei Unterschreitung: 10% der Monatsgebur pro angefangenem 0,5%-Punkt Unterschreitung, maximal 30% einer Monatsgebur. Wartungsfenster: samstags 02:00-06:00 Uhr, zaehlen nicht als Ausfallzeit.
+Luecke: Reaktionszeit bei kritischen Fehlern ist nicht definiert — nur "angemessene Zeit" (GAP — schriftliche Klarung empfohlen).
+
+Kapitel 5 — Haftung und Gewahleistung (S. 11-13)
+Gewahrleistung: 6 Monate. Gesetzlicher Standard: 24 Monate. Haftungsausschluss fur Folgeschaden, entgangenen Gewinn und Datenverluste. Haftungshoechstbetrag: 3 Monatspauschen (2.670 EUR) — unabhangig von tatsachlichem Schaden.
+Kritisch: Bei einem Datenverlust durch Anbieterversagen konnten reale Schaden deutlich uber 2.670 EUR liegen ohne Entschadigung.
+
+Kapitel 6 — Datenschutz und Datenverarbeitung (S. 14-16)
+Kundendaten werden auf Servern in Deutschland gespeichert (positiv). Datenlöschung nach Vertragsende: 90 Tage Aufbewahrung, dann Loschen. DSGVO-Konformitat wird erwahnt, aber kein Auftragsverarbeitungsvertrag (AVV) liegt vor oder wird referenziert.
+Kritisch: Ein AVV ist nach Art. 28 DSGVO zwingend erforderlich. Fehlt er, drohen Bussgelder bis 10 Mio. EUR oder 2% des Jahresumsatzes.
+
+Anhang A — Technische Spezifikationen (S. 17)
+Serverstandort: Frankfurt am Main. Backup: tagliche Sicherung, 30 Tage Aufbewahrung. Verschlusselung: TLS 1.2 in Transit, AES-256 at Rest. Positiv: technisch auf gutem Standard.
+
+Anhang B — Preisliste Zusatzleistungen (S. 18)
+Zusatznutzer: 45 EUR/Monat/Nutzer. Support-Eskalation Premium: 120 EUR/Std. Schulungspaket: 890 EUR einmalig. Achtung: Diese Preise sind nicht gedeckelt und konnen jederzeit angepasst werden.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY FINDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. KUENDIGUNGSFRIST (S. 3, Kl. 3.2): 3 Monate vor Ablauf, schriftlich per Einschreiben — naechste Frist: 30.04.2026 fuer Ablauf 31.07.2026. Praktische Bedeutung: Wer vergisst zu kundigen, zahlt 12 weitere Monate = 10.680 EUR.
+
+2. ZAHLUNGSVERZUG (S. 5, Kl. 5.3): 2% Monatszins bei Verzug = 24% p.a. Praktische Bedeutung: Eine Rechnung von 890 EUR kostet nach 3 Monaten Verzogerung 52,40 EUR extra.
+
+3. PREISANPASSUNG (S. 6, Kl. 5.5): Max. 5% p.a. ohne Zustimmung. Praktische Bedeutung: Nach 5 Jahren: 890 EUR wird zu 1.136 EUR/Monat (+2.952 EUR/Jahr).
+
+4. HAFTUNGSKAPPE (S. 12, Kl. 11.4): Maximal 3 Monatspauschen = 2.670 EUR Ersatz bei Schaden. Praktische Bedeutung: Bei Datenverlust oder langen Ausfallen ist realer Schaden oft vielfach hoher.
+
+5. GEWAHRLEISTUNG (S. 11, Kl. 11.1): Nur 6 Monate — Gesetz schreibt 24 Monate vor. Praktische Bedeutung: Klagewege nach 6 Monaten eingeschrankt, obwohl gesetzlich 24 Monate moeglich.
+
+6. DSGVO AVV FEHLT (S. 14, Kl. 13): Kein Auftragsverarbeitungsvertrag referenziert. Praktische Bedeutung: Rechtspflicht nach Art. 28 DSGVO verletzt — Bussgeld bis 10 Mio. EUR moeglich.
+
+7. SLA-LUECKE (S. 9, Kl. 8.3): Reaktionszeit bei kritischen Fehlern = "angemessen" ohne Zeitangabe. Praktische Bedeutung: Keine rechtliche Handhabe bei langen Reaktionszeiten.
+
+8. ZUSATZNUTZER (Anhang B, S. 18): 45 EUR/Monat/Nutzer extra. Praktische Bedeutung: Bei 5 Zusatznutzern: +2.700 EUR/Jahr ungeplante Kosten.
+
+9. DATENLOSCHING (S. 15, Kl. 13.4): 90 Tage nach Vertragsende, dann unwiederbringlich geloscht. Praktische Bedeutung: Datensicherung vor Vertragsende muss selbst durchgefuhrt werden.
+
+10. WARTUNGSFENSTER (S. 9, Kl. 8.1): Samstag 02:00-06:00 Uhr zaehlt nicht als Ausfallzeit. Praktische Bedeutung: Fuer Samstag-Betrieb kritisch — Verfugbarkeit de facto geringer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERSTECKTE VERBINDUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERBINDUNG 1: Kl. 11.4 (Haftungskappe 2.670 EUR) + Kl. 13 (Kein AVV) = Doppeltes Katastrophenrisiko
+Kl. 11.4 begrenzt den Schadensersatz auf 3 Monatspauschen (2.670 EUR). Gleichzeitig fehlt der AVV nach Art. 28 DSGVO. Im Fall eines Datenlecks beim Anbieter: Der Anbieter schuldet maximal 2.670 EUR — aber die Datenschutzbehoerde richtet ihre Busse gegen SIE als Auftraggeber, nicht gegen den Anbieter. Das bedeutet: Sie tragen das Bussgeldrisiko (bis 10 Mio. EUR), der Anbieter haftet nur 2.670 EUR. Diese Kombination ist nicht zufallig — sie ist Standardpraxis in Anbietervertragen. Massnahme: AVV zwingend erfordern UND Haftungsklausel um DSGVO-Schaden erweitern.
+
+VERBINDUNG 2: Kl. 3.2 (3-Monatsfrist) + Kl. 5.5 (5% Preisanpassung) = Preiswachstum ohne Ausstiegsoption
+Die Kuendigungsfrist betraegt 3 Monate. Die Preisanpassung wird 30 Tage vorher angekuendigt. Das bedeutet: Wenn im Mai eine Preiserhoehung kommt, haben Sie faktisch keine Moeglichkeit, noch rechtzeitig zu kuendigen — die Frist endet am 30.04. Da ist die Anpassung noch nicht angekuendigt. Ergebnis: Sie akzeptieren die neue Preisstufe oder zahlen trotzdem noch 12 Monate zum alten Preis weiter. Massnahme: Sonderkundigungsrecht bei Preisanpassung vertraglich festschreiben.
+
+VERBINDUNG 3: Kl. 8.3 (keine Reaktionszeit) + Kl. 11.4 (Haftungskappe) = Null Handhabe bei langen Ausfallen
+Kl. 8.3 definiert keine Reaktionszeit fuer kritische Fehler ("angemessen"). Kl. 11.4 begrenzt den Schadensersatz auf 2.670 EUR. Wenn Ihr System 4 Tage ausfaellt und dabei z.B. 15.000 EUR Umsatz entgeht: Sie koennen weder eine Reaktionspflicht einklagen (sie ist nicht definiert), noch den realen Schaden geltend machen (Kappe greift). Massnahme: Reaktionszeit explizit vertraglich festlegen (z.B. 4h kritisch, 24h normal).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAS FEHLT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FEHLT 1: Auftragsverarbeitungsvertrag (AVV) — In jedem Vertrag, bei dem ein Dienstleister personenbezogene Daten verarbeitet, ist ein AVV nach DSGVO Art. 28 Pflicht. Er fehlt vollstaendig. Risiko: Direkte Compliance-Verletzung ab Vertragsstart. Was anfordern: "Bitte uebermitteln Sie uns vor Unterzeichnung einen vollstaendigen AVV gemaess Art. 28 DSGVO."
+
+FEHLT 2: Sonderkundigungsrecht bei wesentlichen Aenderungen — Kein einziger Paragraph raeumt dem Kunden das Recht ein, bei wesentlichen Leistungsaenderungen (z.B. Einstellung des Produkts, Preiserhoehung ueber Schwellwert) ausserordentlich zu kuendigen. Das ist unueblich und einseitig. Was einfuegen: "Bei Preiserhoehungen ueber X% oder wesentlichen Leistungsaenderungen hat der Auftraggeber ein 30-taegiges Sonderkundigungsrecht."
+
+FEHLT 3: Subunternehmerklausel — Das Dokument regelt nicht, ob der Anbieter Teilleistungen (insbesondere Datenhaltung oder Support) an Dritte auslagern darf. Falls ja, wuerden Ihre Daten moeglicherweise bei einem unbekannten Dritten liegen. Was einfuegen: "Eine Weitergabe personenbezogener Daten an Subunternehmer bedarf der vorherigen schriftlichen Zustimmung des Auftraggebers."
+
+FEHLT 4: Eskalationsweg bei Streitigkeiten — Es gibt keinen definierten Prozess fuer den Fall, dass der Anbieter eine Leistung nicht erbringt und der Kunde reklamiert. Ohne diesen ist der einzige Weg sofort der Rechtsweg. Was einfuegen: "Bei strittigen Leistungsfragen gilt zunaechst ein 30-taegiger Mediationsversuch vor Einleitung rechtlicher Schritte."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ZAHLEN, DATEN UND BETRAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+890,00 EUR — Monatliche Grundgebur (S. 5)
+14 Tage — Zahlungsziel (S. 5)
+2% p.M. — Verzugszins (S. 6)
+5% p.a. — Max. Preisanpassung (S. 6)
+99,5% — Verfugbarkeitsgarantie pro Monat (S. 8)
+3,6 Std./Monat — Erlaubte Ausfallzeit bei 99,5% (S. 8)
+10% — Entschadigung pro 0,5% SLA-Unterschreitung (S. 9)
+30% — Maximale Entschadigung pro Monat (S. 9)
+6 Monate — Gewahrleistungsfrist (S. 11)
+2.670 EUR — Haftungshoechstbetrag (S. 12)
+90 Tage — Datenspeicherung nach Vertragsende (S. 15)
+30 Tage — Vorankungdigungsfrist Preisanpassung (S. 6)
+3 Monate — Kundigungsfrist (S. 3)
+12 Monate — Verlangerungszeitraum (S. 3)
+30.04.2026 — Naechste Kundigungsfrist (errechnet)
+45 EUR — Preis pro Zusatznutzer/Monat (Anhang B)
+120 EUR/Std. — Premium-Support (Anhang B)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN UND KRITISCHE PUNKTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KRITISCH — Kein AVV vorhanden (S. 14): DSGVO Art. 28 verletzt. Konsequenz: Bussgeld bis 10 Mio. EUR. AVV sofort anfordern oder Vertrag nicht unterzeichnen.
+
+KRITISCH — Kuendigungsfrist verpassbar (S. 3): Frist 30.04.2026 — bei Nichteinhaltung: 12 Monate Kostenbindung = 10.680 EUR. Sofort im Kalender eintragen.
+
+WICHTIG — Gewahrleistung nur 6 Monate (S. 11): Gesetzlicher Anspruch 24 Monate. Konsequenz: Rechtsdurchsetzung nach Monat 7 deutlich erschwert. Nachverhandlung auf 24 Monate fordern.
+
+WICHTIG — Haftungskappe 2.670 EUR (S. 12): Reale Schaden konnen bei Systemausfall oder Datenverlust weit hoher sein. Konsequenz: Eigene Haftpflichtversicherung pruefen.
+
+WICHTIG — Preisanpassung ohne Zustimmung (S. 6): 5% p.a. kumulativ. Konsequenz: Unkontrollierter Kostenanstieg uber Vertragslaufzeit. Cap auf 2% oder absolute Obergrenze verhandeln.
+
+GERING — SLA ohne Reaktionszeit (S. 9): Kein messbarer Standard bei Entstorung. Konsequenz: Bei schweren Ausfallen keine rechtliche Handhabe. Schriftliche Klarung in den Vertrag aufnehmen.
+
+GERING — Zusatznutzerpreise nicht gedeckelt (Anhang B): Konnten jederzeit angepasst werden. Konsequenz: Planungsunsicherheit bei Teamerweiterung. Festpreis fur 24 Monate aushandeln.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LUECKEN UND FEHLENDE INFORMATIONEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LUECKE 1: Kein AVV (Auftragsverarbeitungsvertrag) beigefugt oder referenziert (S. 14) — Rechtspflicht nach DSGVO Art. 28 — sofort vom Anbieter anfordern.
+
+LUECKE 2: Reaktionszeit bei kritischen Fehlern nicht definiert (S. 9, Kl. 8.3) — "angemessen" ist nicht messbar — konkrete SLA-Zeiten (z.B. 4h kritisch, 24h normal) schriftlich vereinbaren.
+
+LUECKE 3: Softwareversion nicht festgeschrieben (S. 1) — Anbieter kann Funktionsumfang durch Updates andern — Klausel "wesentliche Funktionsanderungen bedurfen Zustimmung" einfugen.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MASSNAHMENPLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SOFORT — Kuendigungsfrist eintragen — Bis: heute noch — Wer: Geschaeftsfuhrer — Warum: Frist 30.04.2026, Verpassung = 10.680 EUR Zwangskosten.
+
+2. SOFORT — AVV anfordern — Bis: vor Unterzeichnung — Wer: Datenschutzbeauftragter/Rechtsabteilung — Warum: Ohne AVV droht Bussgeld bis 10 Mio. EUR.
+
+3. DIESE WOCHE — Gewahrleistung nachverhandeln — Bis: vor Vertragsabschluss — Wer: Einkauf/Rechtsabt. — Warum: 6 Monate statt 24 Monate = Rechtsverzicht uber gesetzlichem Standard.
+
+4. DIESE WOCHE — Preisdeckel verhandeln — Bis: vor Unterzeichnung — Wer: Einkauf — Warum: 5% p.a. unkontrolliert; Cap auf 2% oder Festpreis 36 Monate vereinbaren.
+
+5. BIS MONATSENDE — Zahlungsfristen in Buchhaltung hinterlegen — Bis: 30.04.2026 — Wer: Buchhaltung — Warum: 14 Tage Zahlungsziel, Verzug kostet 2%/Monat.
+
+6. VOR VERTRAGSSTART — Datensicherung einrichten — Bis: Vertragsstart — Wer: IT — Warum: Daten nach Vertragsende nach 90 Tagen unwiderbringlich geloscht.
+
+7. LANGFRISTIG — Reaktionszeit-SLA schriftlich erganzen — Bis: spatestens nach 3 Monaten als Erganzungsvereinbarung — Wer: Rechtsabteilung — Warum: Aktuell keine rechtliche Handhabe bei langen Entstorungszeiten.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOKUMENT-QUALITAETSBEWERTUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Klarheit: 4/5 — Gut lesbar, Fachbegriffe klar verwendet, kaum Interpretationsspielraum.
+Vollstandigkeit: 3/5 — AVV fehlt, Reaktionszeiten fehlen, Softwareversion nicht festgeschrieben.
+Ausgewogenheit: 2/5 — Mehrere Klauseln einseitig zugunsten Anbieter (Haftungskappe, kurze Gewahrleistung, einseitige Preisanpassung).
+Rechtssicherheit: 2/5 — DSGVO-Pflichtverletzung durch fehlenden AVV ist gravierend.
+Gesamturteil: UNTERZEICHNUNG MIT ANDERUNGEN — nicht in aktueller Form empfohlen. Mindestbedingung: AVV nachliefern, Gewahrleistung auf 24 Monate, Preisdeckel vereinbaren.
+
+Alle hochgeladenen Daten wurden nach der Analyse sicher geloscht.`
+    );
+
+    if (isEmail || isReply) return (
+`📧 E-MAIL POSTFACH — VOLLSTÄNDIG SORTIERT
+Zugriff: Microsoft Outlook — Posteingang
+Gefundene E-Mails: 22 | Verarbeitet: 22 | Übersprungen: 0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴  DRINGEND — Sofort bearbeiten (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[1] Von: buchhaltung@lieferant-gmbh.de
+    Betreff: Rechnung #2024-0847 — Zahlung überfällig
+    Eingang: Heute, 08:14 Uhr
+    → Offener Betrag: 1.840,00 € — Fälligkeitsdatum war gestern
+    → ENTWURF bereit (siehe unten)
+
+[2] Von: max.mueller@wichtigkunde.de
+    Betreff: Angebot gewünscht bis Freitag — dringend!
+    Eingang: Gestern, 17:52 Uhr
+    → Kunde wartet auf Rückmeldung — Frist in 2 Tagen
+    → ENTWURF bereit (siehe unten)
+
+[3] Von: noreply@hosting-provider.com
+    Betreff: ⚠️ SSL-Zertifikat läuft in 3 Tagen ab
+    Eingang: Heute, 06:30 Uhr
+    → Website wird ohne Erneuerung als "nicht sicher" angezeigt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟡  WICHTIG — Diese Woche bearbeiten (7)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[4]  Terminanfrage von Herrn Schneider — Donnerstag 14:00 Uhr
+[5]  Projektupdate von deinem Entwicklerteam — Fortschrittsbericht
+[6]  Bestellung #5521 wurde versandt — Tracking-Nummer anbei
+[7]  Vertragsangebot von Software AG — Gültigkeit bis 30.04.2026
+[8]  Feedback von Kundin Frau Weber — sehr positiv, Antwort empfohlen
+[9]  Steuerberater: Unterlagen für Q1 benötigt bis Monatsende
+[10] Angebot für neue Reinigungsfirma — Vergleichsangebot vorhanden
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢  NIEDRIG — Wenn Zeit vorhanden (8)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[11-18] Newsletter, Bestätigungsmails, automatische Benachrichtigungen,
+        Werbemails, Systembenachrichtigungen — kein Handlungsbedarf
+
+🚫  SPAM / GELÖSCHT (4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4 E-Mails als Spam markiert und in den Papierkorb verschoben.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✉️  FERTIGE ANTWORT-ENTWÜRFE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ENTWURF 1 — An: buchhaltung@lieferant-gmbh.de
+Betreff: AW: Rechnung #2024-0847
+
+Sehr geehrte Damen und Herren,
+
+vielen Dank für Ihre Erinnerung bezüglich der Rechnung #2024-0847.
+Wir entschuldigen uns für die Verzögerung und werden die ausstehende
+Zahlung in Höhe von 1.840,00 € bis spätestens 19.04.2026 begleichen.
+
+Mit freundlichen Grüßen
+
+───────────────────────────
+ENTWURF 2 — An: max.mueller@wichtigkunde.de
+Betreff: AW: Angebot — Ihre Anfrage
+
+Sehr geehrter Herr Müller,
+
+herzlichen Dank für Ihr Interesse. Ich freue mich, Ihnen mitteilen zu
+können, dass wir Ihr gewünschtes Angebot bis Donnerstag, 18.04.2026,
+ausarbeiten und Ihnen zusenden werden.
+
+Für Rückfragen stehe ich jederzeit gerne zur Verfügung.
+
+Mit freundlichen Grüßen
+
+🔒 E-Mail-Zugriff wurde nach Abschluss vollständig entzogen. Alle Daten gelöscht.`
+    );
+
+    if (isReport) return (
+`📊 GESCHÄFTSBERICHT — FERTIGGESTELLT
+Erstellt am: ${new Date().toLocaleDateString('de-DE')}
+Zeitraum: Aktuell | Status: Abgeschlossen
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋  EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Das Unternehmen zeigt eine stabile Entwicklung mit Wachstumspotenzial in 2 Kernbereichen
+• Umsatz im letzten Quartal: +12% gegenüber Vorquartal — positiver Trend
+• Hauptrisiko: 2 Großkunden machen 60% des Umsatzes aus — Abhängigkeit reduzieren
+• Personalkapazität erreicht 85% Auslastung — Einstellung prüfen für Q3
+• Kundenzufriedenheit: 4,6/5 — sehr gut, Empfehlungsrate 71%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈  WICHTIGSTE KENNZAHLEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Umsatz (aktuell):      +12% gegenüber Vormonat
+Neue Kunden:           +5 im letzten Monat
+Offene Angebote:       8 (Gesamtwert: ca. 24.000 €)
+Kundenzufriedenheit:   4,6 / 5,0
+Pünktliche Lieferung:  94%
+Reklamationsquote:     2,1% — unter Branchenschnitt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  RISIKEN & SCHWACHSTELLEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Kundenkonzentration: Top-2-Kunden = 60% Umsatz → Abhängigkeit verringern
+2. Personalengpass: 3 offene Stellen seit > 3 Monaten → Recruiting beschleunigen
+3. Zahlungsverzögerungen: Ø Zahlungsziel überschritten um 8 Tage → Mahnsystem prüfen
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅  EMPFOHLENE MASSNAHMEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+→ Neukundenstrategie: 5 Leads pro Woche als Mindestziel setzen
+→ Recruiting: Stellenausschreibungen auf 3 weiteren Plattformen schalten
+→ Mahnsystem: automatische Zahlungserinnerung nach 10 Tagen einrichten
+→ Q2-Ziel: Umsatzwachstum von 8% gegenüber Q1 anstreben
+→ Kundenbindung: Bestandskunden-Rabatt von 5% ab Jahr 2 einführen`
+    );
+
+    return (
+`✅ AUFGABE VOLLSTÄNDIG ABGESCHLOSSEN
+Aufgabe: ${desc}
+Fertiggestellt: ${new Date().toLocaleString('de-DE')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋  ERGEBNIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Die Aufgabe wurde vollständig und professionell abgeschlossen. Alle relevanten Informationen wurden verarbeitet, strukturiert und aufbereitet.
+
+Die Ergebnisse sind sofort verwendbar und wurden für den direkten Einsatz im Geschäftsalltag formatiert.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅  NÄCHSTE SCHRITTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+→ Ergebnis herunterladen und speichern
+→ Bei Bedarf: Neue Aufgabe starten
+→ Feedback hinterlassen — hilft uns zu verbessern
+
+🔒 Alle Daten wurden nach Abschluss sicher gelöscht.`
+    );
+
+  } else {
+
+    if (isPDF) return (
+`PDF ANALYSIS COMPLETE
+File: ${fileName}
+Read: completely, page 1 through to the end — no section skipped
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document type: Service agreement with terms of service and data protection clauses
+Total scope: 18 pages, 6 chapters, 17 clauses, 2 appendices
+Purpose: Long-term binding of the client to a SaaS platform — with automatic renewal and unilateral pricing rights in the provider's favour
+Most critical immediate action: Cancellation deadline falls on 30 Apr 2026 — add to calendar immediately, or face automatic 12-month renewal
+Plain-language verdict: I would not sign this contract in its current form. The combination of a missing DPA, a one-sided liability cap, and a price adjustment clause the client cannot veto makes it unbalanced. Two targeted renegotiations and a DPA would make it acceptable — but without those three things, this document carries real legal and financial risk.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION-BY-SECTION ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Chapter 1 — Scope of Services (pp. 1-2)
+Defines the service scope: provision of a cloud-based SaaS solution for project management. Services are clearly defined. No hidden add-ons. No surprises in this section.
+Note: The exact software version number is not locked in — the provider can push updates without prior consent.
+
+Chapter 2 — Term and Cancellation (pp. 3-4)
+Initial term: 12 months from signing. Thereafter: automatic renewal for 12-month periods unless cancelled in writing at least 3 months before expiry. Written notice by recorded post required — email alone is NOT sufficient.
+Critical: Many businesses miss this deadline. If missed: 12 months of costs with no exit = 10,680 GBP.
+
+Chapter 3 — Fees and Payment (pp. 5-7)
+Monthly base fee: 890.00 GBP net. Payment term: 14 days from invoice date. Late payment interest: 2% per month (equivalent to 24% p.a. — well above the statutory rate). Price adjustment: up to 5% annually, 30-day advance notice by email, no consent required.
+Risk: Over 5 years the monthly fee can exceed 1,136 GBP without renegotiation.
+
+Chapter 4 — Service Level Guarantees (SLA) (pp. 8-10)
+Availability guarantee: 99.5% per month (permitted downtime: approx. 3.6 hours/month). Compensation for breach: 10% of monthly fee per 0.5 percentage point below threshold, maximum 30% of one monthly fee. Maintenance windows: Saturdays 02:00-06:00, not counted as downtime.
+Gap: Response time for critical failures is not defined — only "reasonable time" (GAP — written clarification recommended).
+
+Chapter 5 — Liability and Warranty (pp. 11-13)
+Warranty period: 6 months. Statutory standard: 24 months. Exclusion of liability for consequential loss, lost profit, and data loss. Maximum liability: 3 monthly fees (2,670 GBP) — regardless of actual damage incurred.
+Critical: In the event of data loss caused by the provider, real damages could far exceed 2,670 GBP with no recourse.
+
+Chapter 6 — Data Protection and Processing (pp. 14-16)
+Customer data stored on servers in Germany (positive). Deletion after contract end: 90-day retention, then deleted. GDPR compliance is mentioned but no Data Processing Agreement (DPA) is included or referenced.
+Critical: A DPA is mandatory under GDPR Art. 28. Without one, fines of up to 10 million EUR or 2% of annual turnover are possible.
+
+Appendix A — Technical Specifications (p. 17)
+Server location: Frankfurt am Main. Backup: daily, 30-day retention. Encryption: TLS 1.2 in transit, AES-256 at rest. Positive: technically strong standard.
+
+Appendix B — Additional Services Price List (p. 18)
+Additional users: 45 GBP/month/user. Premium support escalation: 120 GBP/hour. Training package: 890 GBP one-time. Note: These prices are not capped and can be adjusted at any time.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY FINDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CANCELLATION DEADLINE (p. 3, Cl. 3.2): 3 months before expiry, in writing by recorded post — next deadline: 30 Apr 2026 for expiry on 31 Jul 2026. Practical meaning: Missing this date = 12 more months locked in = 10,680 GBP unavoidable cost.
+
+2. LATE PAYMENT INTEREST (p. 5, Cl. 5.3): 2% per month = 24% p.a. Practical meaning: An invoice of 890 GBP overdue by 3 months generates 52.40 GBP in interest charges.
+
+3. PRICE ADJUSTMENT CLAUSE (p. 6, Cl. 5.5): Up to 5% p.a. without consent. Practical meaning: After 5 years, 890 GBP becomes 1,136 GBP/month (+2,952 GBP/year).
+
+4. LIABILITY CAP (p. 12, Cl. 11.4): Maximum 3 monthly fees = 2,670 GBP compensation for any damage. Practical meaning: In a data loss or extended outage, real losses are routinely far higher.
+
+5. WARRANTY PERIOD (p. 11, Cl. 11.1): Only 6 months — statute requires 24 months. Practical meaning: Legal remedies after month 6 severely restricted despite statutory entitlement.
+
+6. GDPR DPA MISSING (p. 14, Cl. 13): No Data Processing Agreement referenced. Practical meaning: Legal obligation under GDPR Art. 28 violated — fine up to 10 million EUR possible.
+
+7. SLA GAP — RESPONSE TIME (p. 9, Cl. 8.3): Response time for critical failures = "reasonable" with no timeframe specified. Practical meaning: No legal basis to challenge slow incident response.
+
+8. ADDITIONAL USER PRICING (Appendix B, p. 18): 45 GBP/month/user extra. Practical meaning: 5 additional users = +2,700 GBP/year unplanned cost.
+
+9. DATA DELETION (p. 15, Cl. 13.4): 90 days after contract end, then permanently deleted. Practical meaning: Data export must be arranged personally before contract ends.
+
+10. MAINTENANCE WINDOW (p. 9, Cl. 8.1): Saturday 02:00-06:00 not counted as downtime. Practical meaning: For businesses operating on Saturdays, effective availability is lower than the stated 99.5%.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HIDDEN CONNECTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONNECTION 1: Cl. 11.4 (Liability cap 2,670 GBP) + Cl. 13 (No DPA) = Double catastrophe risk
+Cl. 11.4 limits the provider's liability to 3 monthly fees (2,670 GBP). Simultaneously, the DPA required by GDPR Art. 28 is missing. In the event of a data breach at the provider's end: the provider owes you a maximum of 2,670 GBP — but the data protection authority directs its fine at YOU as the data controller, not at the provider. This means you bear the fine risk (up to 10 million EUR), while the provider's exposure is capped at 2,670 GBP. This combination is not accidental — it is standard practice in vendor contracts. Action: require a DPA AND extend the liability clause to explicitly cover GDPR-related damages.
+
+CONNECTION 2: Cl. 3.2 (3-month notice) + Cl. 5.5 (5% price adjustment) = Price increase with no escape route
+The cancellation notice period is 3 months. Price adjustments are announced 30 days in advance. This means: if a price increase arrives in May, you have no realistic way to cancel in time — the deadline was 30 April. By the time the new price is announced, your exit window has already closed. Result: you either accept the new price level or continue paying for another 12 months regardless. Action: negotiate a special termination right triggered by any price increase.
+
+CONNECTION 3: Cl. 8.3 (no response time) + Cl. 11.4 (liability cap) = Zero recourse during extended outages
+Cl. 8.3 defines no response time for critical failures ("reasonable time" only). Cl. 11.4 caps compensation at 2,670 GBP. If your system is down for 4 days and you lose 15,000 GBP in revenue: you cannot enforce a response deadline (it does not exist), and you cannot claim the real loss (the cap applies). Action: negotiate specific response times into the contract (e.g. 4h critical, 24h standard) before signing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT IS MISSING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MISSING 1: Data Processing Agreement (DPA) — In any contract where a provider processes personal data, a DPA under GDPR Art. 28 is legally mandatory. It is entirely absent here. Risk: direct compliance violation from day one of the contract. What to request: "Please provide a complete DPA in accordance with GDPR Art. 28 before we proceed to signature."
+
+MISSING 2: Special termination right for material changes — No clause gives the client the right to terminate early if the service changes materially (e.g. product discontinuation, price increase above a threshold). This is unusual and one-sided. What to add: "In the event of price increases exceeding X% or material service changes, the client retains a 30-day special termination right."
+
+MISSING 3: Subcontractor clause — The document does not address whether the provider may sub-contract any part of the service (particularly data storage or support) to third parties. If they can, your data may end up with an unknown party without your knowledge. What to add: "Transfer of personal data to subcontractors requires prior written consent from the client."
+
+MISSING 4: Dispute resolution pathway — There is no defined process for what happens if the provider fails to deliver a service and the client disputes it. Without one, the only option is immediate legal action. What to add: "In the event of disputed service delivery, the parties agree to a 30-day mediation period before initiating legal proceedings."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUMBERS, DATES AND AMOUNTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+890.00 GBP — Monthly base fee (p. 5)
+14 days — Payment term (p. 5)
+2% p.m. — Late payment interest (p. 6)
+5% p.a. — Maximum annual price increase (p. 6)
+99.5% — Monthly availability guarantee (p. 8)
+3.6 hours/month — Permitted downtime at 99.5% (p. 8)
+10% — Compensation per 0.5% SLA breach (p. 9)
+30% — Maximum monthly compensation (p. 9)
+6 months — Warranty period (p. 11)
+2,670 GBP — Maximum liability cap (p. 12)
+90 days — Data retention after contract end (p. 15)
+30 days — Advance notice period for price increases (p. 6)
+3 months — Cancellation notice period (p. 3)
+12 months — Auto-renewal period (p. 3)
+30 Apr 2026 — Next cancellation deadline (calculated)
+45 GBP — Additional user price per month (Appendix B)
+120 GBP/hour — Premium support rate (Appendix B)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS AND CRITICAL ATTENTION POINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL — No DPA in place (p. 14): GDPR Art. 28 violated. Consequence: Fine up to 10 million EUR. Request DPA immediately or do not sign.
+
+CRITICAL — Cancellation deadline easily missed (p. 3): Deadline 30 Apr 2026 — if missed: 12-month cost lock-in = 10,680 GBP. Add to calendar now.
+
+IMPORTANT — Warranty only 6 months (p. 11): Statutory entitlement is 24 months. Consequence: Legal enforcement after month 6 severely limited. Negotiate extension to 24 months.
+
+IMPORTANT — Liability cap at 2,670 GBP (p. 12): Real damages from system failure or data loss can be far higher. Consequence: Review your own liability insurance coverage.
+
+IMPORTANT — Price increase without consent (p. 6): 5% p.a. compounding. Consequence: Uncontrolled cost escalation over contract term. Negotiate a 2% cap or fixed price ceiling.
+
+LOW — SLA without response time (p. 9): No measurable standard for incident resolution. Consequence: No legal basis for challenging slow response. Add written clarification to contract.
+
+LOW — Additional user prices not capped (Appendix B): Can be revised at any time. Consequence: Planning uncertainty when expanding the team. Negotiate fixed pricing for 24 months.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GAPS AND MISSING INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GAP 1: No DPA (Data Processing Agreement) included or referenced (p. 14) — mandatory under GDPR Art. 28 — request from provider immediately.
+
+GAP 2: Response time for critical failures not defined (p. 9, Cl. 8.3) — "reasonable time" is not measurable — agree specific SLA times in writing (e.g. 4h critical, 24h standard).
+
+GAP 3: Software version not contractually locked (p. 1) — provider can change functionality via updates — add clause: "material feature changes require client consent."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. PRIORITY: IMMEDIATE — Add cancellation deadline to calendar — By: today — Who: Managing Director — Why: Deadline 30 Apr 2026; missing it = 10,680 GBP forced cost.
+
+2. PRIORITY: IMMEDIATE — Request DPA from provider — By: before signing — Who: Data Protection Officer / Legal — Why: Without DPA, GDPR fine up to 10 million EUR possible.
+
+3. PRIORITY: THIS WEEK — Renegotiate warranty period — By: before contract close — Who: Procurement / Legal — Why: 6 months instead of 24 months = waiving statutory entitlement.
+
+4. PRIORITY: THIS WEEK — Negotiate price increase cap — By: before signing — Who: Procurement — Why: 5% p.a. uncapped; agree 2% cap or fixed price for 36 months.
+
+5. PRIORITY: THIS MONTH — Enter payment deadlines in accounting software — By: 30 Apr 2026 — Who: Finance — Why: 14-day payment term; late payment costs 2%/month.
+
+6. PRIORITY: BEFORE CONTRACT START — Set up data export and backup — By: contract start date — Who: IT — Why: Data permanently deleted 90 days after contract ends.
+
+7. PRIORITY: LONG TERM — Add response-time SLA in a supplementary agreement — By: no later than 3 months after signing — Who: Legal — Why: Currently no legal basis to challenge slow incident resolution.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DOCUMENT QUALITY ASSESSMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Clarity:           4/5 — Well written, technical terms clearly defined, minimal ambiguity.
+Completeness:      3/5 — DPA missing, response times absent, software version not locked.
+Balance/Fairness:  2/5 — Multiple clauses one-sided in favour of provider (liability cap, short warranty, unilateral price increases).
+Legal soundness:   2/5 — GDPR violation through missing DPA is severe.
+Overall verdict:   APPROVE WITH AMENDMENTS — not recommended in current form. Minimum conditions: DPA must be added, warranty extended to 24 months, price increase cap agreed.
+
+All uploaded files were securely deleted after analysis.`
+    );
+
+    if (isEmail || isReply) return (
+`📧 EMAIL INBOX — FULLY SORTED
+Access: Microsoft Outlook — Inbox
+Emails found: 22 | Processed: 22 | Skipped: 0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴  URGENT — Act immediately (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[1] From: accounting@supplier-ltd.com
+    Subject: Invoice #2024-0847 — Payment overdue
+    Received: Today, 08:14 AM
+    → Outstanding: £1,840.00 — due date was yesterday
+    → DRAFT REPLY ready (see below)
+
+[2] From: john.smith@importantclient.com
+    Subject: Quote needed by Friday — urgent!
+    Received: Yesterday, 5:52 PM
+    → Client waiting — deadline in 2 days
+    → DRAFT REPLY ready (see below)
+
+[3] From: noreply@hosting-provider.com
+    Subject: ⚠️ SSL certificate expires in 3 days
+    Received: Today, 06:30 AM
+    → Website will show "Not secure" without renewal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟡  IMPORTANT — Handle this week (7)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[4]  Meeting request from Mr. Thompson — Thursday 2:00 PM
+[5]  Project update from your dev team — progress report attached
+[6]  Order #5521 has been dispatched — tracking number included
+[7]  Contract offer from Software Corp — valid until 30 Apr 2026
+[8]  Positive feedback from client Ms. Davis — reply recommended
+[9]  Accountant: Q1 documents needed by end of month
+[10] Quote for new cleaning service — comparison offer available
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟢  LOW PRIORITY — When time allows (8)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[11-18] Newsletters, confirmation emails, automated notifications,
+        promotional emails, system alerts — no action required
+
+🚫  SPAM / DELETED (4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4 emails flagged as spam and moved to trash.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✉️  READY-TO-SEND DRAFT REPLIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DRAFT 1 — To: accounting@supplier-ltd.com
+Subject: RE: Invoice #2024-0847
+
+Dear Sir or Madam,
+
+Thank you for your reminder regarding invoice #2024-0847.
+We sincerely apologise for the delay and confirm that the outstanding
+payment of £1,840.00 will be transferred by 19 April 2026 at the latest.
+
+Kind regards,
+
+───────────────────────────
+DRAFT 2 — To: john.smith@importantclient.com
+Subject: RE: Quote Request
+
+Dear Mr. Smith,
+
+Thank you very much for your interest. I am pleased to confirm that
+we will prepare and send you the requested quote by Thursday, 18 April 2026.
+
+Please don't hesitate to contact me if you have any questions in the meantime.
+
+Kind regards,
+
+🔒 Email access was fully revoked after completion. All data deleted.`
+    );
+
+    if (isReport) return (
+`📊 BUSINESS REPORT — COMPLETED
+Created: ${new Date().toLocaleDateString('en-GB')}
+Period: Current | Status: Finalised
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋  EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Business is showing stable growth with strong potential in 2 core areas
+• Revenue last quarter: +12% vs. previous quarter — positive trend
+• Key risk: 2 major clients account for 60% of revenue — reduce dependency
+• Staff capacity at 85% — consider hiring for Q3
+• Customer satisfaction: 4.6/5 — excellent, referral rate 71%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈  KEY METRICS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Revenue (current):     +12% vs. last month
+New clients:           +5 in the past month
+Open proposals:        8 (total value approx. £24,000)
+Customer satisfaction: 4.6 / 5.0
+On-time delivery:      94%
+Complaint rate:        2.1% — below industry average
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  RISKS & WEAKNESSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Client concentration: Top 2 clients = 60% revenue → reduce dependency
+2. Staffing gap: 3 open positions for > 3 months → accelerate recruitment
+3. Late payments: Average 8 days overdue → review payment reminder system
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅  RECOMMENDED ACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+→ New clients: set minimum target of 5 leads per week
+→ Recruitment: post vacancies on 3 additional platforms
+→ Payment reminders: set up automatic follow-up after 10 days
+→ Q2 target: 8% revenue growth vs. Q1
+→ Client retention: introduce 5% loyalty discount from year 2 onwards`
+    );
+
+    return (
+`✅ TASK FULLY COMPLETED
+Task: ${desc}
+Completed: ${new Date().toLocaleString('en-GB')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋  RESULT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The task has been completed fully and professionally. All relevant information was processed, structured, and prepared for immediate use.
+
+The results are formatted for direct use in your day-to-day business operations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅  NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+→ Download and save your result
+→ Start a new task if needed
+→ Leave feedback — it helps us improve
+
+🔒 All data was securely deleted after completion.`
+    );
+  }
+}
+
+// =====================
+// GEMINI API KEY MANAGEMENT
+// =====================
+function saveGeminiKey() {
+  const key = document.getElementById('owner-gemini-key').value.trim();
+  const statusEl = document.getElementById('gemini-key-status');
+  if (!key || key.length < 20) {
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = '✗ Ungültiger Key. Bitte den vollständigen API-Key einfügen.';
+    return;
+  }
+  localStorage.setItem('gemini_api_key', key);
+  statusEl.style.display = 'block';
+  statusEl.style.color = '#4ade80';
+  statusEl.textContent = '✓ API-Key gespeichert! KI-Modus aktiv — echte Analysen ab jetzt.';
+  document.getElementById('owner-gemini-key').value = '';
+}
+
+function getGeminiKey() {
+  return localStorage.getItem('gemini_api_key') || '';
+}
+
+function isRealAIEnabled() {
+  const key = getGeminiKey();
+  return key && key.length > 20;
+}
+
+// =====================
+// PDF TEXT EXTRACTION (PDF.js)
+// =====================
+async function extractPDFText(file) {
+  if (typeof pdfjsLib === 'undefined') {
+    throw new Error('PDF.js nicht geladen');
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const typedArray = new Uint8Array(e.target.result);
+        const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+        const totalPages = pdf.numPages;
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
+        // Extract all pages (cap at 300 to stay within Gemini token limit)
+        const maxPages = Math.min(totalPages, 300);
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items
+            .map(item => item.str)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (pageText.length > 10) {
+            fullText += `--- Seite ${i} ---\n${pageText}\n\n`;
+          }
+        }
+        if (totalPages > maxPages) {
+          fullText += `[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} Seiten analysiert.]\n`;
+        }
+        resolve(fullText);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// =====================
+// BUILD PROMPT FOR REAL AI
+// =====================
+
+// Detect language from the task description text
+function detectLanguage(text) {
+  const t = text.toLowerCase();
+  const deWords = ['ich','bitte','und','der','die','das','ein','für','mit','auf','von','zu','an','ist','sind','habe','mach','schreib','analysiere','fasse','erstell','gib','zeig','kannst','soll','bitte','zusammenfassung','bericht','dokument','vertrag','rechnung'];
+  const deScore = deWords.filter(w => t.includes(w)).length;
+  if (deScore >= 2) return 'de';
+  // Add more languages if needed in future
+  return 'en';
+}
+
+function buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength) {
+  const writtenLang = detectLanguage(taskDesc);
+  const isDE = writtenLang === 'de';
+
+  const businessCtx = businessDetails
+    ? (isDE ? `Kontext des Unternehmens: ${businessDetails}\n` : `Business context: ${businessDetails}\n`)
+    : '';
+
+  let formatRules = '';
+  if (analysisLength === 'short') {
+    formatRules = isDE ? `ANALYSETIEFE: KURZ — Ziel max. 200-400 Wörter. Nur das absolut Wichtigste.
+AUSGABE-FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2-3 Sätze Kernfazit]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOP 3 ERKENNTNISSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Die 3 wichtigsten Punkte]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AKTIONSPLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[1-2 konkrete Handlungsempfehlungen]` : `ANALYSIS DEPTH: SHORT — Target max. 200-400 words. Only the absolute essentials.
+OUTPUT FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2-3 sentences core conclusion]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOP 3 FINDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[The 3 most important points]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[1-2 concrete action recommendations]`;
+  } else if (analysisLength === 'long') {
+    formatRules = isDE ? `ANALYSETIEFE: TIEF — Sehr detailliert, extrem gründlich (Ziel: mindestens 1500-2500 Wörter).
+AUSGABE-FORMAT (alle diese Überschriften nutzen):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ausführliches Fazit]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ABSCHNITTSWEISE DETAILANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Sehr tiefe Analyse aller wichtigen Abschnitte/Kennzahlen, detailliert aufgelistet. Keine Kürzungen!]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & VERSTECKTE PROBLEME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle Risiken, quantifiziert und erklärt]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ZAHLEN, DATEN & FAKTEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tiefe Aufschlüsselung der Daten]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UMFASSENDER AKTIONSPLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Detaillierter Plan mit Deadlines und Verantwortlichkeiten]` : `ANALYSIS DEPTH: DEEP — Very detailed, extremely thorough (Target: minimum 1500-2500 words).
+OUTPUT FORMAT (use all these headers):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Detailed conclusion]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION-BY-SECTION DETAILED ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Very deep analysis of all important sections/metrics, listed in detail. Do not truncate!]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & HIDDEN ISSUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All risks, quantified and explained]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NUMBERS, DATES & FACTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Deep breakdown of the data]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMPREHENSIVE ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Detailed plan with deadlines and responsibilities]`;
+  } else {
+    // medium
+    formatRules = isDE ? `ANALYSETIEFE: MITTEL — Ziel 700-1200 Wörter. Fokussiert aber informativ.
+AUSGABE-FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ZUSAMMENFASSUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Kompaktes Fazit]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HAUPTERKENNTNISSE & ANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Die wichtigsten Punkte und Zusammenhänge, gut strukturiert]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Konkrete Risiken und Chancen]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NÄCHSTE SCHRITTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Klarer Aktionsplan]` : `ANALYSIS DEPTH: MEDIUM — Target 700-1200 words. Focused but informative.
+OUTPUT FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Compact conclusion]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY FINDINGS & ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[The most important points and contexts, well structured]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & OPPORTUNITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Concrete risks and opportunities]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Clear action plan]`;
+  }
+
+  const personaDE = `Du bist ein hochintelligenter, extrem fähiger KI-Assistent auf Senior-Management-Niveau. Du denkst kritisch mit, hinterfragst Zahlen und Dokumente, und lieferst keine generischen Floskeln, sondern harte, extrem präzise Fakten.
+WICHTIG — LIES DIE AUFGABE DES KUNDEN GENAU: ${taskDesc}
+Erfülle die Aufgabe EXAKT. Wenn der Kunde eine E-Mail oder einen spezifischen Text will, ignoriere das Standard-Format und liefere genau das Gewünschte! Das Format unten ist nur eine Strukturhilfe für Standard-Analysen.
+${businessCtx}
+${formatRules}
+
+ABSOLUTE REGELN:
+- Vermeide "KI-Gerede" (z.B. "Hier ist deine Analyse..."). Fange direkt mit dem Inhalt an.
+- Antworte IMMER auf Deutsch (außer der Kunde bittet explizit um eine andere Sprache im Text).`;
+
+  const personaEN = `You are a highly intelligent, extremely capable AI assistant at senior management level. You think critically, question numbers and documents, and deliver hard, precise facts instead of generic phrases.
+IMPORTANT — READ THE CLIENT'S TASK CAREFULLY: ${taskDesc}
+Fulfil the task EXACTLY. If the client wants an email drafted or a specific text, ignore the default format and deliver exactly what is requested! The format below is only a structural guide for standard analyses.
+${businessCtx}
+${formatRules}
+
+ABSOLUTE RULES:
+- Avoid "AI-speak" (e.g. "Here is your analysis..."). Start directly with the content.
+- ALWAYS respond in English (unless the client explicitly asks for another language in the text).`;
+
+  return (isDE ? personaDE : personaEN) + `\n\nZU ANALYSIERENDES DOKUMENT / DOCUMENT TO ANALYSE:\n${docText}`;
+}
+
+// =====================
+// REAL AI ENGINE — replaces demo mode when API key is set
+// =====================
+async function runRealAI(taskDesc, businessDetails, analysisLength) {
+  const apiKey = getGeminiKey();
+  if (!apiKey) throw new Error('NO_KEY');
+
+  const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name.toLowerCase() : '';
+  const investorKws = ['investor','geschäftsbericht','geschaeftsbericht','jahresbericht',
+    'annual report','finanzbericht','konzernabschluss','ifrs','gaap','ebit','ebitda',
+    'dividende','earnings','revenue','profit','bericht_2024','bericht_2025','bericht_2026',
+    'porsche','volkswagen','bmw','mercedes','siemens','sap','allianz','apple','microsoft','amazon'];
+  const d = taskDesc.toLowerCase();
+  const isInvestorTask = investorKws.some(kw => d.includes(kw) || fn.includes(kw));
+  const taskType = isInvestorTask ? 'investor' : 'pdf';
+
+  // Extract text from all uploaded PDFs
+  let docText = '';
+  if (uploadedPDFs.length > 0) {
+    setProgress(15, currentLang === 'de' ? 'PDF wird gelesen und extrahiert...' : 'Reading and extracting PDF...');
+    for (const file of uploadedPDFs) {
+      try {
+        const text = await extractPDFText(file);
+        docText += text + '\n\n';
+      } catch (err) {
+        docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
+      }
+    }
+  } else {
+    docText = `[Kein Dokument hochgeladen. Aufgabe basiert nur auf der Beschreibung: ${taskDesc}]`;
+  }
+
+  setProgress(35, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
+
+  const prompt = buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength);
+
+  setProgress(55, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 8192,
+          temperature: 0.7,
+          topP: 0.9,
+          topK: 40
+        }
+      })
+    }
+  );
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!result) throw new Error('Keine Antwort von der KI erhalten');
+  return result;
+}
+
+// =====================
+// INIT
+// =====================
+document.addEventListener('DOMContentLoaded', () => {
+  setLang(currentLang);
+  loadAuth();
+  renderTestimonials();
+  initCharacterSelection();
+
+  // Show API key status in owner settings when it loads
+  const existingKey = getGeminiKey();
+  if (existingKey) {
+    const statusEl = document.getElementById('gemini-key-status');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#4ade80';
+      statusEl.textContent = '✓ API-Key aktiv — echte KI-Analysen sind eingeschaltet.';
+    }
+  }
+});

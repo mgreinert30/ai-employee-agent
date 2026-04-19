@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Employee Agent</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
+</head>
+<body>
+
+
+  <!-- PDF LENGTH SELECTOR -->
+  <div id="length-selector-overlay" class="overlay hidden" onclick="if(event.target===this)closeLengthSelector()">
+    <div class="modal" style="max-width:480px;">
+      <div style="text-align:center;margin-bottom:8px;font-size:32px;" id="length-char-icon">📄</div>
+      <h3 style="text-align:center;font-size:20px;font-weight:800;margin-bottom:6px;" id="length-title" data-de="Wie ausführlich soll die Analyse sein?" data-en="How detailed should the analysis be?">Wie ausführlich soll die Analyse sein?</h3>
+      <p style="text-align:center;color:var(--gray);font-size:14px;margin-bottom:24px;" data-de="Wähle die Tiefe deiner PDF-Analyse:" data-en="Choose the depth of your PDF analysis:">Wähle die Tiefe deiner PDF-Analyse:</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <button class="length-option" onclick="downloadPDF('short')">
+          <div class="length-option-inner">
+            <span class="length-icon">⚡</span>
+            <div>
+              <strong data-de="Kurz" data-en="Short">Kurz</strong>
+              <p data-de="Nur das Wichtigste — Executive Summary &amp; Top-3-Erkenntnisse. Ideal für einen schnellen Überblick." data-en="Key points only — Executive Summary &amp; top 3 findings. Perfect for a quick overview.">Nur das Wichtigste — Executive Summary &amp; Top-3-Erkenntnisse.</p>
+            </div>
+          </div>
+        </button>
+        <button class="length-option" onclick="downloadPDF('medium')">
+          <div class="length-option-inner">
+            <span class="length-icon">📋</span>
+            <div>
+              <strong data-de="Mittel" data-en="Medium">Mittel</strong>
+              <p data-de="Summary, alle Erkenntnisse, Risiken &amp; Handlungsempfehlungen. Der ideale Kompromiss." data-en="Summary, all findings, risks &amp; recommended actions. The ideal balance.">Summary, alle Erkenntnisse, Risiken &amp; Handlungsempfehlungen.</p>
+            </div>
+          </div>
+        </button>
+        <button class="length-option" onclick="downloadPDF('long')">
+          <div class="length-option-inner">
+            <span class="length-icon">🔬</span>
+            <div>
+              <strong data-de="Lang — Vollständige Analyse" data-en="Long — Full Analysis">Lang — Vollständige Analyse</strong>
+              <p data-de="Jede Seite, jede Klausel, jedes Detail analysiert. Für maximale Tiefe und Vollständigkeit." data-en="Every page, every clause, every detail analysed. For maximum depth and completeness.">Jede Seite, jede Klausel, jedes Detail analysiert.</p>
+            </div>
+          </div>
+        </button>
+      </div>
+      <button onclick="closeLengthSelector()" class="btn-link" style="display:block;text-align:center;margin-top:16px;" data-de="Abbrechen" data-en="Cancel">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- OWNER DASHBOARD -->
+  <div id="owner-dashboard-overlay" class="overlay hidden">
+    <div class="owner-dashboard">
+      <div class="owner-dash-header">
+        <div class="owner-dash-logo">Owner<span>Panel</span></div>
+        <button onclick="closeOwnerDashboard()" class="owner-close-btn">✕ <span data-de="Schließen" data-en="Close">Schließen</span></button>
+      </div>
+      <div class="owner-tabs">
+        <button class="owner-tab active" onclick="ownerTab('overview')" id="otab-overview" data-de="📊 Übersicht" data-en="📊 Overview">📊 Übersicht</button>
+        <button class="owner-tab" onclick="ownerTab('reviews')" id="otab-reviews" data-de="⭐ Bewertungen" data-en="⭐ Reviews">⭐ Bewertungen</button>
+        <button class="owner-tab" onclick="ownerTab('settings')" id="otab-settings" data-de="⚙️ Einstellungen" data-en="⚙️ Settings">⚙️ Einstellungen</button>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div id="owner-tab-overview" class="owner-tab-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total-sales">0</div>
+            <div class="stat-label" data-de="Aufgaben abgeschlossen" data-en="Tasks Completed">Aufgaben abgeschlossen</div>
+          </div>
+          <div class="stat-card highlight">
+            <div class="stat-value" id="stat-total-revenue">€0.00</div>
+            <div class="stat-label" data-de="Gesamtumsatz" data-en="Total Revenue">Gesamtumsatz</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-month-revenue">€0.00</div>
+            <div class="stat-label" data-de="Umsatz diesen Monat" data-en="Revenue this month">Umsatz diesen Monat</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total-users">0</div>
+            <div class="stat-label" data-de="Registrierte Nutzer" data-en="Registered Users">Registrierte Nutzer</div>
+          </div>
+        </div>
+        <h4 class="section-mini-title" data-de="Letzte Transaktionen" data-en="Recent Transactions">Letzte Transaktionen</h4>
+        <div id="recent-transactions"><p class="empty-state" data-de="Noch keine Transaktionen." data-en="No transactions yet.">Noch keine Transaktionen.</p></div>
+      </div>
+
+      <!-- REVIEWS TAB -->
+      <div id="owner-tab-reviews" class="owner-tab-content" style="display:none;">
+        <p class="owner-tab-hint" data-de="Wähle bis zu 6 Bewertungen aus, die auf der Startseite angezeigt werden. Klicke auf ⭐ Zeigen um eine Bewertung zu featuren." data-en="Choose up to 6 reviews to show on the home page. Click ⭐ Feature to highlight a review.">
+          Wähle bis zu 6 Bewertungen aus, die auf der Startseite angezeigt werden.
+        </p>
+        <div id="owner-reviews-list"><p class="empty-state" data-de="Noch keine Bewertungen eingegangen." data-en="No reviews received yet.">Noch keine Bewertungen eingegangen.</p></div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div id="owner-tab-settings" class="owner-tab-content" style="display:none;">
+
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);">
+          <h4 style="color:#60a5fa;margin-bottom:6px;">🤖 Gemini API-Key (echte KI)</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">
+            Trage hier deinen kostenlosen Google Gemini API-Key ein. Danach analysiert die KI jedes hochgeladene PDF wirklich — kein Demo-Modus mehr.<br>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#60a5fa;">→ Kostenlos holen bei Google AI Studio</a>
+          </p>
+          <input type="password" id="owner-gemini-key" placeholder="AIza..." style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;margin-bottom:10px;"/>
+          <button onclick="saveGeminiKey()" class="btn-primary" style="width:100%;">API-Key speichern & aktivieren</button>
+          <p id="gemini-key-status" style="margin-top:8px;font-size:13px;display:none;"></p>
+        </div>
+
+        <div class="settings-section">
+          <h4 data-de="💳 PayPal verknüpfen" data-en="💳 Link PayPal">💳 PayPal verknüpfen</h4>
+          <p data-de="Gib deinen PayPal.me Nutzernamen ein. Kundenzahlungen werden direkt an dein PayPal weitergeleitet." data-en="Enter your PayPal.me username. Customer payments will be sent directly to your PayPal.">
+            Gib deinen PayPal.me Nutzernamen ein. Kundenzahlungen werden direkt an dein PayPal weitergeleitet.
+          </p>
+          <div class="paypal-row">
+            <span class="paypal-prefix">paypal.me/</span>
+            <input type="text" id="owner-paypal-input" placeholder="deinname" />
+          </div>
+          <button onclick="savePaypalSettings()" class="btn-primary" data-de="PayPal speichern" data-en="Save PayPal">PayPal speichern</button>
+          <p id="paypal-saved-msg" class="settings-success" style="display:none;">✓ PayPal gespeichert!</p>
+        </div>
+
+        <div class="settings-section">
+          <button onclick="handleOwnerLogout()" class="btn-delete full-width-btn" data-de="Owner Panel abmelden" data-en="Log out of Owner Panel">Owner Panel abmelden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER LOGIN / SIGNUP MODAL -->
+  <div id="auth-overlay" class="overlay">
+    <div class="modal">
+      <div class="modal-logo">AI<span>Employee</span></div>
+      <div id="auth-reason" class="auth-reason" style="display:none;"></div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchTab('login')" id="tab-login" data-de="Anmelden" data-en="Log in">Anmelden</button>
+        <button class="auth-tab" onclick="switchTab('signup')" id="tab-signup" data-de="Registrieren" data-en="Sign up">Registrieren</button>
+      </div>
+      <form id="form-login" onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:14px;">
+        <label data-de="E-Mail" data-en="Email">E-Mail</label>
+        <input type="email" id="login-email" required placeholder="max@firma.de" />
+        <label data-de="Passwort" data-en="Password">Passwort</label>
+        <input type="password" id="login-password" required placeholder="••••••••" />
+        <div class="remember-row">
+          <input type="checkbox" id="remember-me" checked />
+          <label for="remember-me" data-de="Angemeldet bleiben" data-en="Stay logged in">Angemeldet bleiben</label>
+        </div>
+        <button type="submit" class="btn-primary full-width" data-de="Anmelden" data-en="Log in">Anmelden</button>
+        <p id="login-error" class="auth-error"></p>
+      </form>
+      <form id="form-signup" onsubmit="handleSignup(event)" style="display:none;flex-direction:column;gap:14px;">
+        <label data-de="Dein Name" data-en="Your name">Dein Name</label>
+        <input type="text" id="signup-name" required placeholder="Max Mustermann" />
+        <label data-de="E-Mail" data-en="Email">E-Mail</label>
+        <input type="email" id="signup-email" required placeholder="max@firma.de" />
+        <label data-de="Passwort" data-en="Password">Passwort</label>
+        <input type="password" id="signup-password" required placeholder="Min. 8 Zeichen" minlength="8" />
+        <button type="submit" class="btn-primary full-width" data-de="Konto erstellen" data-en="Create account">Konto erstellen</button>
+        <p id="signup-error" class="auth-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- LANGUAGE SWITCHER -->
+  <div class="lang-bar">
+    <button onclick="setLang('de')" id="btn-de" class="lang-btn active">🇩🇪 Deutsch</button>
+    <button onclick="setLang('en')" id="btn-en" class="lang-btn">🇬🇧 English</button>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-inner">
+      <div class="logo" id="site-logo">AI<span>Employee</span></div>
+      <div class="header-right">
+        <span id="header-username" class="header-user"></span>
+        <button onclick="openOwnerDashboard()" class="btn-owner" id="btn-owner-panel" style="display:none;" data-de="⚙️ Owner Panel" data-en="⚙️ Owner Panel">⚙️ Owner Panel</button>
+        <button onclick="openMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
+        <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
+      </div>
+    </div>
+    <p class="tagline" data-de="Dein KI-Mitarbeiter. 24/7. Günstiger als jeder Mensch." data-en="Your AI employee. 24/7. Cheaper than any human.">
+      Dein KI-Mitarbeiter. 24/7. Günstiger als jeder Mensch.
+    </p>
+  </header>
+
+  <!-- MY TASKS PANEL -->
+  <div id="my-tasks-panel" style="display:none;">
+    <div class="panel-inner">
+      <div class="panel-header">
+        <h3 data-de="Meine Aufgaben" data-en="My Tasks">Meine Aufgaben</h3>
+        <button onclick="closeMyTasks()" class="btn-ghost" data-de="Schließen" data-en="Close">Schließen</button>
+      </div>
+      <div id="tasks-list"></div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1 data-de="Gib deinem Unternehmen einen KI-Mitarbeiter" data-en="Give your business an AI employee">
+      Gib deinem Unternehmen einen KI-Mitarbeiter
+    </h1>
+    <p data-de="Beschreibe deine Aufgabe. Dein KI-Mitarbeiter erledigt sie — schneller als jeder Mensch, zu einem fairen Preis." data-en="Describe your task. Your AI employee handles it — faster than any human, at a fair price.">
+      Beschreibe deine Aufgabe. Dein KI-Mitarbeiter erledigt sie — schneller als jeder Mensch, zu einem fairen Preis.
+    </p>
+    <div class="hero-badges">
+      <span class="hero-badge">✅ <span data-de="Agent wird nach jeder Aufgabe automatisch von deinem PC gelöscht" data-en="Agent is automatically deleted from your PC after every task">Agent wird nach jeder Aufgabe automatisch von deinem PC gelöscht</span></span>
+      <span class="hero-badge">🔒 <span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></span>
+      <span class="hero-badge">💶 <span data-de="Faire Preise" data-en="Fair pricing">Faire Preise</span></span>
+    </div>
+    <a href="#task-form" class="btn-primary" data-de="Aufgabe starten" data-en="Start a task">Aufgabe starten</a>
+  </section>
+
+  <!-- CHARACTER SELECTOR -->
+  <section class="character-section">
+    <h2 data-de="Wähle deinen KI-Mitarbeiter" data-en="Choose your AI employee">Wähle deinen KI-Mitarbeiter</h2>
+    <p data-de="Beide sind gleich leistungsfähig — wähle einfach deinen bevorzugten Stil." data-en="Both are equally capable — just choose your preferred style.">Beide sind gleich leistungsfähig — wähle einfach deinen bevorzugten Stil.</p>
+    <div class="character-cards">
+
+      <!-- MALE CHARACTER -->
+      <div class="character-card" id="char-male" onclick="selectCharacter('male')">
+        <div class="character-badge selected-badge" id="badge-male" style="display:none;" data-de="✓ Ausgewählt" data-en="✓ Selected">✓ Ausgewählt</div>
+        <img src="alex.png" alt="Alex" class="character-img" />
+        <h3 data-de="Alex" data-en="Alex">Alex</h3>
+        <p data-de="KI-Mitarbeiter · Professionell & präzise" data-en="AI Employee · Professional & precise">KI-Mitarbeiter · Professionell & präzise</p>
+        <button class="char-select-btn" id="charbtn-male" data-de="Alex wählen" data-en="Choose Alex">Alex wählen</button>
+      </div>
+
+      <!-- FEMALE CHARACTER -->
+      <div class="character-card" id="char-female" onclick="selectCharacter('female')">
+        <div class="character-badge selected-badge" id="badge-female" style="display:none;" data-de="✓ Ausgewählt" data-en="✓ Selected">✓ Ausgewählt</div>
+        <img src="emma.png" alt="Emma" class="character-img" />
+        <h3 data-de="Emma" data-en="Emma">Emma</h3>
+        <p data-de="KI-Mitarbeiterin · Effizient & zuverlässig" data-en="AI Employee · Efficient & reliable">KI-Mitarbeiterin · Effizient & zuverlässig</p>
+        <button class="char-select-btn" id="charbtn-female" data-de="Emma wählen" data-en="Choose Emma">Emma wählen</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works">
+    <h2 data-de="So funktioniert es" data-en="How it works">So funktioniert es</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3 data-de="Aufgabe beschreiben" data-en="Describe your task">Aufgabe beschreiben</h3>
+        <p data-de="Erkläre was du brauchst — E-Mails sortieren, Dokumente erstellen, Berichte schreiben." data-en="Tell us what you need — sort emails, create documents, write reports.">Erkläre was du brauchst.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3 data-de="Preis bestätigen" data-en="Confirm the price">Preis bestätigen</h3>
+        <p data-de="Du siehst den genauen Preis bevor die Arbeit beginnt. Keine Überraschungen." data-en="You see the exact price before work begins. No surprises.">Du siehst den genauen Preis. Keine Überraschungen.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3 data-de="Bezahlen & Live zusehen" data-en="Pay & watch live">Bezahlen & Live zusehen</h3>
+        <p data-de="Bezahle sicher per PayPal oder Überweisung. Live-Fortschrittsbalken zeigt alles in Echtzeit." data-en="Pay securely. A live progress bar shows everything in real time.">Bezahle sicher. Live-Fortschrittsbalken zeigt alles.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <h3 data-de="Agent wird gelöscht" data-en="Agent gets deleted">Agent wird gelöscht</h3>
+        <p data-de="Nach Abschluss wird der Agent vollständig von deinem PC entfernt. Kein Zugriff mehr. Keine Daten gespeichert." data-en="After completion the agent is fully removed from your PC. No access. No data kept.">Agent wird vollständig von deinem PC entfernt. Keine Daten gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials-section" id="testimonials">
+    <h2 data-de="Was unsere Kunden sagen" data-en="What our customers say">Was unsere Kunden sagen</h2>
+    <div id="testimonials-grid" class="testimonials-grid">
+      <!-- Populated by JS from featured reviews -->
+      <p class="empty-state" id="no-reviews-msg" data-de="Noch keine Bewertungen. Sei der Erste!" data-en="No reviews yet. Be the first!">Noch keine Bewertungen. Sei der Erste!</p>
+    </div>
+  </section>
+
+  <!-- TASK FORM -->
+  <section class="form-section" id="task-form">
+    <h2 data-de="Deine Aufgabe" data-en="Your Task">Deine Aufgabe</h2>
+
+    <!-- STEP 1: FORM -->
+    <div id="step-form">
+      <form onsubmit="submitTask(event)">
+        <label data-de="Beschreibe dein Unternehmen (optional)" data-en="Describe your business (optional)">Beschreibe dein Unternehmen (optional)</label>
+        <textarea id="business-details" rows="2" placeholder="z.B. Wir sind ein kleines Beratungsunternehmen..."></textarea>
+        <label data-de="Was soll dein KI-Mitarbeiter erledigen?" data-en="What should your AI employee do?">Was soll dein KI-Mitarbeiter erledigen?</label>
+        <div class="task-shortcuts">
+          <button type="button" class="task-shortcut" onclick="selectShortcut('pdf')" data-de="📄 PDF analysieren" data-en="📄 Analyse PDF">📄 PDF analysieren</button>
+          <button type="button" class="task-shortcut" onclick="selectShortcut('email')" data-de="📧 E-Mails sortieren" data-en="📧 Sort emails">📧 E-Mails sortieren</button>
+          <button type="button" class="task-shortcut" onclick="selectShortcut('report')" data-de="📊 Bericht erstellen" data-en="📊 Create report">📊 Bericht erstellen</button>
+          <button type="button" class="task-shortcut" onclick="selectShortcut('reply')" data-de="✉️ Antworten schreiben" data-en="✉️ Write replies">✉️ Antworten schreiben</button>
+          <button type="button" class="task-shortcut" onclick="selectShortcut('document')" data-de="📝 Dokument erstellen" data-en="📝 Create document">📝 Dokument erstellen</button>
+        </div>
+        <textarea id="task-description" rows="4" required placeholder="z.B. Sortiere meine E-Mails nach Dringlichkeit..."></textarea>
+
+        <!-- ANALYSIS DEPTH SELECTOR (Moved to Step 1) -->
+        <div id="depth-selector" style="margin-top:15px; margin-bottom:20px; display:block;">
+          <p style="font-size:13px;color:var(--gray);margin-bottom:10px;text-align:center;" data-de="Wie ausführlich soll die KI analysieren/schreiben?" data-en="How detailed should the AI analyse/write?">Wie ausführlich soll die KI analysieren/schreiben?</p>
+          <div style="display:flex;gap:10px;">
+            <button type="button" class="depth-btn" id="depth-short" onclick="setDepth('short')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
+              <div style="font-size:18px;margin-bottom:4px;">⚡</div>
+              <strong data-de="Kurz" data-en="Short">Kurz</strong>
+              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~1 Min" data-en="~1 min">~1 Min</div>
+            </button>
+            <button type="button" class="depth-btn active-depth" id="depth-medium" onclick="setDepth('medium')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
+              <div style="font-size:18px;margin-bottom:4px;">📋</div>
+              <strong data-de="Mittel" data-en="Medium">Mittel</strong>
+              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~2 Min" data-en="~2 min">~2 Min</div>
+            </button>
+            <button type="button" class="depth-btn" id="depth-long" onclick="setDepth('long')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
+              <div style="font-size:18px;margin-bottom:4px;">🔬</div>
+              <strong data-de="Lang" data-en="Long">Lang</strong>
+              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~4 Min" data-en="~4 min">~4 Min</div>
+            </button>
+          </div>
+        </div>
+        <!-- PDF UPLOAD -->
+        <div class="pdf-upload-area" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <input type="file" id="pdf-file-input" accept=".pdf" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
+          <div class="pdf-upload-icon">📄</div>
+          <div class="pdf-upload-text">
+            <strong data-de="PDF-Dateien hier ablegen oder klicken" data-en="Drop PDF files here or click">PDF-Dateien hier ablegen oder klicken</strong><br>
+            <span data-de="Bis zu 10 PDFs — werden nach Abschluss gelöscht" data-en="Up to 10 PDFs — deleted after completion">Bis zu 10 PDFs — werden nach Abschluss gelöscht</span>
+          </div>
+          <div class="pdf-file-list" id="pdf-file-list"></div>
+        </div>
+
+        <button type="submit" class="btn-primary" data-de="Preis berechnen →" data-en="Calculate price →">Preis berechnen →</button>
+      </form>
+    </div>
+
+    <!-- STEP 2: PRICE -->
+    <div id="step-price" style="display:none;">
+      <div class="price-box">
+        <div class="price-icon">🤖</div>
+        <p id="price-time-text" class="price-time"></p>
+        <p id="price-amount" class="price-amount"></p>
+        <p class="price-note" data-de="Alle deine Daten werden nach Abschluss gelöscht." data-en="All your data will be deleted after the job is done.">Alle deine Daten werden nach Abschluss gelöscht.</p>
+        <div class="price-buttons">
+          <button onclick="goToPayment()" class="btn-primary" data-de="Weiter zur Zahlung →" data-en="Continue to payment →">Weiter zur Zahlung →</button>
+          <button onclick="cancelTask()" class="btn-secondary" data-de="Abbrechen" data-en="Cancel">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: PAYMENT -->
+    <div id="step-payment" style="display:none;">
+      <div class="payment-box">
+        <h3 data-de="Zahlungsmethode" data-en="Payment Method">Zahlungsmethode</h3>
+        <p id="payment-amount-label" class="payment-amount-label"></p>
+        <div id="saved-payment" style="display:none;">
+          <div class="saved-method">
+            <span id="saved-method-icon"></span>
+            <span id="saved-method-label"></span>
+            <button onclick="changPaymentMethod()" class="btn-link" data-de="Ändern" data-en="Change">Ändern</button>
+          </div>
+          <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Jetzt bezahlen" data-en="Pay now">Jetzt bezahlen</button>
+        </div>
+        <div id="new-payment">
+          <div class="payment-options">
+            <button onclick="selectPayment('paypal')" class="payment-option" id="opt-paypal">
+              <span class="payment-logo">🅿️</span>
+              <span>PayPal</span>
+            </button>
+            <button onclick="selectPayment('bank')" class="payment-option" id="opt-bank">
+              <span class="payment-logo">🏦</span>
+              <span data-de="Banküberweisung" data-en="Bank Transfer">Banküberweisung</span>
+            </button>
+          </div>
+          <div id="paypal-form" style="display:none;">
+            <label data-de="Deine PayPal E-Mail-Adresse" data-en="Your PayPal email address">Deine PayPal E-Mail-Adresse</label>
+            <input type="email" id="paypal-email" placeholder="deine@paypal.com" />
+            <p class="payment-hint" data-de="Du erhältst eine Zahlungsanfrage an diese Adresse." data-en="You will receive a payment request at this address.">Du erhältst eine Zahlungsanfrage an diese Adresse.</p>
+            <div class="remember-row">
+              <input type="checkbox" id="save-paypal" checked />
+              <label for="save-paypal" data-de="PayPal-Adresse speichern" data-en="Save PayPal address">PayPal-Adresse speichern</label>
+            </div>
+            <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Mit PayPal bezahlen" data-en="Pay with PayPal">Mit PayPal bezahlen</button>
+          </div>
+          <div id="bank-form" style="display:none;">
+            <label data-de="Kontoinhaber" data-en="Account holder">Kontoinhaber</label>
+            <input type="text" id="bank-name" placeholder="Max Mustermann" />
+            <label>IBAN</label>
+            <input type="text" id="bank-iban" placeholder="DE89 3704 0044 0532 0130 00" />
+            <div class="bank-info-box" data-de="Nach Bestätigung erhältst du unsere Bankdaten per E-Mail." data-en="After confirmation you will receive our bank details by email.">Nach Bestätigung erhältst du unsere Bankdaten per E-Mail.</div>
+            <div class="remember-row">
+              <input type="checkbox" id="save-bank" checked />
+              <label for="save-bank" data-de="Bankdaten speichern" data-en="Save bank details">Bankdaten speichern</label>
+            </div>
+            <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Per Überweisung bezahlen" data-en="Pay by bank transfer">Per Überweisung bezahlen</button>
+          </div>
+        </div>
+        <button onclick="cancelTask()" class="btn-link center-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: SETUP GUIDE -->
+    <div id="step-setup" style="display:none;">
+      <div class="setup-box">
+        <div class="setup-header">
+          <span class="setup-icon">⚙️</span>
+          <div>
+            <h3 data-de="Einmalige Einrichtung" data-en="One-time Setup">Einmalige Einrichtung</h3>
+            <p data-de="Damit dein KI-Mitarbeiter auf deinem Computer arbeiten kann, benötigt er kurz deine Erlaubnis." data-en="So your AI employee can work on your computer, it needs your permission for a moment.">Damit dein KI-Mitarbeiter auf deinem Computer arbeiten kann, benötigt er kurz deine Erlaubnis.</p>
+          </div>
+        </div>
+        <div class="setup-steps">
+          <div class="setup-step">
+            <div class="setup-step-num">1</div>
+            <div class="setup-step-content">
+              <strong data-de="Agent herunterladen" data-en="Download the Agent">Agent herunterladen</strong>
+              <p data-de="Lade das kleine Hilfsprogramm herunter. Sicher und kostenlos — nur einmal nötig." data-en="Download the small helper program. Safe and free — only needed once.">Lade das kleine Hilfsprogramm herunter. Sicher und kostenlos — nur einmal nötig.</p>
+              <a href="#" class="btn-download" onclick="downloadAgent(); return false;">⬇️ <span data-de="Für Windows herunterladen" data-en="Download for Windows">Für Windows herunterladen</span></a>
+            </div>
+          </div>
+          <div class="setup-step">
+            <div class="setup-step-num">2</div>
+            <div class="setup-step-content">
+              <strong data-de="Programm installieren" data-en="Install the program">Programm installieren</strong>
+              <p data-de="Öffne die Datei und klicke auf &quot;Installieren&quot;. Windows fragt nach Bestätigung — klicke &quot;Ja&quot;." data-en="Open the file and click &quot;Install&quot;. Windows may ask for confirmation — click &quot;Yes&quot;.">Öffne die Datei und klicke auf "Installieren". Windows fragt — klicke "Ja".</p>
+            </div>
+          </div>
+          <div class="setup-step">
+            <div class="setup-step-num">3</div>
+            <div class="setup-step-content">
+              <strong data-de="Berechtigungen erteilen" data-en="Grant permissions">Berechtigungen erteilen</strong>
+              <p data-de="Wähle nur aus, was für deine Aufgabe nötig ist:" data-en="Only select what is needed for your task:">Wähle nur aus, was für deine Aufgabe nötig ist:</p>
+              <div class="permission-list">
+                <label class="permission-item"><input type="checkbox" id="perm-email" /><span>📧</span><span data-de="E-Mails lesen &amp; sortieren" data-en="Read &amp; sort emails">E-Mails lesen &amp; sortieren</span></label>
+                <label class="permission-item"><input type="checkbox" id="perm-files" /><span>📁</span><span data-de="Dateien &amp; Dokumente lesen" data-en="Read files &amp; documents">Dateien &amp; Dokumente lesen</span></label>
+                <label class="permission-item"><input type="checkbox" id="perm-browser" /><span>🌐</span><span data-de="Browser-Aktionen ausführen" data-en="Perform browser actions">Browser-Aktionen ausführen</span></label>
+                <label class="permission-item"><input type="checkbox" id="perm-calendar" /><span>📅</span><span data-de="Kalender lesen" data-en="Read calendar">Kalender lesen</span></label>
+              </div>
+            </div>
+          </div>
+          <div class="setup-step">
+            <div class="setup-step-num">4</div>
+            <div class="setup-step-content">
+              <strong data-de="Verbindung bestätigen" data-en="Confirm connection">Verbindung bestätigen</strong>
+              <p data-de="Ein grünes Symbol in der Taskleiste zeigt: dein KI-Mitarbeiter ist verbunden." data-en="A green icon in the taskbar means your AI employee is connected.">Ein grünes Symbol in der Taskleiste zeigt: dein KI-Mitarbeiter ist verbunden.</p>
+              <div class="taskbar-preview"><span>...</span><span class="taskbar-icon">🟢</span><span class="taskbar-time">14:32</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="setup-note">
+          <span>🔒</span>
+          <p data-de="Der Agent arbeitet nur während deiner Aufgabe. Danach werden alle Berechtigungen deaktiviert und alle Daten gelöscht." data-en="The agent only works during your task. Afterwards all permissions are deactivated and all data is deleted.">Der Agent arbeitet nur während deiner Aufgabe. Danach werden alle Berechtigungen deaktiviert und alle Daten gelöscht.</p>
+        </div>
+        <button onclick="goToAppSelection()" class="btn-primary full-width" data-de="Ich habe alles eingerichtet — Weiter ✓" data-en="I have set everything up — Continue ✓">Ich habe alles eingerichtet — Weiter ✓</button>
+        <div class="bottom-links">
+          <button onclick="cancelTask()" class="btn-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
+          <a href="#" onclick="goHome(); return false;" class="btn-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4b: APP SELECTION (AI asks which apps to use) -->
+    <div id="step-apps" style="display:none;">
+      <div class="setup-box">
+        <div class="setup-header">
+          <span class="setup-icon" id="app-step-icon">🤖</span>
+          <div>
+            <h3 id="app-step-title" data-de="Noch eine kurze Frage..." data-en="One quick question...">Noch eine kurze Frage...</h3>
+            <p id="app-step-subtitle" data-de="Damit ich genau weiß, wo ich arbeiten soll — beantworte kurz folgende Fragen:" data-en="So I know exactly where to work — please answer the following:">Damit ich genau weiß, wo ich arbeiten soll — beantworte kurz folgende Fragen:</p>
+          </div>
+        </div>
+        <div id="app-questions" style="display:flex;flex-direction:column;gap:20px;margin-bottom:28px;"></div>
+        <button onclick="confirmApps()" class="btn-primary full-width" data-de="Alles klar — Aufgabe starten ✓" data-en="All good — Start task ✓">Alles klar — Aufgabe starten ✓</button>
+        <div class="bottom-links">
+          <button id="btn-back-apps" onclick="showStep('step-setup')" class="btn-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5: PROGRESS BAR -->
+    <div id="step-progress" style="display:none;">
+      <div class="progress-box">
+        <div class="agent-working">
+          <div class="agent-icon">🤖</div>
+          <p id="progress-message" class="progress-message">Lese deine Aufgabe...</p>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <p id="progress-percent" class="progress-percent">0%</p>
+      </div>
+    </div>
+
+    <!-- STEP 6: RESULTS -->
+    <div id="step-result" style="display:none;">
+      <div class="result-box">
+        <div class="result-header">
+          <span class="result-icon">✅</span>
+          <h3 data-de="Aufgabe abgeschlossen!" data-en="Task complete!">Aufgabe abgeschlossen!</h3>
+        </div>
+        <div id="result-content" class="result-content"></div>
+        <div class="result-buttons">
+          <button onclick="downloadResult()" class="btn-primary" data-de="Ergebnis herunterladen" data-en="Download result">Ergebnis herunterladen</button>
+          <button onclick="deleteData()" class="btn-delete" data-de="🗑 Alle meine Daten löschen" data-en="🗑 Delete all my data">🗑 Alle meine Daten löschen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7: DELETING IN PROGRESS -->
+    <div id="step-deleting" style="display:none;">
+      <div class="deleted-box">
+        <div class="deleted-icon">⏳</div>
+        <h3 data-de="Wird entfernt..." data-en="Removing...">Wird entfernt...</h3>
+        <div class="revoke-list" id="revoke-list"></div>
+      </div>
+    </div>
+
+    <!-- STEP 8: DELETED CONFIRMATION -->
+    <div id="step-deleted" style="display:none;">
+      <div class="deleted-box">
+        <div class="deleted-icon">✅</div>
+        <h3 data-de="Vollständig entfernt." data-en="Fully removed.">Vollständig entfernt.</h3>
+        <div class="deleted-checklist">
+          <div class="deleted-check"><span>🗑</span><span data-de="Alle Aufgabendaten gelöscht" data-en="All task data deleted">Alle Aufgabendaten gelöscht</span></div>
+          <div class="deleted-check"><span>📧</span><span data-de="E-Mail-Zugriff entzogen" data-en="Email access revoked">E-Mail-Zugriff entzogen</span></div>
+          <div class="deleted-check"><span>📁</span><span data-de="Dateizugriff entzogen" data-en="File access revoked">Dateizugriff entzogen</span></div>
+          <div class="deleted-check"><span>🌐</span><span data-de="Browser-Zugriff entzogen" data-en="Browser access revoked">Browser-Zugriff entzogen</span></div>
+          <div class="deleted-check"><span>🔌</span><span data-de="Agent vom Computer getrennt" data-en="Agent disconnected from computer">Agent vom Computer getrennt</span></div>
+        </div>
+        <p class="deleted-note" data-de="Der KI-Mitarbeiter hat keine Kontrolle mehr über deinen Computer." data-en="The AI employee no longer has any control over your computer.">Der KI-Mitarbeiter hat keine Kontrolle mehr über deinen Computer.</p>
+        <div class="deleted-actions">
+          <button onclick="goToFeedback()" class="btn-primary" data-de="⭐ Bewertung hinterlassen" data-en="⭐ Leave a review">⭐ Bewertung hinterlassen</button>
+          <button onclick="resetForm()" class="btn-secondary" data-de="Neue Aufgabe starten" data-en="Start a new task">Neue Aufgabe starten</button>
+        </div>
+        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+      </div>
+    </div>
+
+    <!-- STEP 9: FEEDBACK / REVIEW FORM -->
+    <div id="step-feedback" style="display:none;">
+      <div class="feedback-box">
+        <div class="feedback-header">
+          <span style="font-size:36px;">⭐</span>
+          <div>
+            <h3 data-de="Wie war dein KI-Mitarbeiter?" data-en="How was your AI employee?">Wie war dein KI-Mitarbeiter?</h3>
+            <p data-de="Deine Bewertung hilft uns und anderen Kunden." data-en="Your review helps us and other customers.">Deine Bewertung hilft uns und anderen Kunden.</p>
+          </div>
+        </div>
+        <div class="star-rating" id="star-rating">
+          <span class="star" data-val="1" onclick="setStars(1)">★</span>
+          <span class="star" data-val="2" onclick="setStars(2)">★</span>
+          <span class="star" data-val="3" onclick="setStars(3)">★</span>
+          <span class="star" data-val="4" onclick="setStars(4)">★</span>
+          <span class="star" data-val="5" onclick="setStars(5)">★</span>
+        </div>
+        <label data-de="Dein Kommentar (optional)" data-en="Your comment (optional)">Dein Kommentar (optional)</label>
+        <textarea id="review-text" rows="3" placeholder="z.B. Sehr schnell und präzise! Würde ich weiterempfehlen."></textarea>
+        <label data-de="Dein Name (für die Bewertung)" data-en="Your name (for the review)">Dein Name (für die Bewertung)</label>
+        <input type="text" id="review-name" placeholder="Max M." />
+        <button onclick="submitReview()" class="btn-primary full-width" data-de="Bewertung absenden" data-en="Submit review">Bewertung absenden</button>
+        <button onclick="skipReview()" class="btn-link center-link" data-de="Überspringen" data-en="Skip">Überspringen</button>
+      </div>
+    </div>
+
+    <!-- STEP 10: REVIEW SUBMITTED -->
+    <div id="step-review-done" style="display:none;">
+      <div class="deleted-box">
+        <div class="deleted-icon">🙏</div>
+        <h3 data-de="Danke für deine Bewertung!" data-en="Thank you for your review!">Danke für deine Bewertung!</h3>
+        <p data-de="Deine Bewertung wurde eingereicht." data-en="Your review has been submitted.">Deine Bewertung wurde eingereicht.</p>
+        <button onclick="resetForm()" class="btn-primary" data-de="Neue Aufgabe starten" data-en="Start a new task">Neue Aufgabe starten</button>
+        <a href="#" onclick="goHome(); return false;" class="btn-link center-link" data-de="🏠 Zur Startseite" data-en="🏠 Go to Home Page">🏠 Zur Startseite</a>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- LEAVE A REVIEW SECTION -->
+  <section class="review-section" id="leave-review">
+    <h2 data-de="Bewertung hinterlassen" data-en="Leave a Review">Bewertung hinterlassen</h2>
+    <p data-de="Hast du unseren Service genutzt? Teile deine Erfahrung." data-en="Have you used our service? Share your experience.">Hast du unseren Service genutzt? Teile deine Erfahrung.</p>
+    <a href="#task-form" class="btn-primary" data-de="Jetzt starten & bewerten" data-en="Start now & review">Jetzt starten & bewerten</a>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p data-de="© 2026 AI Employee Agent · Alle Daten werden nach Abschluss gelöscht · DSGVO-konform" data-en="© 2026 AI Employee Agent · All data deleted after completion · GDPR compliant">
+      © 2026 AI Employee Agent · Alle Daten werden nach Abschluss gelöscht · DSGVO-konform
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
