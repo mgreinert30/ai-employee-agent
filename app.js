@@ -468,7 +468,7 @@ function connectGmail() {
 
   const client = google.accounts.oauth2.initTokenClient({
     client_id: GMAIL_CLIENT_ID,
-    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+    scope: 'https://www.googleapis.com/auth/gmail.modify',
     callback: async (response) => {
       if (response.error) {
         status.textContent = (currentLang === 'de' ? 'Fehler: ' : 'Error: ') + response.error;
@@ -488,14 +488,14 @@ function connectGmail() {
 
 async function fetchGmailEmails(token) {
   const listRes = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=15&q=is:inbox',
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=is:inbox',
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const listData = await listRes.json();
   const messages = listData.messages || [];
 
   const emails = [];
-  for (const msg of messages.slice(0, 15)) {
+  for (const msg of messages.slice(0, 20)) {
     try {
       const r = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
@@ -503,13 +503,39 @@ async function fetchGmailEmails(token) {
       );
       const d = await r.json();
       const h = d.payload?.headers || [];
-      const from    = h.find(x => x.name === 'From')?.value    || '';
-      const subject = h.find(x => x.name === 'Subject')?.value || '(kein Betreff)';
-      const date    = h.find(x => x.name === 'Date')?.value    || '';
-      emails.push(`Von: ${from}\nBetreff: ${subject}\nDatum: ${date}`);
+      emails.push({
+        id: msg.id,
+        from:    h.find(x => x.name === 'From')?.value    || '',
+        subject: h.find(x => x.name === 'Subject')?.value || '(kein Betreff)',
+        date:    h.find(x => x.name === 'Date')?.value    || ''
+      });
     } catch (_) {}
   }
   return emails;
+}
+
+async function getOrCreateLabel(token, name) {
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  const existing = (data.labels || []).find(l => l.name === name);
+  if (existing) return existing.id;
+  const createRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, labelListVisibility: 'labelShow', messageListVisibility: 'show' })
+  });
+  const created = await createRes.json();
+  return created.id;
+}
+
+async function applyLabel(token, messageId, labelId) {
+  await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addLabelIds: [labelId] })
+  });
 }
 
 async function startGmailTask() {
@@ -518,9 +544,9 @@ async function startGmailTask() {
   const name = getCharacterName();
   const de = currentLang === 'de';
 
-  setProgress(5,  de ? `${name} verbindet sich mit Gmail...`        : `${name} connecting to Gmail...`);
+  setProgress(5,  de ? `${name} verbindet sich mit Gmail...` : `${name} connecting to Gmail...`);
   await delay(600);
-  setProgress(20, de ? `${name} liest deine E-Mails...`            : `${name} reading your emails...`);
+  setProgress(20, de ? `${name} liest deine E-Mails...`     : `${name} reading your emails...`);
 
   let emails = [];
   try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
@@ -532,38 +558,19 @@ async function startGmailTask() {
     return;
   }
 
-  setProgress(45, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
-  await delay(400);
-  setProgress(70, de ? `${name} sortiert nach Dringlichkeit...`          : `${name} sorting by urgency...`);
+  setProgress(40, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
 
-  const prompt = de
-    ? `Du bist ein professioneller E-Mail-Assistent. Sortiere diese ${emails.length} E-Mails nach Dringlichkeit und erstelle eine klare, strukturierte Übersicht.
+  const emailList = emails.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
+  const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
+Kategorien: DRINGEND, WICHTIG, NIEDRIG, INFO
+Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
 
 E-Mails:
-${emails.join('\n\n---\n\n')}
+${emailList}`;
 
-Gib für jede E-Mail aus:
-- Kategorie: DRINGEND / WICHTIG / NIEDRIG / INFO
-- Absender & Betreff
-- Kurze Zusammenfassung (1 Satz)
-- Empfohlene Aktion
-
-Gruppiere nach Kategorie. Sei präzise und professionell.`
-    : `You are a professional email assistant. Sort these ${emails.length} emails by urgency and create a clear, structured overview.
-
-Emails:
-${emails.join('\n\n---\n\n')}
-
-For each email provide:
-- Category: URGENT / IMPORTANT / LOW / INFO
-- Sender & Subject
-- Brief summary (1 sentence)
-- Recommended action
-
-Group by category. Be precise and professional.`;
-
+  let categorized = [];
   try {
-    setProgress(85, de ? 'KI analysiert — bitte warten...' : 'AI analysing — please wait...');
+    setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
     const res = await fetch('/api/analyse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -571,13 +578,44 @@ Group by category. Be precise and professional.`;
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    currentResult = data.result;
+    const jsonMatch = data.result.match(/\[[\s\S]*\]/);
+    if (jsonMatch) categorized = JSON.parse(jsonMatch[0]);
   } catch (err) {
-    currentResult = (de ? '⚠️ Analyse fehlgeschlagen: ' : '⚠️ Analysis failed: ') + err.message;
+    currentResult = (de ? '⚠️ Kategorisierung fehlgeschlagen: ' : '⚠️ Categorisation failed: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    gmailAccessToken = null;
+    return;
+  }
+
+  setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
+
+  const categories = ['DRINGEND', 'WICHTIG', 'NIEDRIG', 'INFO'];
+  const labelPrefix = 'KI-Sortierung/';
+  const labelIds = {};
+  for (const cat of categories) {
+    try { labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat); } catch (_) {}
+  }
+
+  setProgress(88, de ? `${name} sortiert E-Mails in Gmail...` : `${name} sorting emails in Gmail...`);
+
+  const counts = { DRINGEND: 0, WICHTIG: 0, NIEDRIG: 0, INFO: 0 };
+  for (const item of categorized) {
+    const labelId = labelIds[item.kategorie];
+    if (labelId && item.id) {
+      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (_) {}
+    }
   }
 
   gmailAccessToken = null;
   setProgress(100, de ? 'Fertig!' : 'Done!');
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  currentResult = de
+    ? `✅ ${total} E-Mails wurden in Gmail sortiert!\n\nDu findest sie unter dem Label "KI-Sortierung" in deinem Gmail:\n\n🔴 DRINGEND: ${counts.DRINGEND} E-Mails\n🟡 WICHTIG: ${counts.WICHTIG} E-Mails\n🟢 NIEDRIG: ${counts.NIEDRIG} E-Mails\n🔵 INFO: ${counts.INFO} E-Mails\n\nÖffne Gmail → linke Seite → "KI-Sortierung" um die sortierten E-Mails zu sehen.`
+    : `✅ ${total} emails sorted in Gmail!\n\nFind them under the "KI-Sortierung" label in Gmail:\n\n🔴 URGENT: ${counts.DRINGEND} emails\n🟡 IMPORTANT: ${counts.WICHTIG} emails\n🟢 LOW: ${counts.NIEDRIG} emails\n🔵 INFO: ${counts.INFO} emails\n\nOpen Gmail → left sidebar → "KI-Sortierung" to see your sorted emails.`;
+
   showStep('step-result');
   document.getElementById('result-content').textContent = currentResult;
 }
