@@ -933,6 +933,14 @@ function confirmPayment() {
     return;
   }
 
+  // Document/report creation → skip setup & apps, go straight to AI generation
+  const taskType = detectTaskType(desc);
+  if (taskType === 'document' || taskType === 'report' || taskType === 'reply') {
+    window.skippedSetup = true;
+    startTask();
+    return;
+  }
+
   applySmartPermissions();
 
   const needsLocalAccess = document.getElementById('perm-email').checked ||
@@ -1180,7 +1188,9 @@ async function startTask() {
   const taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
-  const useRealAI = uploadedPDFs.length > 0;
+  // Always use real AI for document/report/reply creation (no PDF required)
+  const taskKind = detectTaskType(taskDesc);
+  const useRealAI = uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply';
 
   if (useRealAI) {
     // Real AI mode — PDF uploaded, call server-side Gemini API
@@ -1217,15 +1227,13 @@ function setProgress(pct, msg) {
 // =====================
 function downloadResult() {
   const desc = document.getElementById('task-description').value.toLowerCase();
-  const isPDF   = uploadedPDFs.length > 0 || desc.includes('pdf');
   const isEmail = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || (window.selectedApps && window.selectedApps.email);
 
-  if (isPDF) {
-    downloadPDF(window.selectedAnalysisLength || 'medium');
-  } else if (isEmail) {
+  if (isEmail) {
     downloadEmailResult();
   } else {
-    downloadHTMLReport();
+    // PDF for everything else (PDF analysis, document creation, reports, replies)
+    downloadPDF(window.selectedAnalysisLength || 'medium');
   }
 }
 
@@ -2931,6 +2939,96 @@ RECOMMENDATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Sign or not? What to renegotiate? Specific points.]`,
 
+    create_document: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EINLEITUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Zweck und Hintergrund des Dokuments — klar und professionell.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HAUPTTEIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Strukturierter Hauptinhalt mit klaren Unterabschnitten. Vollständig ausgearbeitet gemäß Aufgabe.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DETAILS & ERLÄUTERUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle relevanten Details, Hintergründe, Begründungen — professionell und präzise formuliert.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FAZIT & NÄCHSTE SCHRITTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Abschluss und konkrete nächste Schritte.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Purpose and background of the document — clear and professional.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MAIN CONTENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Structured main content with clear subsections. Fully developed per the task.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DETAILS & EXPLANATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All relevant details, background, reasoning — professional and precise.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONCLUSION & NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Closing and concrete next steps.]`,
+
+    create_report: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Die wichtigsten Erkenntnisse und Empfehlungen in 3-5 Sätzen.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSE & ERKENNTNISSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ausführliche Analyse mit allen relevanten Erkenntnissen, strukturiert und nummeriert.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle relevanten Risiken und Chancen — quantifiziert und bewertet.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HANDLUNGSEMPFEHLUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Konkrete, umsetzbare Empfehlungen mit klaren Prioritäten und Zeitrahmen.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Key findings and recommendations in 3-5 sentences.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSIS & FINDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Detailed analysis with all relevant findings, structured and numbered.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & OPPORTUNITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All relevant risks and opportunities — quantified and assessed.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Concrete, actionable recommendations with clear priorities and timeframes.]`,
+
+    create_reply: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANTWORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Professionelle, vollständige Antwort — im richtigen Ton, direkt umsetzbar.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REPLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Professional, complete reply — right tone, ready to send.]`,
+
     allgemein: isDE
       ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KENNZAHLEN AUF EINEN BLICK
@@ -2982,17 +3080,31 @@ NEXT STEPS
 [Clear action plan]`
   };
 
-  // Depth modifier overlaid on top of doc-type sections (#2)
+  // Calculate page-count-based targets (#2 — length control)
+  // Detect source page count from docText header "[Dokument: name | X Seiten]"
+  const pageMatch = docText.match(/\|\s*(\d+)\s*Seit/i);
+  const sourcePages = pageMatch ? parseInt(pageMatch[1]) : 0;
+  let shortTarget, mediumTarget, longTarget;
+  if (sourcePages > 0) {
+    // Percentage of source: short=12.5%, medium=25%, long=50%
+    shortTarget  = isDE ? `ca. ${Math.max(2, Math.round(sourcePages * 0.125))} Seiten (12,5% des Originals mit ${sourcePages} Seiten)` : `approx. ${Math.max(2, Math.round(sourcePages * 0.125))} pages (12.5% of the ${sourcePages}-page original)`;
+    mediumTarget = isDE ? `ca. ${Math.max(4, Math.round(sourcePages * 0.25))} Seiten (25% des Originals)`  : `approx. ${Math.max(4, Math.round(sourcePages * 0.25))} pages (25% of original)`;
+    longTarget   = isDE ? `ca. ${Math.max(8, Math.round(sourcePages * 0.5))} Seiten (50% des Originals)`   : `approx. ${Math.max(8, Math.round(sourcePages * 0.5))} pages (50% of original)`;
+  } else {
+    shortTarget  = isDE ? 'ca. 3 Seiten (700-900 Wörter)'    : 'approx. 3 pages (700-900 words)';
+    mediumTarget = isDE ? 'ca. 5 Seiten (1400-1800 Wörter)'  : 'approx. 5 pages (1400-1800 words)';
+    longTarget   = isDE ? 'ca. 8-10 Seiten (2500-3500 Wörter)' : 'approx. 8-10 pages (2500-3500 words)';
+  }
   const depthInstructions = {
     short: isDE
-      ? `ANALYSETIEFE: KURZ — Mindestens 600-800 Wörter. Klar und prägnant, aber vollständig für jeden Abschnitt.`
-      : `ANALYSIS DEPTH: SHORT — Minimum 600-800 words. Clear and concise but complete for each section.`,
+      ? `AUSGABELÄNGE: KURZ — Ziel ${shortTarget}. Klar und prägnant, alle Abschnitte trotzdem vollständig.`
+      : `OUTPUT LENGTH: SHORT — Target ${shortTarget}. Clear and concise, but all sections still complete.`,
     medium: isDE
-      ? `ANALYSETIEFE: MITTEL — Ziel 900-1400 Wörter. Fokussiert und informativ, alle Abschnitte gut ausgeführt.`
-      : `ANALYSIS DEPTH: MEDIUM — Target 900-1400 words. Focused and informative, all sections well developed.`,
+      ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}. Fokussiert und informativ, alle Abschnitte gut ausgeführt.`
+      : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}. Focused and informative, all sections well developed.`,
     long: isDE
-      ? `ANALYSETIEFE: TIEF — Mindestens 1800-2800 Wörter. Extrem gründlich, keine Kürzungen, jede Kennzahl kommentiert.`
-      : `ANALYSIS DEPTH: DEEP — Minimum 1800-2800 words. Extremely thorough, no truncation, every metric commented on.`
+      ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}. Extrem gründlich, keine Kürzungen, jede Kennzahl kommentiert.`
+      : `OUTPUT LENGTH: LONG — Target ${longTarget}. Extremely thorough, no truncation, every metric commented on.`
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
@@ -3002,18 +3114,38 @@ NEXT STEPS
     de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
     en: { geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
   };
-  const dtLabel = docTypeLabels[isDE ? 'de' : 'en'][docType] || 'Dokument';
+  const dtLabel = docTypeLabels[isDE ? 'de' : 'en'][docType.replace('create_','')] || 'Dokument';
+  const isCreation = docType.startsWith('create_');
 
-  const personaDE = `Du bist der präziseste PDF-Analyst der Welt — spezialisiert auf ${dtLabel}e. Deine Analyse ist messbar besser als jedes andere KI-Tool.
+  const personaDE = isCreation
+    ? `Du bist ein professioneller Texter und Dokumentenersteller. Deine Aufgabe ist es, ein hochwertiges Dokument zu erstellen — kein Analyse, sondern echte Erstellung.
+
+AUFGABE: ${taskDesc}
+${businessCtx}
+
+KERNREGELN:
+1. Erstelle ein vollständiges, professionelles Dokument — direkt verwendbar.
+2. KEINE FLOSKELN: Nie "Ich werde jetzt...", "Hier ist das Dokument:". Direkt mit dem Inhalt starten.
+3. PROFESSIONELLE SPRACHE: Klar, präzise, sachlich — passend zum Unternehmenskontext.
+4. VOLLSTÄNDIG: Nicht abkürzen oder zusammenfassen — komplette Sätze und Abschnitte.
+5. ANTWORTE AUF DEUTSCH.
+
+${depth}
+
+AUSGABE-FORMAT (genau diese Abschnitte):
+${sections}
+
+QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung? Falls nein — überarbeiten.`
+    : `Du bist der präziseste PDF-Analyst der Welt — spezialisiert auf ${dtLabel}e. Deine Analyse ist messbar besser als jedes andere KI-Tool.
 
 AUFGABE DES KUNDEN: ${taskDesc}
 DOKUMENTTYP: ${dtLabel}
 ${businessCtx}
 
 KERNREGELN — NIEMALS BRECHEN:
-1. SEITENREFERENZEN PFLICHT (#8): Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter. Keine Fakten ohne Quellenangabe.
+1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
 2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
-3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Ich habe analysiert...". Direkt starten.
+3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...". Direkt starten.
 4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
 5. JEDER SATZ trägt Information — keine Füllsätze.
 6. ANTWORTE AUF DEUTSCH.
@@ -3023,21 +3155,40 @@ ${depth}
 AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
 ${sections}
 
-QUALITÄTSPRÜFUNG vor der Ausgabe:
-- Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen? Falls nein — ergänzen.
-- Hat jede wichtige Aussage eine Seitenreferenz (laut Seite X)? Falls nein — hinzufügen.
-- Überschreite ich die Mindestwortzahl? Falls nein — ausbauen.`;
+QUALITÄTSPRÜFUNG:
+- Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen?
+- Hat jede wichtige Aussage eine Seitenreferenz (laut Seite X)?
+- Überschreite ich die Mindestlänge?`;
 
-  const personaEN = `You are the world's most precise PDF analyst — specialised in ${dtLabel}s. Your analysis is measurably better than any other AI tool.
+  const personaEN = isCreation
+    ? `You are a professional writer and document creator. Your task is to create a high-quality document — not an analysis, but actual creation.
+
+TASK: ${taskDesc}
+${businessCtx}
+
+CORE RULES:
+1. Create a complete, professional document — directly usable.
+2. NO FILLER: Never "I will now...", "Here is the document:". Start directly with content.
+3. PROFESSIONAL LANGUAGE: Clear, precise, formal — appropriate to the business context.
+4. COMPLETE: Do not abbreviate or summarise — full sentences and sections.
+5. RESPOND IN ENGLISH.
+
+${depth}
+
+OUTPUT FORMAT (exactly these sections):
+${sections}
+
+QUALITY CHECK: Is the document directly usable without further editing? If not — revise.`
+    : `You are the world's most precise PDF analyst — specialised in ${dtLabel}s. Your analysis is measurably better than any other AI tool.
 
 CLIENT TASK: ${taskDesc}
 DOCUMENT TYPE: ${dtLabel}
 ${businessCtx}
 
 CORE RULES — NEVER BREAK:
-1. PAGE REFERENCES MANDATORY (#8): After EVERY important claim write "(see page X)". No facts without a source.
+1. PAGE REFERENCES MANDATORY: After EVERY important claim write "(see page X)".
 2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
-3. NO FILLER: Banned: "It is important to note...", "The document describes...", "I have analysed...". Start directly.
+3. NO FILLER: Banned: "It is important to note...", "The document describes...". Start directly.
 4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
 5. EVERY SENTENCE carries information — no padding.
 6. RESPOND IN ENGLISH.
@@ -3047,12 +3198,15 @@ ${depth}
 OUTPUT FORMAT (exactly these sections, in this order):
 ${sections}
 
-QUALITY CHECK before output:
-- Have I entered all key numbers as "Label: Value" in the METRICS section? If not — add them.
-- Does every important claim have a page reference (see page X)? If not — add it.
-- Am I meeting the minimum word count? If not — expand.`;
+QUALITY CHECK:
+- Have I entered all key numbers as "Label: Value" in the METRICS section?
+- Does every important claim have a page reference (see page X)?
+- Am I meeting the minimum length?`;
 
-  return (isDE ? personaDE : personaEN) + `\n\n━━━ DOKUMENT / DOCUMENT ━━━\n${docText}`;
+  const docSection = (!isCreation && docText && docText.length > 50)
+    ? `\n\n━━━ QUELLDOKUMENT ━━━\n${docText}`
+    : '';
+  return (isDE ? personaDE : personaEN) + docSection;
 }
 
 // =====================
@@ -3060,7 +3214,10 @@ QUALITY CHECK before output:
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
-  const docType = detectDocType(fn, taskDesc);
+  const taskKind = detectTaskType(taskDesc);
+  // For pure creation tasks (no source PDF), use creation docType
+  const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
+  const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
   window.currentDocType = docType;
 
   // Extract text from all uploaded PDFs
