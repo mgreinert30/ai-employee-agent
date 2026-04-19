@@ -1622,8 +1622,8 @@ function downloadPDF(length) {
     doc.setTextColor(...navy);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
-    // Strip emojis for PDF (jsPDF can't render them)
-    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x00-\x7F]/g,'').trim();
+    // Strip emojis but keep Latin/umlauts for jsPDF
+    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
     doc.text(clean, mL + 7, y + 5.6);
     y += 11;
     doc.setTextColor(...steel);
@@ -1650,15 +1650,14 @@ function downloadPDF(length) {
     // Clean risk prefix icons
     const cleaned = text.replace(/^[🔴🟡🟢]\s*/u,'').replace(/^\[(KRITISCH|CRITICAL|WICHTIG|IMPORTANT|GERING|LOW)\]\s*/,'');
 
-    guard(7);
+    const lines = doc.splitTextToSize(cleaned, cW - indent - 5);
+    guard(lines.length * 5.2 + 3); // guard full bullet height before drawing
     doc.setFillColor(...dotColor);
-    doc.circle(mL + indent + 1.2, y - 1.2, 1, 'F');
+    doc.circle(mL + indent + 1.2, y - 1.5, 1, 'F');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
-    const lines = doc.splitTextToSize(cleaned, cW - indent - 5);
-    lines.forEach((ln, i) => {
-      guard(6);
+    lines.forEach(ln => {
       doc.text(ln, mL + indent + 4, y);
       y += 5.2;
     });
@@ -1666,7 +1665,8 @@ function downloadPDF(length) {
   }
 
   function numberedItem(n, text) {
-    guard(7);
+    const lines = doc.splitTextToSize(text, cW - 9);
+    guard(lines.length * 5.2 + 3);
     doc.setFillColor(...accent);
     doc.circle(mL + 3, y - 1.5, 2.5, 'F');
     doc.setTextColor(...white);
@@ -1676,8 +1676,7 @@ function downloadPDF(length) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
-    const lines = doc.splitTextToSize(text, cW - 9);
-    lines.forEach((ln, i) => { guard(6); doc.text(ln, mL + 9, y); y += 5.2; });
+    lines.forEach(ln => { doc.text(ln, mL + 9, y); y += 5.2; });
     y += 1;
   }
 
@@ -1835,8 +1834,8 @@ function downloadPDF(length) {
         break;
 
       case 'section': {
+        if (nCounter % 2 === 1) y += 15; // close incomplete KPI row before heading
         nCounter = 0;
-        if (b._prevWasKpi) y += 4;
         const t = safe(b.text);
         if (t) sectionHead(t);
         break;
@@ -1867,28 +1866,32 @@ function downloadPDF(length) {
         break;
       }
 
-      case 'kpi': { // (#10) colored KPI tiles
+      case 'kpi': { // colored KPI tiles — 2-column grid
         const lbl = safe(b.label);
         const val = safe(b.value);
         if (!lbl || !val) break;
-        guard(12);
         const tileW = (cW - 4) / 2;
-        const col   = nCounter % 2 === 0 ? mL : mL + tileW + 4;
-        if (nCounter % 2 === 0 && nCounter > 0) y += 13;
+        const isLeft = nCounter % 2 === 0;
+        const col = isLeft ? mL : mL + tileW + 4;
+        if (isLeft) guard(14); // only check page break at start of new row
+        // tile background (drawn at current y, height 12)
         doc.setFillColor(...ice);
-        doc.roundedRect(col, y - 8, tileW, 11, 2, 2, 'F');
+        doc.roundedRect(col, y, tileW, 12, 2, 2, 'F');
+        // left accent bar
         doc.setFillColor(...accent);
-        doc.roundedRect(col, y - 8, 3, 11, 1, 1, 'F');
+        doc.roundedRect(col, y, 3, 12, 1, 1, 'F');
+        // label
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
+        doc.setFontSize(7.5);
         doc.setTextColor(71, 85, 105);
-        doc.text(lbl, col + 6, y - 2);
+        doc.text(lbl, col + 6, y + 4.5);
+        // value
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
         doc.setTextColor(...navy);
-        doc.text(val, col + 6, y + 4.5);
+        doc.text(val, col + 6, y + 10);
         nCounter++;
-        if (nCounter % 2 === 0) y += 13;
+        if (nCounter % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
         break;
       }
 
@@ -1919,6 +1922,9 @@ function downloadPDF(length) {
       }
     }
   });
+
+  // Close any incomplete KPI row at end of content
+  if (nCounter % 2 === 1) y += 15;
 
   // ── FINAL PAGE FOOTER ──
   sep(4);
