@@ -555,6 +555,54 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .step p { font-size: 13px; color: var(--gray); line-height: 1.65; }
 
 /* =====================
+   CASE STUDY
+   ===================== */
+.case-section { padding: 100px 24px; background: var(--lighter); }
+.case-inner { max-width: 1080px; margin: 0 auto; }
+.case-inner h2 { font-size: 38px; font-weight: 900; letter-spacing: -1px; margin-bottom: 52px; text-align: center; }
+.case-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+
+/* Story side */
+.case-story { display: flex; flex-direction: column; gap: 28px; }
+.case-profile { display: flex; align-items: center; gap: 14px; }
+.case-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--electric)); color: white; font-weight: 900; font-size: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.case-profile strong { display: block; font-size: 16px; font-weight: 800; }
+.case-profile span { font-size: 13px; color: var(--gray); }
+.case-problem { background: #fff8f0; border: 1.5px solid #fed7aa; border-radius: 14px; padding: 20px 22px; }
+.case-problem-label { font-size: 12px; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.case-problem p { font-size: 15px; color: var(--dark); line-height: 1.65; }
+.case-problem em { font-style: italic; font-weight: 600; }
+.case-steps-list { display: flex; flex-direction: column; gap: 12px; }
+.case-step-item { display: flex; align-items: center; gap: 14px; }
+.case-step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: white; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.case-step-item.done .case-step-num { background: var(--green); }
+.case-step-item p { font-size: 15px; color: var(--dark); }
+.case-quote { background: white; border-left: 4px solid var(--blue); border-radius: 0 14px 14px 0; padding: 20px 22px; box-shadow: var(--shadow); position: relative; }
+.case-quote-mark { font-size: 48px; color: var(--blue); line-height: 1; margin-bottom: 4px; font-family: Georgia, serif; }
+.case-quote p { font-size: 15px; color: var(--dark); line-height: 1.65; font-style: italic; margin-bottom: 10px; }
+.case-quote-author { font-size: 13px; color: var(--gray); font-weight: 600; }
+
+/* Result card */
+.case-result { background: var(--dark); border-radius: 20px; padding: 28px; color: white; box-shadow: var(--shadow-lg); }
+.case-result-header { margin-bottom: 20px; }
+.case-result-badge { font-size: 13px; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 5px 12px; display: inline-block; margin-bottom: 10px; }
+.case-result-title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.6); }
+.case-result-section { margin-bottom: 18px; }
+.case-result-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--blue-light); margin-bottom: 8px; }
+.case-result-text { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; }
+.case-risk { font-size: 13px; padding: 7px 12px; border-radius: 8px; margin-bottom: 6px; }
+.case-risk.high { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+.case-risk.mid { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
+.case-verdict { background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 14px; font-size: 14px; color: #fcd34d; line-height: 1.55; }
+.case-savings-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 22px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+.case-saving-item { text-align: center; }
+.case-saving-item strong { display: block; font-size: 22px; font-weight: 900; color: white; }
+.case-saving-item span { font-size: 12px; color: rgba(255,255,255,0.5); }
+.case-saving-item.highlight strong { color: var(--green); }
+.case-saving-sep { font-size: 12px; color: rgba(255,255,255,0.3); }
+@media (max-width: 800px) { .case-layout { grid-template-columns: 1fr; } }
+
+/* =====================
    FOR WHOM
    ===================== */
 .forwho-section { background: var(--dark); padding: 100px 24px; }
