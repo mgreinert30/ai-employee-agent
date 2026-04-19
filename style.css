@@ -613,6 +613,27 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 /* =====================
    FOR WHOM
    ===================== */
+/* =====================
+   WHY DIFFERENT
+   ===================== */
+.whydiff-section { padding: 100px 24px; background: var(--lighter); }
+.whydiff-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
+.whydiff-inner h2 { font-size: 38px; font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
+.whydiff-intro { font-size: 17px; color: var(--gray); line-height: 1.7; max-width: 720px; margin: 0 auto 52px; }
+.whydiff-compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: start; text-align: left; }
+.whydiff-col { border-radius: 20px; padding: 28px; }
+.whydiff-bad { background: #fff5f5; border: 1.5px solid #fecaca; }
+.whydiff-good { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+.whydiff-col-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.whydiff-col-icon { font-size: 28px; }
+.whydiff-col-header strong { font-size: 17px; font-weight: 800; color: var(--dark); }
+.whydiff-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.whydiff-col ul li { font-size: 14px; line-height: 1.55; color: var(--dark); }
+.whydiff-bad ul li { color: #7f1d1d; }
+.whydiff-good ul li { color: #14532d; }
+.whydiff-vs { display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: var(--gray); padding-top: 60px; }
+@media (max-width: 780px) { .whydiff-compare { grid-template-columns: 1fr; } .whydiff-vs { padding: 0; } }
+
 .forwho-section { background: var(--dark); padding: 100px 24px; }
 .forwho-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
 .forwho-inner h2 { font-size: 38px; font-weight: 900; color: var(--white); margin-bottom: 14px; letter-spacing: -1px; }
