@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
@@ -690,6 +691,26 @@
         <div class="bottom-links">
           <button id="btn-back-apps" onclick="showStep('step-setup')" class="btn-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
         </div>
+      </div>
+    </div>
+
+    <!-- STEP 4c: GMAIL CONNECT -->
+    <div id="step-gmail" style="display:none;">
+      <div class="setup-box">
+        <div class="setup-header">
+          <span class="setup-icon" id="gmail-step-icon">📧</span>
+          <div>
+            <h3 data-de="Gmail verbinden" data-en="Connect Gmail">Gmail verbinden</h3>
+            <p data-de="Melde dich einmalig mit deinem Google-Konto an — die KI liest deine E-Mails, sortiert sie und löscht danach alles." data-en="Sign in once with your Google account — the AI reads your emails, sorts them, then deletes everything.">Melde dich einmalig mit deinem Google-Konto an — die KI liest deine E-Mails, sortiert sie und löscht danach alles.</p>
+          </div>
+        </div>
+        <button onclick="connectGmail()" class="btn-primary full-width" id="gmail-connect-btn" data-de="🔗 Mit Google verbinden" data-en="🔗 Connect with Google">🔗 Mit Google verbinden</button>
+        <p id="gmail-status" style="display:none;text-align:center;margin-top:12px;font-size:14px;color:var(--gray);"></p>
+        <div class="setup-note" style="margin-top:20px;">
+          <span>🔒</span>
+          <p data-de="Nur Lese-Zugriff auf deine E-Mails. Kein Schreiben, kein Löschen. Alle Daten werden nach der Analyse sofort verworfen." data-en="Read-only access to your emails. No writing, no deleting. All data is discarded after analysis.">Nur Lese-Zugriff. Alle Daten werden nach der Analyse sofort verworfen.</p>
+        </div>
+        <button onclick="cancelTask()" class="btn-link center-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
       </div>
     </div>
 

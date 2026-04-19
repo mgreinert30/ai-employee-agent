@@ -447,6 +447,142 @@ function initCharacterSelection() {
 }
 
 // =====================
+// GMAIL INTEGRATION
+// =====================
+const GMAIL_CLIENT_ID = '81791575409-uff7u3p59b2nk13d4ogqrg9oo7q4oq8g.apps.googleusercontent.com';
+let gmailAccessToken = null;
+
+function connectGmail() {
+  const btn = document.getElementById('gmail-connect-btn');
+  const status = document.getElementById('gmail-status');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'de' ? '⏳ Verbinde...' : '⏳ Connecting...';
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    status.textContent = currentLang === 'de' ? 'Google-Bibliothek lädt noch — bitte Seite neu laden.' : 'Google library still loading — please reload the page.';
+    status.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🔗 Mit Google verbinden';
+    return;
+  }
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GMAIL_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+    callback: async (response) => {
+      if (response.error) {
+        status.textContent = (currentLang === 'de' ? 'Fehler: ' : 'Error: ') + response.error;
+        status.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '🔗 Mit Google verbinden';
+        return;
+      }
+      gmailAccessToken = response.access_token;
+      btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analyse startet...' : '✓ Connected — Starting analysis...';
+      status.style.display = 'none';
+      await startGmailTask();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchGmailEmails(token) {
+  const listRes = await fetch(
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=15&q=is:inbox',
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const listData = await listRes.json();
+  const messages = listData.messages || [];
+
+  const emails = [];
+  for (const msg of messages.slice(0, 15)) {
+    try {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const d = await r.json();
+      const h = d.payload?.headers || [];
+      const from    = h.find(x => x.name === 'From')?.value    || '';
+      const subject = h.find(x => x.name === 'Subject')?.value || '(kein Betreff)';
+      const date    = h.find(x => x.name === 'Date')?.value    || '';
+      emails.push(`Von: ${from}\nBetreff: ${subject}\nDatum: ${date}`);
+    } catch (_) {}
+  }
+  return emails;
+}
+
+async function startGmailTask() {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  const de = currentLang === 'de';
+
+  setProgress(5,  de ? `${name} verbindet sich mit Gmail...`        : `${name} connecting to Gmail...`);
+  await delay(600);
+  setProgress(20, de ? `${name} liest deine E-Mails...`            : `${name} reading your emails...`);
+
+  let emails = [];
+  try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
+    currentResult = (de ? 'Fehler beim Lesen der E-Mails: ' : 'Error reading emails: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    gmailAccessToken = null;
+    return;
+  }
+
+  setProgress(45, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
+  await delay(400);
+  setProgress(70, de ? `${name} sortiert nach Dringlichkeit...`          : `${name} sorting by urgency...`);
+
+  const prompt = de
+    ? `Du bist ein professioneller E-Mail-Assistent. Sortiere diese ${emails.length} E-Mails nach Dringlichkeit und erstelle eine klare, strukturierte Übersicht.
+
+E-Mails:
+${emails.join('\n\n---\n\n')}
+
+Gib für jede E-Mail aus:
+- Kategorie: DRINGEND / WICHTIG / NIEDRIG / INFO
+- Absender & Betreff
+- Kurze Zusammenfassung (1 Satz)
+- Empfohlene Aktion
+
+Gruppiere nach Kategorie. Sei präzise und professionell.`
+    : `You are a professional email assistant. Sort these ${emails.length} emails by urgency and create a clear, structured overview.
+
+Emails:
+${emails.join('\n\n---\n\n')}
+
+For each email provide:
+- Category: URGENT / IMPORTANT / LOW / INFO
+- Sender & Subject
+- Brief summary (1 sentence)
+- Recommended action
+
+Group by category. Be precise and professional.`;
+
+  try {
+    setProgress(85, de ? 'KI analysiert — bitte warten...' : 'AI analysing — please wait...');
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result;
+  } catch (err) {
+    currentResult = (de ? '⚠️ Analyse fehlgeschlagen: ' : '⚠️ Analysis failed: ') + err.message;
+  }
+
+  gmailAccessToken = null;
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
+}
+
+// =====================
 // PRICING
 // Max €5 per task. Fair, transparent, length-based.
 // Compared to ChatGPT Plus (~€20/month ÷ ~30 uses = €0.67/use for general access)
@@ -751,15 +887,23 @@ function confirmPayment() {
   saveSale(desc, currentEstimate.price.toFixed(2), method);
   saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
   
+  // Email tasks → Gmail connect step (no local agent needed)
+  if (detectTaskType(desc) === 'email') {
+    window.skippedSetup = true;
+    document.getElementById('gmail-step-icon').textContent = getCharacterEmoji();
+    showStep('step-gmail');
+    return;
+  }
+
   applySmartPermissions();
-  
-  const needsLocalAccess = document.getElementById('perm-email').checked || 
-                           document.getElementById('perm-files').checked || 
-                           document.getElementById('perm-browser').checked || 
+
+  const needsLocalAccess = document.getElementById('perm-email').checked ||
+                           document.getElementById('perm-files').checked ||
+                           document.getElementById('perm-browser').checked ||
                            document.getElementById('perm-calendar').checked;
-                           
+
   window.skippedSetup = !needsLocalAccess;
-  
+
   if (needsLocalAccess) {
     showStep('step-setup');
     applyLangToSetup();
@@ -1627,7 +1771,7 @@ function goHome() { resetForm(); showPage('main'); }
 // =====================
 // STEP NAVIGATION
 // =====================
-const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
+const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
 function showStep(id) { ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; }); }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
