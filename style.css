@@ -464,6 +464,14 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
   transition: all 0.3s;
   box-shadow: 0 4px 20px rgba(37,99,235,0.06);
 }
+.os-card-clickable { cursor: pointer; }
+.os-card-clickable:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 48px rgba(37,99,235,0.18);
+  border-color: var(--blue);
+}
+.os-card-clickable:hover .os-card-cta { color: var(--blue); }
+.os-card-cta { margin-top: 16px; font-size: 14px; font-weight: 700; color: var(--blue-light); }
 .os-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 20px 48px rgba(37,99,235,0.14);
