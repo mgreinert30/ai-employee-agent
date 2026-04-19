@@ -1277,6 +1277,16 @@ function parseResultBlocks(text) {
 
     afterDivider = false;
 
+    // KPI lines inside KENNZAHLEN / KEY METRICS section: "Label: Value" with numbers/% /€/$
+    // Detect if we're inside a KPI section
+    const prevSection = blocks.slice().reverse().find(b => b.type === 'section');
+    const inKpiSection = prevSection && /kennzahl|metric|glance|blick/i.test(prevSection.text);
+    if (inKpiSection && /^[^:]+:\s*[+\-]?[\d€$£%,.]+/.test(t)) {
+      const colonIdx = t.indexOf(':');
+      blocks.push({ type: 'kpi', label: t.slice(0, colonIdx).trim(), value: t.slice(colonIdx + 1).trim() });
+      return;
+    }
+
     // Risk bullets  🔴 🟡 🟢
     if (/^[\uD83D][\uDD34]/.test(t) || t.startsWith('\uD83D\uDD34') || /^\u{1F534}/u.test(t)) {
       blocks.push({ type: 'risk', level: 'critical', text: stripLeadingSymbol(t) }); return;
@@ -1347,6 +1357,12 @@ function downloadPDF(length) {
   const nowTime  = new Date().toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-GB', { hour:'2-digit', minute:'2-digit' });
   const refNr    = 'REF-' + Date.now().toString(36).toUpperCase().slice(-6);
   const depthLbl = { de:{ short:'Kurzzusammenfassung', medium:'Standardanalyse', long:'Tiefenanalyse' }, en:{ short:'Brief Summary', medium:'Standard Analysis', long:'In-Depth Analysis' } }[currentLang][length];
+  const docType  = window.currentDocType || 'allgemein';
+  const docTypeLabels = {
+    de: { geschaeftsbericht:'GESCHÄFTSBERICHT', vertrag:'VERTRAG', jahresabschluss:'JAHRESABSCHLUSS', rechnung:'RECHNUNG', protokoll:'PROTOKOLL', allgemein:'DOKUMENT' },
+    en: { geschaeftsbericht:'BUSINESS REPORT', vertrag:'CONTRACT', jahresabschluss:'FINANCIAL STATEMENT', rechnung:'INVOICE', protokoll:'MEETING MINUTES', allgemein:'DOCUMENT' }
+  };
+  const dtLabel = docTypeLabels[currentLang === 'de' ? 'de' : 'en'][docType] || 'DOKUMENT';
 
   // ── HELPERS ──
   function newPage() {
@@ -1445,81 +1461,140 @@ function downloadPDF(length) {
     y += 1;
   }
 
-  // ── COVER PAGE ──
-  // Full dark background
+  // ── COVER PAGE (#5) ──
   doc.setFillColor(...navy);
   doc.rect(0, 0, pageW, pageH, 'F');
 
-  // Top accent stripe
+  // Bold left accent bar
   doc.setFillColor(...accent);
-  doc.rect(0, 0, pageW, 3, 'F');
+  doc.rect(0, 0, 6, pageH, 'F');
 
-  // Report type label
+  // Top-right decorative corner block
+  doc.setFillColor(30, 41, 59);
+  doc.rect(pageW - 50, 0, 50, 60, 'F');
+  doc.setFillColor(...accent);
+  doc.rect(pageW - 50, 0, 2, 60, 'F');
+
+  // Document type chip
+  const chipW = doc.getTextWidth(dtLabel) + 16;
+  doc.setFillColor(...accent);
+  doc.roundedRect(mL + 8, 24, chipW, 8, 1.5, 1.5, 'F');
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.text(dtLabel, mL + 8 + 8, 29.5);
+
+  // Depth badge (right of chip)
+  const depthX = mL + 8 + chipW + 6;
+  const depthChipW = doc.getTextWidth(depthLbl) + 14;
+  doc.setFillColor(30, 41, 59);
+  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'F');
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'S');
   doc.setTextColor(...silver);
+  doc.text(depthLbl, depthX + 7, 29.5);
+
+  // Main title — document filename large (#5)
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 20);
+  let ty = 50;
+  titleLines.forEach(ln => { doc.text(ln, mL + 8, ty); ty += 13; });
+
+  // Subtitle line
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const typeLabel = currentLang === 'de' ? 'ANALYSEBERICHT' : 'ANALYSIS REPORT';
-  doc.text(typeLabel, mL, 28);
-  // Underline
+  doc.setFontSize(11);
+  doc.setTextColor(148, 163, 184);
+  const subtitle = currentLang === 'de' ? 'KI-gestützte Dokumentenanalyse' : 'AI-powered document analysis';
+  doc.text(subtitle, mL + 8, ty + 4);
+  ty += 18;
+
+  // Divider
   doc.setDrawColor(...accent);
   doc.setLineWidth(0.6);
-  doc.line(mL, 29.5, mL + doc.getTextWidth(typeLabel), 29.5);
+  doc.line(mL + 8, ty, pageW - mR, ty);
+  ty += 10;
 
-  // Main title
-  doc.setTextColor(...white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(26);
-  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 10);
-  let ty = 44;
-  titleLines.forEach(ln => { doc.text(ln, mL, ty); ty += 11; });
-
-  // Depth label badge
-  doc.setFillColor(...accent);
-  doc.roundedRect(mL, ty + 4, doc.getTextWidth(depthLbl) + 12, 9, 1.5, 1.5, 'F');
-  doc.setTextColor(...white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text(depthLbl, mL + 6, ty + 10);
-  ty += 20;
-
-  // Metadata block
-  doc.setTextColor(...silver);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const meta = [
-    (currentLang === 'de' ? 'Datei: ' : 'File: ') + fileName,
-    (currentLang === 'de' ? 'Erstellt: ' : 'Created: ') + today + '  ' + nowTime,
-    (currentLang === 'de' ? 'Referenz: ' : 'Reference: ') + refNr,
-    (currentLang === 'de' ? 'Status: ' : 'Status: ') + (currentLang === 'de' ? 'Abgeschlossen — Vertraulich' : 'Complete — Confidential'),
+  // Metadata grid — 2 columns
+  const metaPairs = [
+    [currentLang === 'de' ? 'Datei' : 'File', fileName.length > 35 ? fileName.slice(0,32)+'...' : fileName],
+    [currentLang === 'de' ? 'Erstellt' : 'Created', today + '  ' + nowTime],
+    [currentLang === 'de' ? 'Referenz' : 'Reference', refNr],
+    [currentLang === 'de' ? 'Status' : 'Status', currentLang === 'de' ? 'Abgeschlossen — Vertraulich' : 'Complete — Confidential'],
   ];
-  meta.forEach(m => { doc.text(m, mL, ty); ty += 7; });
+  doc.setFontSize(8.5);
+  metaPairs.forEach(([label, val]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...silver);
+    doc.text(label + ':', mL + 8, ty);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...white);
+    doc.text(val, mL + 8 + 30, ty);
+    ty += 8;
+  });
 
-  // Confidential stamp bottom-right
-  doc.setTextColor(...accent);
+  // Bottom info bar
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, pageH - 22, pageW, 22, 'F');
+  doc.setFillColor(...accent);
+  doc.rect(0, pageH - 22, pageW, 0.5, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', pageW - mR, pageH - 18, { align:'right' });
+  doc.setTextColor(...accent);
+  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', mL + 8, pageH - 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(...mid);
-  doc.text(currentLang === 'de'
-    ? 'Erstellt mit AI Employee Agent  •  Alle Daten nach Analyse geloscht'
-    : 'Created with AI Employee Agent  •  All data deleted after analysis',
-    pageW - mR, pageH - 12, { align:'right' });
+  doc.setTextColor(...silver);
+  doc.text(
+    currentLang === 'de' ? 'Erstellt mit AI Employee Agent  •  Alle Daten nach Analyse geloscht' : 'Created with AI Employee Agent  •  All data deleted after analysis',
+    pageW - mR, pageH - 12, { align: 'right' }
+  );
 
-  // Bottom accent stripe
-  doc.setFillColor(...accent);
-  doc.rect(0, pageH - 3, pageW, 3, 'F');
+  // ── PARSE blocks early (needed for TOC) ──
+  const blocks = parseResultBlocks(currentResult || '');
+  let nCounter = 0;
+
+  // ── TABLE OF CONTENTS PAGE (#7) — for medium and long ──
+  if (length !== 'short') {
+    doc.addPage();
+    drawRunningHeader();
+    let ty2 = mTop + 14;
+
+    doc.setFillColor(...accent);
+    doc.rect(mL, ty2, 3, 8, 'F');
+    doc.setFillColor(...ice);
+    doc.rect(mL + 3, ty2, cW - 3, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...navy);
+    doc.text(currentLang === 'de' ? 'INHALTSVERZEICHNIS' : 'TABLE OF CONTENTS', mL + 7, ty2 + 5.5);
+    ty2 += 14;
+
+    const sectionNames = blocks.filter(b => b.type === 'section').map(b => b.text);
+    sectionNames.forEach((name, idx) => {
+      const clean = name.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
+      if (!clean) return;
+      doc.setFont('helvetica', idx === 0 ? 'bold' : 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...steel);
+      doc.text(`${idx + 1}.  ${clean}`, mL + 4, ty2);
+      // Dotted leader line
+      doc.setDrawColor(...ice);
+      doc.setLineWidth(0.3);
+      const textEnd = mL + 4 + doc.getTextWidth(`${idx + 1}.  ${clean}`) + 3;
+      for (let dx = textEnd; dx < pageW - mR - 14; dx += 3) {
+        doc.line(dx, ty2 - 1, dx + 1.5, ty2 - 1);
+      }
+      ty2 += 8;
+    });
+  }
 
   // ── CONTENT PAGES ──
   doc.addPage();
   drawRunningHeader();
   y = mTop + 12;
-
-  // ── PARSE + RENDER currentResult ──
-  // Parse into typed blocks first, then render — avoids emoji detection failures
-  const blocks = parseResultBlocks(currentResult || '');
-  let nCounter = 0;
 
   // Helper: safely strip all non-printable / non-latin characters for jsPDF
   function safe(s) {
@@ -1541,6 +1616,7 @@ function downloadPDF(length) {
 
       case 'section': {
         nCounter = 0;
+        if (b._prevWasKpi) y += 4;
         const t = safe(b.text);
         if (t) sectionHead(t);
         break;
@@ -1568,6 +1644,31 @@ function downloadPDF(length) {
         nCounter++;
         const t = safe(b.text);
         if (t) numberedItem(nCounter, t);
+        break;
+      }
+
+      case 'kpi': { // (#10) colored KPI tiles
+        const lbl = safe(b.label);
+        const val = safe(b.value);
+        if (!lbl || !val) break;
+        guard(12);
+        const tileW = (cW - 4) / 2;
+        const col   = nCounter % 2 === 0 ? mL : mL + tileW + 4;
+        if (nCounter % 2 === 0 && nCounter > 0) y += 13;
+        doc.setFillColor(...ice);
+        doc.roundedRect(col, y - 8, tileW, 11, 2, 2, 'F');
+        doc.setFillColor(...accent);
+        doc.roundedRect(col, y - 8, 3, 11, 1, 1, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text(lbl, col + 6, y - 2);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...navy);
+        doc.text(val, col + 6, y + 4.5);
+        nCounter++;
+        if (nCounter % 2 === 0) y += 13;
         break;
       }
 
@@ -2615,9 +2716,7 @@ function isRealAIEnabled() {
 // PDF TEXT EXTRACTION (PDF.js)
 // =====================
 async function extractPDFText(file) {
-  if (typeof pdfjsLib === 'undefined') {
-    throw new Error('PDF.js nicht geladen');
-  }
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -2625,28 +2724,63 @@ async function extractPDFText(file) {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
         const totalPages = pdf.numPages;
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
-        // Extract all pages (cap at 300 to stay within Gemini token limit)
         const maxPages = Math.min(totalPages, 300);
-        for (let i = 1; i <= maxPages; i++) {
+
+        // Extract each page with table-aware reconstruction (#9)
+        async function extractPage(i) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          const pageText = content.items
-            .map(item => item.str)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          if (pageText.length > 10) {
-            fullText += `--- Seite ${i} ---\n${pageText}\n\n`;
-          }
+          const items = content.items;
+          if (!items.length) return '';
+
+          // Group items by row (y-coordinate within 4 units = same row)
+          const rows = {};
+          items.forEach(item => {
+            if (!item.str.trim()) return;
+            const y = Math.round(item.transform[5] / 4) * 4;
+            if (!rows[y]) rows[y] = [];
+            rows[y].push({ x: item.transform[4], text: item.str });
+          });
+
+          // Sort rows top-to-bottom (PDF y is bottom-up), cells left-to-right
+          const sortedRows = Object.entries(rows)
+            .sort(([a], [b]) => Number(b) - Number(a))
+            .map(([_, cells]) => {
+              const sorted = cells.sort((a, b) => a.x - b.x).map(c => c.text);
+              // If row has multiple cells with clear x-gaps → format as table row
+              if (sorted.length > 2) return sorted.join(' | ');
+              return sorted.join(' ');
+            });
+
+          return sortedRows.join('\n').replace(/[ \t]+/g, ' ').trim();
         }
+
+        let allPages = [];
+        for (let i = 1; i <= maxPages; i++) {
+          const pageText = await extractPage(i);
+          if (pageText.length > 10) allPages.push({ page: i, text: pageText });
+        }
+
+        // Smart chunking (#6): if too long, keep first 40% + last 60% (intro + conclusions)
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
+        const MAX_CHARS = 110000;
+        const allCombined = allPages.map(p => `--- Seite ${p.page} ---\n${p.text}`).join('\n\n');
+
+        if (allCombined.length <= MAX_CHARS) {
+          fullText += allCombined;
+        } else {
+          const front = Math.floor(MAX_CHARS * 0.4);
+          const back  = MAX_CHARS - front;
+          const frontText = allCombined.slice(0, front);
+          const backText  = allCombined.slice(-back);
+          fullText += frontText + '\n\n[... mittlere Seiten übersprungen — Anfang & Ende priorisiert ...]\n\n' + backText;
+        }
+
         if (totalPages > maxPages) {
-          fullText += `[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} Seiten analysiert.]\n`;
+          fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} analysiert.]`;
         }
         resolve(fullText);
-      } catch (err) {
-        reject(err);
-      }
+      } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
@@ -2656,6 +2790,17 @@ async function extractPDFText(file) {
 // =====================
 // BUILD PROMPT FOR REAL AI
 // =====================
+
+// Detect document type for tailored prompt (#1)
+function detectDocType(filename, taskDesc) {
+  const t = (filename + ' ' + taskDesc).toLowerCase();
+  if (/(geschäftsbericht|jahresbericht|annual.?report|geschaeftsbericht|quartalsbericht|konzernbericht|quarterly|q[1-4]\s*20\d\d|halbjahresbericht|interim.?report)/.test(t)) return 'geschaeftsbericht';
+  if (/(vertrag|contract|agreement|vereinbarung|lizenz|mietvertrag|kaufvertrag|dienstleistungsvertrag|nda|terms.of)/.test(t)) return 'vertrag';
+  if (/(jahresabschluss|bilanz|gewinn.verlust|balance.sheet|income.statement|ifrs|gaap|buchführung|buchfuehrung|cashflow|p&l)/.test(t)) return 'jahresabschluss';
+  if (/(rechnung|invoice|faktura|angebot|quotation)/.test(t)) return 'rechnung';
+  if (/(protokoll|minutes|meeting|sitzung|besprechung)/.test(t)) return 'protokoll';
+  return 'allgemein';
+}
 
 // Detect language from the task description text
 function detectLanguage(text) {
@@ -2667,112 +2812,140 @@ function detectLanguage(text) {
   return 'en';
 }
 
-function buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength) {
+function buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength) {
   const writtenLang = detectLanguage(taskDesc);
   const isDE = writtenLang === 'de';
-
   const businessCtx = businessDetails
     ? (isDE ? `Kontext des Unternehmens: ${businessDetails}\n` : `Business context: ${businessDetails}\n`)
     : '';
 
-  let formatRules = '';
-  if (analysisLength === 'short') {
-    formatRules = isDE ? `ANALYSETIEFE: KURZ — Ziel max. 200-400 Wörter. Nur das absolut Wichtigste.
-AUSGABE-FORMAT:
+  // Doc-type specific section templates (#1, #4)
+  const docTypeSections = {
+    geschaeftsbericht: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle wichtigen Zahlen als: Bezeichnung: Wert (z.B. Umsatz 2024: €1,2 Mrd. | Wachstum: +12% | EBITDA-Marge: 18%). JEDE Zeile = eine Kennzahl.]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-3 Sätze Kernfazit]
+[Kompaktes Fazit: Wie läuft das Unternehmen? Was sind die wichtigsten Botschaften des Berichts?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOP 3 ERKENNTNISSE
+JAHRESVERGLEICH & ENTWICKLUNG
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Die 3 wichtigsten Punkte]
+[Vergleich mit Vorjahr: Was ist besser geworden, was schlechter? Konkrete Zahlen und Prozent-Veränderungen nennen, inkl. Seitenreferenz (laut Seite X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AKTIONSPLAN
+SEGMENTANALYSE & MARKTPOSITION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[1-2 konkrete Handlungsempfehlungen]` : `ANALYSIS DEPTH: SHORT — Target max. 200-400 words. Only the absolute essentials.
-OUTPUT FORMAT:
+[Welche Bereiche/Segmente laufen gut, welche schwächeln? Marktposition und Wettbewerbsstellung.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle genannten Risiken und Chancen — quantifiziert wo möglich, mit Seitenreferenz.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUSBLICK & HANDLUNGSEMPFEHLUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Prognose des Unternehmens für die Zukunft + konkrete Empfehlungen für Investoren/Management]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All key numbers as: Label: Value (e.g. Revenue 2024: €1.2bn | Growth: +12% | EBITDA margin: 18%). ONE metric per line.]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-3 sentences core conclusion]
+[Compact conclusion: How is the company performing? What are the report's key messages?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOP 3 FINDINGS
+YEAR-ON-YEAR COMPARISON & TRENDS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[The 3 most important points]
+[Compare to prior year: what improved, what declined? Specific numbers and % changes, with page references (see page X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACTION PLAN
+SEGMENT ANALYSIS & MARKET POSITION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[1-2 concrete action recommendations]`;
-  } else if (analysisLength === 'long') {
-    formatRules = isDE ? `ANALYSETIEFE: TIEF — Sehr detailliert, extrem gründlich (Ziel: mindestens 1500-2500 Wörter).
-AUSGABE-FORMAT (alle diese Überschriften nutzen):
+[Which segments are performing well, which are struggling? Market and competitive position.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & OPPORTUNITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All stated risks and opportunities — quantified where possible, with page reference.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTLOOK & RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Company's own forecast + concrete recommendations for investors/management]`,
+
+    vertrag: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle wichtigen Zahlen/Fristen als: Bezeichnung: Wert (z.B. Laufzeit: 24 Monate | Kündigungsfrist: 3 Monate | Preissteigerung: 5% p.a.). JEDE Zeile = ein Wert.]
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ausführliches Fazit]
+[Kernaussage: Worum geht es, wer sind die Parteien, was sind die Hauptpflichten?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ABSCHNITTSWEISE DETAILANALYSE
+KRITISCHE KLAUSELN & RISIKEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Sehr tiefe Analyse aller wichtigen Abschnitte/Kennzahlen, detailliert aufgelistet. Keine Kürzungen!]
+[Alle einseitigen, riskanten oder ungewöhnlichen Klauseln — mit Klausel-Nummer und Seitenangabe (laut Seite X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISIKEN & VERSTECKTE PROBLEME
+FRISTEN & TERMINE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle Risiken, quantifiziert und erklärt]
+[Alle Fristen, Laufzeiten, Kündigungsfristen, Verlängerungsklauseln — konkret]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ZAHLEN, DATEN & FAKTEN
+EMPFEHLUNG
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Tiefe Aufschlüsselung der Daten]
+[Unterschreiben? Was nachverhandeln? Konkrete Punkte.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All key numbers/deadlines as: Label: Value (e.g. Term: 24 months | Notice period: 3 months | Price increase: 5% p.a.). ONE value per line.]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-UMFASSENDER AKTIONSPLAN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Detaillierter Plan mit Deadlines und Verantwortlichkeiten]` : `ANALYSIS DEPTH: DEEP — Very detailed, extremely thorough (Target: minimum 1500-2500 words).
-OUTPUT FORMAT (use all these headers):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Detailed conclusion]
+[Core: what is this about, who are the parties, what are the main obligations?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SECTION-BY-SECTION DETAILED ANALYSIS
+CRITICAL CLAUSES & RISKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Very deep analysis of all important sections/metrics, listed in detail. Do not truncate!]
+[All one-sided, risky or unusual clauses — with clause number and page reference (see page X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISKS & HIDDEN ISSUES
+DEADLINES & TERMS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[All risks, quantified and explained]
+[All deadlines, terms, notice periods, renewal clauses — specific dates]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NUMBERS, DATES & FACTS
+RECOMMENDATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Deep breakdown of the data]
+[Sign or not? What to renegotiate? Specific points.]`,
+
+    allgemein: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle wichtigen Zahlen/Werte aus dem Dokument als: Bezeichnung: Wert. JEDE Zeile = ein Wert. Falls keine Zahlen vorhanden, diesen Abschnitt weglassen.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COMPREHENSIVE ACTION PLAN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Detailed plan with deadlines and responsibilities]`;
-  } else {
-    // medium
-    formatRules = isDE ? `ANALYSETIEFE: MITTEL — Ziel 700-1200 Wörter. Fokussiert aber informativ.
-AUSGABE-FORMAT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ZUSAMMENFASSUNG
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Kompaktes Fazit]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HAUPTERKENNTNISSE & ANALYSE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Die wichtigsten Punkte und Zusammenhänge, gut strukturiert]
+[Die wichtigsten Punkte, gut strukturiert, mit Seitenangaben (laut Seite X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RISIKEN & CHANCEN
@@ -2782,17 +2955,21 @@ RISIKEN & CHANCEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NÄCHSTE SCHRITTE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Klarer Aktionsplan]` : `ANALYSIS DEPTH: MEDIUM — Target 700-1200 words. Focused but informative.
-OUTPUT FORMAT:
+[Klarer Aktionsplan]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SUMMARY
+[All important numbers from the document as: Label: Value. ONE per line. Omit if no numbers present.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Compact conclusion]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KEY FINDINGS & ANALYSIS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[The most important points and contexts, well structured]
+[Most important points, well structured, with page references (see page X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RISKS & OPPORTUNITIES
@@ -2802,46 +2979,78 @@ RISKS & OPPORTUNITIES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Clear action plan]`;
-  }
+[Clear action plan]`
+  };
 
-  const personaDE = `Du bist der präziseste PDF-Analyst und Dokumenten-Experte der Welt. Deine Analyse ist messbar besser als ChatGPT, Claude oder Gemini im Standard-Modus — weil du diese spezifischen Regeln befolgst:
+  // Depth modifier overlaid on top of doc-type sections (#2)
+  const depthInstructions = {
+    short: isDE
+      ? `ANALYSETIEFE: KURZ — Mindestens 600-800 Wörter. Klar und prägnant, aber vollständig für jeden Abschnitt.`
+      : `ANALYSIS DEPTH: SHORT — Minimum 600-800 words. Clear and concise but complete for each section.`,
+    medium: isDE
+      ? `ANALYSETIEFE: MITTEL — Ziel 900-1400 Wörter. Fokussiert und informativ, alle Abschnitte gut ausgeführt.`
+      : `ANALYSIS DEPTH: MEDIUM — Target 900-1400 words. Focused and informative, all sections well developed.`,
+    long: isDE
+      ? `ANALYSETIEFE: TIEF — Mindestens 1800-2800 Wörter. Extrem gründlich, keine Kürzungen, jede Kennzahl kommentiert.`
+      : `ANALYSIS DEPTH: DEEP — Minimum 1800-2800 words. Extremely thorough, no truncation, every metric commented on.`
+  };
+
+  const sections = docTypeSections[docType] || docTypeSections['allgemein'];
+  const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
+
+  const docTypeLabels = {
+    de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
+    en: { geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
+  };
+  const dtLabel = docTypeLabels[isDE ? 'de' : 'en'][docType] || 'Dokument';
+
+  const personaDE = `Du bist der präziseste PDF-Analyst der Welt — spezialisiert auf ${dtLabel}e. Deine Analyse ist messbar besser als jedes andere KI-Tool.
 
 AUFGABE DES KUNDEN: ${taskDesc}
+DOKUMENTTYP: ${dtLabel}
 ${businessCtx}
 
 KERNREGELN — NIEMALS BRECHEN:
-1. ZITIERE EXAKT: Nenne immer konkrete Zahlen, Daten, Namen, Seitenzahlen aus dem Dokument. Niemals Platzhalter wie "[Zahl aus Dokument]" — nutze die echten Werte.
-2. KEINE FLOSKELN: Verboten sind Sätze wie "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Ich habe das Dokument analysiert...". Fange direkt mit dem Inhalt an.
-3. KRITISCH DENKEN: Wenn du Widersprüche, Inkonsistenzen, versteckte Risiken oder ungewöhnliche Klauseln siehst — benenne sie explizit. Das ist der Mehrwert gegenüber anderen KI-Tools.
-4. PRÄZISE SPRACHE: Jeder Satz muss Information tragen. Keine Füllsätze.
-5. ANTWORTE AUF DEUTSCH — außer der Kunde fordert explizit Englisch.
+1. SEITENREFERENZEN PFLICHT (#8): Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter. Keine Fakten ohne Quellenangabe.
+2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
+3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Ich habe analysiert...". Direkt starten.
+4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
+5. JEDER SATZ trägt Information — keine Füllsätze.
+6. ANTWORTE AUF DEUTSCH.
 
-${formatRules}
+${depth}
+
+AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
+${sections}
 
 QUALITÄTSPRÜFUNG vor der Ausgabe:
-- Habe ich mindestens 3 spezifische Fakten/Zahlen aus dem Dokument zitiert? Falls nein — ergänzen.
-- Habe ich etwas gefunden, das andere AIs wahrscheinlich übersehen würden (Fußnoten, Ausnahmen, versteckte Klauseln)? Falls nein — nochmal prüfen.
-- Ist jede Handlungsempfehlung konkret umsetzbar (mit Zeitangabe oder konkretem Schritt)? Falls nein — schärfer formulieren.`;
+- Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen? Falls nein — ergänzen.
+- Hat jede wichtige Aussage eine Seitenreferenz (laut Seite X)? Falls nein — hinzufügen.
+- Überschreite ich die Mindestwortzahl? Falls nein — ausbauen.`;
 
-  const personaEN = `You are the world's most precise PDF analyst and document expert. Your analysis is measurably better than ChatGPT, Claude, or standard Gemini — because you follow these specific rules:
+  const personaEN = `You are the world's most precise PDF analyst — specialised in ${dtLabel}s. Your analysis is measurably better than any other AI tool.
 
 CLIENT TASK: ${taskDesc}
+DOCUMENT TYPE: ${dtLabel}
 ${businessCtx}
 
 CORE RULES — NEVER BREAK:
-1. CITE EXACTLY: Always reference concrete numbers, dates, names, page references from the document. Never use placeholders like "[number from document]" — use the actual values.
-2. NO FILLER PHRASES: Banned: "It is important to note...", "The document describes...", "I have analysed the document...". Start directly with the content.
-3. THINK CRITICALLY: If you spot contradictions, inconsistencies, hidden risks or unusual clauses — name them explicitly. This is the value over other AI tools.
-4. PRECISE LANGUAGE: Every sentence must carry information. No filler sentences.
-5. RESPOND IN ENGLISH at all times.
+1. PAGE REFERENCES MANDATORY (#8): After EVERY important claim write "(see page X)". No facts without a source.
+2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
+3. NO FILLER: Banned: "It is important to note...", "The document describes...", "I have analysed...". Start directly.
+4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
+5. EVERY SENTENCE carries information — no padding.
+6. RESPOND IN ENGLISH.
 
-${formatRules}
+${depth}
+
+OUTPUT FORMAT (exactly these sections, in this order):
+${sections}
 
 QUALITY CHECK before output:
-- Have I cited at least 3 specific facts/numbers from the document? If not — add them.
-- Have I found something other AIs would likely miss (footnotes, exceptions, hidden clauses)? If not — look again.
-- Is every recommendation concretely actionable (with a timeframe or specific step)? If not — sharpen it.`;
+- Have I entered all key numbers as "Label: Value" in the METRICS section? If not — add them.
+- Does every important claim have a page reference (see page X)? If not — add it.
+- Am I meeting the minimum word count? If not — expand.`;
 
   return (isDE ? personaDE : personaEN) + `\n\n━━━ DOKUMENT / DOCUMENT ━━━\n${docText}`;
 }
@@ -2850,14 +3059,9 @@ QUALITY CHECK before output:
 // REAL AI ENGINE — replaces demo mode when API key is set
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
-  const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name.toLowerCase() : '';
-  const investorKws = ['investor','geschäftsbericht','geschaeftsbericht','jahresbericht',
-    'annual report','finanzbericht','konzernabschluss','ifrs','gaap','ebit','ebitda',
-    'dividende','earnings','revenue','profit','bericht_2024','bericht_2025','bericht_2026',
-    'porsche','volkswagen','bmw','mercedes','siemens','sap','allianz','apple','microsoft','amazon'];
-  const d = taskDesc.toLowerCase();
-  const isInvestorTask = investorKws.some(kw => d.includes(kw) || fn.includes(kw));
-  const taskType = isInvestorTask ? 'investor' : 'pdf';
+  const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
+  const docType = detectDocType(fn, taskDesc);
+  window.currentDocType = docType;
 
   // Extract text from all uploaded PDFs
   let docText = '';
@@ -2877,7 +3081,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(35, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
-  const prompt = buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength);
+  const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
 
   setProgress(55, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
