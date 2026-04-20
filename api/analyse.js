@@ -8,14 +8,17 @@ export const config = {
 
 // Models that support multimodal (image) input
 const VISION_MODELS = [
+  'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
 
 // All models for text-only requests
 const TEXT_MODELS = [
+  'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
 ];
 
 export default async function handler(req, res) {
