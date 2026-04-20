@@ -1715,11 +1715,15 @@ function downloadPDF(length) {
   doc.setFillColor(...accent);
   doc.rect(0, 0, 6, pageH, 'F');
 
-  // Top-right decorative corner block
-  doc.setFillColor(30, 41, 59);
-  doc.rect(pageW - 50, 0, 50, 60, 'F');
-  doc.setFillColor(...accent);
-  doc.rect(pageW - 50, 0, 2, 60, 'F');
+  // Top-right decoration — three concentric faint rings
+  const cx = pageW - 2, cy = 0; // anchor to top-right corner
+  [[55, 0.08], [38, 0.12], [22, 0.18]].forEach(([r, alpha]) => {
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.6);
+    doc.setGState(doc.GState({ opacity: alpha }));
+    doc.circle(cx, cy, r, 'S');
+  });
+  doc.setGState(doc.GState({ opacity: 1 })); // reset opacity
 
   // Document type chip
   const chipW = doc.getTextWidth(dtLabel) + 16;
