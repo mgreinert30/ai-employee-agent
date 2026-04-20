@@ -707,7 +707,9 @@ async function fetchGmailEmails(token) {
   const messages = listData.messages || [];
 
   const emails = [];
-  for (const msg of messages.slice(0, 20)) {
+  const toFetch = messages.slice(0, emailCount);
+  for (let i = 0; i < toFetch.length; i++) {
+    const msg = toFetch[i];
     try {
       const r = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
@@ -721,6 +723,8 @@ async function fetchGmailEmails(token) {
         subject: h.find(x => x.name === 'Subject')?.value || '(kein Betreff)',
         date:    h.find(x => x.name === 'Date')?.value    || ''
       });
+      // Small delay every 50 emails to avoid hitting rate limits
+      if (i > 0 && i % 50 === 0) await delay(300);
     } catch (_) {}
   }
   return emails;
@@ -758,7 +762,7 @@ async function startGmailTask() {
 
   setProgress(5,  de ? `${name} verbindet sich mit Gmail...` : `${name} connecting to Gmail...`);
   await delay(600);
-  setProgress(20, de ? `${name} liest deine E-Mails...`     : `${name} reading your emails...`);
+  setProgress(15, de ? `${name} lädt bis zu ${emailCount} E-Mails...` : `${name} loading up to ${emailCount} emails...`);
 
   let emails = [];
   try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
@@ -803,6 +807,8 @@ ${emailList}`;
 
   setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
 
+  // Create parent label first — Gmail requires parent to exist before children
+  try { await getOrCreateLabel(gmailAccessToken, 'KI-Sortierung'); } catch (_) {}
   const categories = ['DRINGEND', 'WICHTIG', 'NIEDRIG', 'INFO'];
   const labelPrefix = 'KI-Sortierung/';
   const labelIds = {};
