@@ -1536,13 +1536,24 @@ function parseResultBlocks(text) {
       blocks.push({ type: 'risk', level: 'low', text: stripLeadingSymbol(t) }); return;
     }
 
+    // Labeled bullet  * **Label:** text  or  - **Label:** text
+    const lblM = t.match(/^[*\-]\s+\*\*([^*:]+):\*\*\s*(.*)/);
+    if (lblM) {
+      const label = lblM[1].trim();
+      const text  = lblM[2].trim();
+      if (/^(Erkenntnis|Insight|Hinweis|Tipp|Note|Tip)/i.test(label)) {
+        blocks.push({ type: 'insight', label, text }); return;
+      }
+      blocks.push({ type: 'labeled_bullet', label, text }); return;
+    }
+
     // Numbered items  1. 2. etc.
     const numM = t.match(/^(\d+)\.\s+(.+)/);
     if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); return; }
 
-    // Arrow / dash bullets  →  -  •
-    if (/^(→|•|\-\s)/.test(t)) {
-      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+)/, '').trim() }); return;
+    // Arrow / dash / star bullets  →  -  •  *
+    if (/^(→|•|\-\s|\*\s)/.test(t)) {
+      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); return;
     }
 
     // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
@@ -1618,12 +1629,15 @@ function downloadPDF(length) {
   function drawRunningHeader() {
     doc.setFillColor(...navy);
     doc.rect(0, 0, pageW, 10, 'F');
+    // Accent bottom line on header
+    doc.setFillColor(...accent);
+    doc.rect(0, 10, pageW, 0.5, 'F');
     doc.setTextColor(...silver);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
-    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align:'right' });
-    // Always reset text state after header so body content starts clean
+    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align: 'right' });
+    // Defensive reset
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
@@ -1638,21 +1652,27 @@ function downloadPDF(length) {
   }
 
   function sectionHead(label) {
-    guard(14);
-    y += 3;
-    // Left accent bar
+    guard(16);
+    y += 5;
+    // Full-width dark navy band
+    doc.setFillColor(...navy);
+    doc.rect(0, y, pageW, 11, 'F');
+    // Bold accent left bar
     doc.setFillColor(...accent);
-    doc.rect(mL, y, 3, 8, 'F');
-    // Label
-    doc.setFillColor(...ice);
-    doc.rect(mL + 3, y, cW - 3, 8, 'F');
-    doc.setTextColor(...navy);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    // Strip emojis but keep Latin/umlauts for jsPDF
+    doc.rect(0, y, 5, 11, 'F');
+    // Subtle right accent glow
+    doc.setFillColor(37, 99, 235);
+    doc.rect(pageW - 2, y, 2, 11, 'F');
+    // White uppercase label
     const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
-    doc.text(clean, mL + 7, y + 5.6);
-    y += 11;
+    doc.setTextColor(...white);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(clean.toUpperCase(), mL, y + 7.4);
+    y += 15;
+    // Defensive reset
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
     doc.setTextColor(...steel);
   }
 
@@ -1900,11 +1920,14 @@ function downloadPDF(length) {
   // Helper: safely strip all non-printable / non-latin characters for jsPDF
   function safe(s) {
     return s
-      .replace(/\u2014|\u2013/g, ' - ')   // em dash / en dash → " - " (keeps readability + breaks long lines)
-      .replace(/\u2018|\u2019/g, "'")     // curly single quotes → straight
-      .replace(/\u201C|\u201D/g, '"')     // curly double quotes → straight
-      .replace(/\u2022/g, '-')            // bullet dot → hyphen
-      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')  // strip remaining non-Latin
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // strip **bold** markdown
+      .replace(/\*([^*]+)\*/g, '$1')     // strip *italic* markdown
+      .replace(/`([^`]+)`/g, '$1')       // strip `code` markdown
+      .replace(/\u2014|\u2013/g, ' - ')
+      .replace(/\u2018|\u2019/g, "'")
+      .replace(/\u201C|\u201D/g, '"')
+      .replace(/\u2022/g, '-')
+      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1974,6 +1997,70 @@ function downloadPDF(length) {
         doc.text(val, col + 6, y + 10);
         nCounter++;
         if (nCounter % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
+        break;
+      }
+
+      case 'labeled_bullet': {
+        const lbl = safe(b.label || '');
+        const txt = safe(b.text || '');
+        if (!lbl) break;
+        guard(8);
+        // Accent square dot
+        doc.setFillColor(...accent);
+        doc.rect(mL + 2, y - 3, 2.5, 2.5, 'F');
+        // Bold blue label
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...accent);
+        const lblW = doc.getTextWidth(lbl + ':') + 2;
+        doc.text(lbl + ':', mL + 7, y);
+        if (txt) {
+          const remaining = cW - 7 - lblW - 2;
+          const txtLines = doc.splitTextToSize(txt, remaining);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...steel);
+          if (txtLines.length === 1 && doc.getTextWidth(txt) <= remaining) {
+            doc.text(txt, mL + 7 + lblW + 2, y);
+            y += 5.5;
+          } else {
+            y += 5.5;
+            txtLines.forEach(ln => { guard(6); doc.text(ln, mL + 12, y); y += 5.2; });
+          }
+        } else {
+          y += 5.5;
+        }
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...steel);
+        y += 0.5;
+        break;
+      }
+
+      case 'insight': {
+        const lbl = safe(b.label || '');
+        const txt = safe(b.text || '');
+        if (!txt && !lbl) break;
+        const insLines = doc.splitTextToSize(txt || lbl, cW - 16);
+        const boxH = 8 + insLines.length * 5.2 + 4;
+        guard(boxH + 4);
+        y += 2;
+        doc.setFillColor(236, 253, 245);
+        doc.roundedRect(mL, y, cW, boxH, 3, 3, 'F');
+        doc.setFillColor(...green);
+        doc.roundedRect(mL, y, 4, boxH, 1, 1, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...green);
+        doc.text((lbl || 'ERKENNTNIS').toUpperCase(), mL + 8, y + 5.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(6, 78, 59);
+        let iy = y + 11;
+        insLines.forEach(ln => { doc.text(ln, mL + 8, iy); iy += 5.2; });
+        y += boxH + 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...steel);
         break;
       }
 
