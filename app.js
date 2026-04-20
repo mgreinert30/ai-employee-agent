@@ -825,11 +825,43 @@ ${emailList}`;
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   currentResult = de
-    ? `✅ ${total} E-Mails wurden in Gmail sortiert!\n\nDu findest sie unter dem Label "KI-Sortierung" in deinem Gmail:\n\n🔴 DRINGEND: ${counts.DRINGEND} E-Mails\n🟡 WICHTIG: ${counts.WICHTIG} E-Mails\n🟢 NIEDRIG: ${counts.NIEDRIG} E-Mails\n🔵 INFO: ${counts.INFO} E-Mails\n\nÖffne Gmail → linke Seite → "KI-Sortierung" um die sortierten E-Mails zu sehen.`
-    : `✅ ${total} emails sorted in Gmail!\n\nFind them under the "KI-Sortierung" label in Gmail:\n\n🔴 URGENT: ${counts.DRINGEND} emails\n🟡 IMPORTANT: ${counts.WICHTIG} emails\n🟢 LOW: ${counts.NIEDRIG} emails\n🔵 INFO: ${counts.INFO} emails\n\nOpen Gmail → left sidebar → "KI-Sortierung" to see your sorted emails.`;
+    ? `${total} E-Mails sortiert — DRINGEND: ${counts.DRINGEND} | WICHTIG: ${counts.WICHTIG} | NIEDRIG: ${counts.NIEDRIG} | INFO: ${counts.INFO}`
+    : `${total} emails sorted — URGENT: ${counts.DRINGEND} | IMPORTANT: ${counts.WICHTIG} | LOW: ${counts.NIEDRIG} | INFO: ${counts.INFO}`;
+
+  const cats = de
+    ? [
+        { label: 'DRINGEND',  count: counts.DRINGEND, color: '#ef4444', bg: '#fef2f2', desc: 'Sofort bearbeiten' },
+        { label: 'WICHTIG',   count: counts.WICHTIG,  color: '#f59e0b', bg: '#fffbeb', desc: 'Diese Woche' },
+        { label: 'NIEDRIG',   count: counts.NIEDRIG,  color: '#22c55e', bg: '#f0fdf4', desc: 'Wenn Zeit vorhanden' },
+        { label: 'INFO',      count: counts.INFO,     color: '#3b82f6', bg: '#eff6ff', desc: 'Zur Kenntnisnahme' },
+      ]
+    : [
+        { label: 'URGENT',    count: counts.DRINGEND, color: '#ef4444', bg: '#fef2f2', desc: 'Act immediately' },
+        { label: 'IMPORTANT', count: counts.WICHTIG,  color: '#f59e0b', bg: '#fffbeb', desc: 'This week' },
+        { label: 'LOW',       count: counts.NIEDRIG,  color: '#22c55e', bg: '#f0fdf4', desc: 'When time allows' },
+        { label: 'INFO',      count: counts.INFO,     color: '#3b82f6', bg: '#eff6ff', desc: 'For your info' },
+      ];
+
+  const resultHTML = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:40px;margin-bottom:8px;">✅</div>
+      <h2 style="font-size:22px;font-weight:700;color:#0f172a;margin:0 0 4px;">${total} ${de ? 'E-Mails sortiert' : 'Emails sorted'}</h2>
+      <p style="font-size:13px;color:#64748b;margin:0;">${de ? 'Labels in Gmail erstellt unter "KI-Sortierung"' : 'Labels created in Gmail under "KI-Sortierung"'}</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      ${cats.map(c => `
+        <div style="background:${c.bg};border:1.5px solid ${c.color}22;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;font-weight:800;color:${c.color};line-height:1;">${c.count}</div>
+          <div style="font-size:12px;font-weight:700;color:${c.color};margin:4px 0 2px;letter-spacing:0.5px;">${c.label}</div>
+          <div style="font-size:11px;color:#64748b;">${c.desc}</div>
+        </div>`).join('')}
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;font-size:13px;color:#475569;text-align:center;">
+      📂 ${de ? 'Gmail öffnen → linke Seite → Label' : 'Open Gmail → left sidebar → label'} <strong>"KI-Sortierung"</strong> ${de ? '→ deine sortierten E-Mails' : '→ your sorted emails'}
+    </div>`;
 
   showStep('step-result');
-  document.getElementById('result-content').textContent = currentResult;
+  document.getElementById('result-content').innerHTML = resultHTML;
 }
 
 // =====================
