@@ -129,8 +129,8 @@ function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-my-tasks').style.display = 'inline-block';
-  // Show owner panel button only for owner account
   document.getElementById('btn-owner-panel').style.display = currentUser.isOwner ? 'inline-block' : 'none';
+  document.getElementById('btn-my-account').style.display = currentUser.isOwner ? 'none' : 'inline-block';
   renderTestimonials();
 }
 
@@ -146,8 +146,90 @@ function handleLogout() {
 // =====================
 // MY TASKS PANEL
 // =====================
+function toggleMyTasks() {
+  const panel = document.getElementById('my-tasks-panel');
+  if (panel.style.display === 'none' || !panel.style.display) { panel.style.display = 'block'; renderTaskHistory(); }
+  else { panel.style.display = 'none'; }
+}
 function openMyTasks() { document.getElementById('my-tasks-panel').style.display = 'block'; renderTaskHistory(); }
 function closeMyTasks() { document.getElementById('my-tasks-panel').style.display = 'none'; }
+// =====================
+// ACCOUNT SETTINGS
+// =====================
+function openAccount() {
+  document.getElementById('account-overlay').classList.remove('hidden');
+  document.getElementById('account-name').value = currentUser?.name || '';
+  document.getElementById('account-email').value = currentUser?.email || '';
+  document.getElementById('account-password-old').value = '';
+  document.getElementById('account-password-new').value = '';
+  ['account-name-msg','account-email-msg','account-password-msg'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+}
+function closeAccount() { document.getElementById('account-overlay').classList.add('hidden'); }
+
+function saveAccountName() {
+  const name = document.getElementById('account-name').value.trim();
+  if (!name) return;
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx !== -1) { users[idx].name = name; localStorage.setItem('ai_agent_users', JSON.stringify(users)); }
+  currentUser.name = name;
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${name}` : `Hello, ${name}`;
+  const msg = document.getElementById('account-name-msg');
+  msg.textContent = currentLang === 'de' ? '✓ Name gespeichert!' : '✓ Name saved!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function saveAccountEmail() {
+  const newEmail = document.getElementById('account-email').value.trim();
+  const msg = document.getElementById('account-email-msg');
+  if (!newEmail || newEmail === currentUser.email) return;
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  if (users.find(u => u.email === newEmail)) {
+    msg.textContent = currentLang === 'de' ? '❌ E-Mail bereits vergeben.' : '❌ Email already taken.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx !== -1) {
+    const tasks = localStorage.getItem(`ai_tasks_${currentUser.email}`);
+    if (tasks) { localStorage.setItem(`ai_tasks_${newEmail}`, tasks); localStorage.removeItem(`ai_tasks_${currentUser.email}`); }
+    const payment = localStorage.getItem(`ai_payment_${currentUser.email}`);
+    if (payment) { localStorage.setItem(`ai_payment_${newEmail}`, payment); localStorage.removeItem(`ai_payment_${currentUser.email}`); }
+    users[idx].email = newEmail;
+    localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  }
+  currentUser.email = newEmail;
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  msg.textContent = currentLang === 'de' ? '✓ E-Mail gespeichert!' : '✓ Email saved!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function saveAccountPassword() {
+  const oldPw = document.getElementById('account-password-old').value;
+  const newPw = document.getElementById('account-password-new').value;
+  const msg = document.getElementById('account-password-msg');
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx === -1) return;
+  if (users[idx].password !== oldPw) {
+    msg.textContent = currentLang === 'de' ? '❌ Aktuelles Passwort falsch.' : '❌ Current password incorrect.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  if (newPw.length < 8) {
+    msg.textContent = currentLang === 'de' ? '❌ Neues Passwort muss mindestens 8 Zeichen haben.' : '❌ New password must be at least 8 characters.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+  users[idx].password = newPw;
+  localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  msg.textContent = currentLang === 'de' ? '✓ Passwort geändert!' : '✓ Password changed!';
+  msg.style.color = '#10b981'; msg.style.display = 'block';
+  document.getElementById('account-password-old').value = '';
+  document.getElementById('account-password-new').value = '';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
 function getTaskHistory() { return JSON.parse(localStorage.getItem(`ai_tasks_${currentUser?.email}`) || '[]'); }
 function saveTaskToHistory(description, price) {
   if (!currentUser) return;
@@ -261,11 +343,223 @@ function submitReview() {
   if (!selectedStars) { alert(currentLang === 'de' ? 'Bitte wähle eine Sternebewertung.' : 'Please select a star rating.'); return; }
   const text = document.getElementById('review-text').value.trim();
   const name = document.getElementById('review-name').value.trim() || (currentLang === 'de' ? 'Anonym' : 'Anonymous');
+  // #4 Feedback-Lernen: save improvement note
+  const improvement = document.getElementById('improvement-text')?.value?.trim();
+  if (improvement) saveFeedbackToLearning(improvement);
   const reviews = getAllReviews();
   reviews.push({ id: Date.now(), name, text, stars: selectedStars, date: new Date().toISOString(), featured: false, hidden: false });
   localStorage.setItem('ai_reviews', JSON.stringify(reviews));
   showStep('step-review-done');
   renderTestimonials();
+}
+
+// =====================
+// #4 FEEDBACK-LERNEN
+// =====================
+function saveFeedbackToLearning(text) {
+  if (!text || text.trim().length < 5) return;
+  const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  notes.push(text.trim().slice(0, 300));
+  if (notes.length > 5) notes.shift();
+  localStorage.setItem('ai_improvement_notes', JSON.stringify(notes));
+}
+
+function getLearningContext(isDE) {
+  const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  if (!notes.length) return '';
+  return (isDE
+    ? '\nNUTZER-PRÄFERENZEN (aus früherem Feedback — bitte berücksichtigen):\n'
+    : '\nUSER PREFERENCES (from previous feedback — please apply):\n')
+    + notes.map(n => `- ${n}`).join('\n') + '\n';
+}
+
+// =====================
+// #5 MULTI-STEP (Task Chaining)
+// =====================
+function chainTask(type) {
+  const de = currentLang === 'de';
+  const instructions = {
+    shorten:  de ? 'Fasse folgenden Text in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen:\n\n'
+                 : 'Summarise the following text in 50% shorter — keep all key points, remove filler:\n\n',
+    translate:de ? 'Übersetze folgenden Text vollständig und professionell ins Englische:\n\n'
+                 : 'Translate the following text completely and professionally into German:\n\n',
+    report:   de ? 'Erstelle aus folgendem Text einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n'
+                 : 'Create a professional report with executive summary, key findings and recommendations from the following text:\n\n',
+    bullets:  de ? 'Forme folgenden Text in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n'
+                 : 'Convert the following text into concise, clearly structured bullet points — no prose:\n\n'
+  };
+  const prefix = instructions[type] || instructions.shorten;
+  const input = currentResult ? currentResult.slice(0, 5000) : '';
+  document.getElementById('task-description').value = prefix + input;
+  window.selectedAnalysisLength = 'medium';
+  window.skippedSetup = true;
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  startTask();
+}
+
+// =====================
+// #7 ZEITPLAN + #3 PROAKTIVITÄT
+// =====================
+const SCHEDULE_KEY = 'ai_scheduled_tasks';
+
+function calcNextRun(frequency) {
+  const d = new Date();
+  if (frequency === 'daily')   { d.setDate(d.getDate() + 1); }
+  else if (frequency === 'weekly')  { d.setDate(d.getDate() + 7); }
+  else if (frequency === 'monthly') { d.setMonth(d.getMonth() + 1); d.setDate(1); }
+  d.setHours(8, 0, 0, 0);
+  return d.getTime();
+}
+
+function scheduleCurrentTask(frequency) {
+  const taskDesc = document.getElementById('task-description')?.value || '';
+  if (!taskDesc.trim()) return;
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  tasks.push({
+    id: Date.now().toString(36),
+    task: taskDesc,
+    frequency,
+    analysisLength: window.selectedAnalysisLength || 'medium',
+    nextRun: calcNextRun(frequency),
+    created: Date.now()
+  });
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(tasks));
+  if ('Notification' in window) Notification.requestPermission();
+  const labels = { de: { daily:'Täglich', weekly:'Wöchentlich', monthly:'Monatlich' }, en: { daily:'Daily', weekly:'Weekly', monthly:'Monthly' } };
+  const lbl = labels[currentLang][frequency];
+  const el = document.getElementById('schedule-confirm');
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = currentLang === 'de'
+      ? `✅ Aufgabe geplant: ${lbl} — nächste Ausführung ${new Date(calcNextRun(frequency)).toLocaleDateString('de-DE')}`
+      : `✅ Task scheduled: ${lbl} — next run ${new Date(calcNextRun(frequency)).toLocaleDateString('en-GB')}`;
+  }
+}
+
+function checkDueTasks() {
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  const now = Date.now();
+  const due = tasks.filter(t => t.nextRun <= now);
+  if (!due.length) return;
+  const task = due[0];
+  const banner = document.getElementById('due-task-banner');
+  const textEl = document.getElementById('due-task-text');
+  if (banner && textEl) {
+    textEl.textContent = `"${task.task.slice(0, 70)}${task.task.length > 70 ? '…' : ''}"`;
+    banner.style.display = 'flex';
+    window._duePendingTask = task;
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('AI Employee Agent', {
+      body: (currentLang === 'de' ? 'Geplante Aufgabe bereit: ' : 'Scheduled task ready: ') + task.task.slice(0, 60),
+    });
+  }
+}
+
+function startDueTask() {
+  const task = window._duePendingTask;
+  if (!task) return;
+  // Update nextRun
+  const tasks = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+  const idx = tasks.findIndex(t => t.id === task.id);
+  if (idx >= 0) tasks[idx].nextRun = calcNextRun(tasks[idx].frequency);
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(tasks));
+  document.getElementById('due-task-banner').style.display = 'none';
+  window._duePendingTask = null;
+  showPage('services');
+  document.getElementById('task-description').value = task.task;
+  window.selectedAnalysisLength = task.analysisLength || 'medium';
+}
+
+function dismissDueBanner() {
+  document.getElementById('due-task-banner').style.display = 'none';
+}
+
+// =====================
+// #6 GOOGLE CALENDAR
+// =====================
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
+function connectCalendar() {
+  const btn = document.getElementById('calendar-connect-btn');
+  const status = document.getElementById('calendar-status');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'de' ? '⏳ Verbinde...' : '⏳ Connecting...';
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    status.textContent = currentLang === 'de' ? 'Google-Bibliothek lädt — bitte Seite neu laden.' : 'Google library loading — please reload.';
+    status.style.display = 'block';
+    btn.disabled = false; btn.textContent = '📅 Mit Google Kalender verbinden';
+    return;
+  }
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GMAIL_CLIENT_ID,
+    scope: CALENDAR_SCOPE,
+    callback: async (response) => {
+      if (response.error) {
+        status.textContent = 'Fehler: ' + response.error;
+        status.style.display = 'block';
+        btn.disabled = false; btn.textContent = '📅 Mit Google Kalender verbinden';
+        return;
+      }
+      btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analysiere Termine...' : '✓ Connected — Analysing events...';
+      status.style.display = 'none';
+      await startCalendarTask(response.access_token);
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchCalendarEvents(token) {
+  const now = new Date().toISOString();
+  const future = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=20&singleEvents=true&orderBy=startTime`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  return (data.items || []).map(e => {
+    const start = e.start?.dateTime || e.start?.date || '';
+    const end   = e.end?.dateTime   || e.end?.date   || '';
+    return `Termin: ${e.summary || '(kein Titel)'}\nStart: ${start}\nEnde: ${end}\nOrt: ${e.location || '—'}\nBeschreibung: ${e.description?.slice(0,100) || '—'}`;
+  });
+}
+
+async function startCalendarTask(token) {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  const de = currentLang === 'de';
+
+  setProgress(10, de ? `${name} liest deinen Kalender...` : `${name} reading your calendar...`);
+  let events = [];
+  try { events = await fetchCalendarEvents(token); } catch (err) {
+    currentResult = (de ? 'Fehler beim Lesen des Kalenders: ' : 'Error reading calendar: ') + err.message;
+    setProgress(100, 'Fertig.'); showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    return;
+  }
+
+  setProgress(50, de ? `KI analysiert ${events.length} Termine...` : `AI analysing ${events.length} events...`);
+  const prompt = de
+    ? `Analysiere die folgenden ${events.length} Kalendertermine der nächsten 14 Tage. Identifiziere: Terminkonzflikte, Termine die Vorbereitung brauchen, Lücken für fokussierte Arbeit, empfohlene Prioritäten. Antworte strukturiert mit konkreten Empfehlungen.\n\nTermine:\n${events.join('\n\n---\n\n')}`
+    : `Analyse the following ${events.length} calendar events for the next 14 days. Identify: scheduling conflicts, events needing preparation, gaps for focused work, recommended priorities. Respond structured with concrete recommendations.\n\nEvents:\n${events.join('\n\n---\n\n')}`;
+
+  try {
+    setProgress(75, de ? 'KI analysiert...' : 'AI analysing...');
+    const res = await fetch('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result;
+  } catch (err) {
+    currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
+  }
+
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
 }
 
 function skipReview() { showStep('step-review-done'); }
@@ -354,6 +648,7 @@ function selectCharacter(type) {
   const btnFemale = document.getElementById('charbtn-female');
   btnMale.textContent = type === 'male' ? (currentLang === 'de' ? '✓ Alex ausgewählt' : '✓ Alex selected') : (currentLang === 'de' ? 'Alex wählen' : 'Choose Alex');
   btnFemale.textContent = type === 'female' ? (currentLang === 'de' ? '✓ Emma ausgewählt' : '✓ Emma selected') : (currentLang === 'de' ? 'Emma wählen' : 'Choose Emma');
+  updateMiniCharButtons();
 }
 
 function getCharacterEmoji() { return selectedCharacter === 'female' ? '👩‍💼' : '👨‍💼'; }
@@ -364,18 +659,216 @@ function initCharacterSelection() {
 }
 
 // =====================
-// PRICING
+// GMAIL INTEGRATION
 // =====================
+const GMAIL_CLIENT_ID = '81791575409-uff7u3p59b2nk13d4ogqrg9oo7q4oq8g.apps.googleusercontent.com';
+let gmailAccessToken = null;
+
+function connectGmail() {
+  const btn = document.getElementById('gmail-connect-btn');
+  const status = document.getElementById('gmail-status');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'de' ? '⏳ Verbinde...' : '⏳ Connecting...';
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    status.textContent = currentLang === 'de' ? 'Google-Bibliothek lädt noch — bitte Seite neu laden.' : 'Google library still loading — please reload the page.';
+    status.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🔗 Mit Google verbinden';
+    return;
+  }
+
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GMAIL_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/gmail.modify',
+    callback: async (response) => {
+      if (response.error) {
+        status.textContent = (currentLang === 'de' ? 'Fehler: ' : 'Error: ') + response.error;
+        status.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '🔗 Mit Google verbinden';
+        return;
+      }
+      gmailAccessToken = response.access_token;
+      btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analyse startet...' : '✓ Connected — Starting analysis...';
+      status.style.display = 'none';
+      await startGmailTask();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchGmailEmails(token) {
+  const listRes = await fetch(
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=is:inbox',
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const listData = await listRes.json();
+  const messages = listData.messages || [];
+
+  const emails = [];
+  for (const msg of messages.slice(0, 20)) {
+    try {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const d = await r.json();
+      const h = d.payload?.headers || [];
+      emails.push({
+        id: msg.id,
+        from:    h.find(x => x.name === 'From')?.value    || '',
+        subject: h.find(x => x.name === 'Subject')?.value || '(kein Betreff)',
+        date:    h.find(x => x.name === 'Date')?.value    || ''
+      });
+    } catch (_) {}
+  }
+  return emails;
+}
+
+async function getOrCreateLabel(token, name) {
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  const existing = (data.labels || []).find(l => l.name === name);
+  if (existing) return existing.id;
+  const createRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, labelListVisibility: 'labelShow', messageListVisibility: 'show' })
+  });
+  const created = await createRes.json();
+  return created.id;
+}
+
+async function applyLabel(token, messageId, labelId) {
+  await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addLabelIds: [labelId] })
+  });
+}
+
+async function startGmailTask() {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const name = getCharacterName();
+  const de = currentLang === 'de';
+
+  setProgress(5,  de ? `${name} verbindet sich mit Gmail...` : `${name} connecting to Gmail...`);
+  await delay(600);
+  setProgress(20, de ? `${name} liest deine E-Mails...`     : `${name} reading your emails...`);
+
+  let emails = [];
+  try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
+    currentResult = (de ? 'Fehler beim Lesen der E-Mails: ' : 'Error reading emails: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    gmailAccessToken = null;
+    return;
+  }
+
+  setProgress(40, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
+
+  const emailList = emails.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
+  const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
+Kategorien: DRINGEND, WICHTIG, NIEDRIG, INFO
+Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
+
+E-Mails:
+${emailList}`;
+
+  let categorized = [];
+  try {
+    setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const jsonMatch = data.result.match(/\[[\s\S]*\]/);
+    if (jsonMatch) categorized = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    currentResult = (de ? '⚠️ Kategorisierung fehlgeschlagen: ' : '⚠️ Categorisation failed: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    gmailAccessToken = null;
+    return;
+  }
+
+  setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
+
+  const categories = ['DRINGEND', 'WICHTIG', 'NIEDRIG', 'INFO'];
+  const labelPrefix = 'KI-Sortierung/';
+  const labelIds = {};
+  for (const cat of categories) {
+    try { labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat); } catch (_) {}
+  }
+
+  setProgress(88, de ? `${name} sortiert E-Mails in Gmail...` : `${name} sorting emails in Gmail...`);
+
+  const counts = { DRINGEND: 0, WICHTIG: 0, NIEDRIG: 0, INFO: 0 };
+  for (const item of categorized) {
+    const labelId = labelIds[item.kategorie];
+    if (labelId && item.id) {
+      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (_) {}
+    }
+  }
+
+  gmailAccessToken = null;
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  currentResult = de
+    ? `✅ ${total} E-Mails wurden in Gmail sortiert!\n\nDu findest sie unter dem Label "KI-Sortierung" in deinem Gmail:\n\n🔴 DRINGEND: ${counts.DRINGEND} E-Mails\n🟡 WICHTIG: ${counts.WICHTIG} E-Mails\n🟢 NIEDRIG: ${counts.NIEDRIG} E-Mails\n🔵 INFO: ${counts.INFO} E-Mails\n\nÖffne Gmail → linke Seite → "KI-Sortierung" um die sortierten E-Mails zu sehen.`
+    : `✅ ${total} emails sorted in Gmail!\n\nFind them under the "KI-Sortierung" label in Gmail:\n\n🔴 URGENT: ${counts.DRINGEND} emails\n🟡 IMPORTANT: ${counts.WICHTIG} emails\n🟢 LOW: ${counts.NIEDRIG} emails\n🔵 INFO: ${counts.INFO} emails\n\nOpen Gmail → left sidebar → "KI-Sortierung" to see your sorted emails.`;
+
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
+}
+
+// =====================
+// PRICING
+// Max €5 per task. Fair, transparent, length-based.
+// Compared to ChatGPT Plus (~€20/month ÷ ~30 uses = €0.67/use for general access)
+// Our service is specialized, higher quality, pay-per-use — €0.99–€4.99 is very competitive.
+// =====================
+const TASK_PRICES = {
+  pdf:      { short: 0.99, medium: 1.99, long: 3.99 },
+  email:    { short: 0.99, medium: 1.49, long: 2.49 },
+  report:   { short: 1.49, medium: 2.49, long: 4.49 },
+  reply:    { short: 0.99, medium: 1.99, long: 2.99 },
+  document: { short: 1.49, medium: 2.99, long: 4.99 }
+};
+const TASK_TIMES = {
+  pdf:      { short: 1, medium: 2, long: 4 },
+  email:    { short: 2, medium: 3, long: 5 },
+  report:   { short: 2, medium: 3, long: 5 },
+  reply:    { short: 1, medium: 2, long: 3 },
+  document: { short: 2, medium: 4, long: 6 }
+};
+
+function detectTaskType(description) {
+  const d = description.toLowerCase();
+  if (d.includes('pdf') || d.includes('analysier') || d.includes('analyse')) return 'pdf';
+  if (d.includes('email') || d.includes('mail') || d.includes('postfach') || d.includes('inbox')) return 'email';
+  if (d.includes('bericht') || d.includes('report') || d.includes('summary') || d.includes('zusammenfassung')) return 'report';
+  if (d.includes('antwort') || d.includes('reply') || d.includes('respond')) return 'reply';
+  if (d.includes('dokument') || d.includes('document') || d.includes('schreib') || d.includes('write')) return 'document';
+  return 'report';
+}
+
 function estimateTask(description) {
-  const desc = description.toLowerCase();
-  let base = 5, complexity = 1.0;
-  if (desc.includes('email') || desc.includes('mail')) { base += 8; complexity = 1.5; }
-  if (desc.includes('sort') || desc.includes('sortier')) base += 5;
-  if (desc.includes('report') || desc.includes('bericht') || desc.includes('summary')) { base += 8; complexity = Math.max(complexity, 1.5); }
-  if (desc.includes('reply') || desc.includes('antwort')) { base += 10; complexity = 2.5; }
-  if (desc.includes('document') || desc.includes('dokument') || desc.includes('write')) { base += 12; complexity = Math.max(complexity, 1.5); }
-  const minutes = Math.ceil(base * complexity);
-  return { minutes, price: Math.round(Math.max(minutes * 0.20 * complexity, 2.00) * 100) / 100 };
+  const depth = window.selectedAnalysisLength || 'medium';
+  const type = detectTaskType(description);
+  const price = TASK_PRICES[type][depth];
+  const minutes = TASK_TIMES[type][depth];
+  return { minutes, price, type, depth };
 }
 
 // =====================
@@ -411,6 +904,96 @@ function selectShortcut(type) {
   document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+}
+
+// =====================
+// PAGE NAVIGATION
+// =====================
+function showPage(page) {
+  const main = document.getElementById('page-main');
+  const task = document.getElementById('page-task');
+  const reviewCta = document.getElementById('review-cta-section');
+
+  if (page === 'main') {
+    main.style.display = 'block';
+    task.style.display = 'none';
+    if (reviewCta) reviewCta.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    main.style.display = 'none';
+    task.style.display = 'block';
+    if (reviewCta) reviewCta.style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    if (page === 'pdf') {
+      document.getElementById('service-picker').style.display = 'none';
+      document.getElementById('task-page-icon').textContent = '📄';
+      document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'PDF analysieren' : 'Analyse PDF';
+      preselectPDF();
+      showStep('step-form');
+    } else if (page === 'services') {
+      document.getElementById('service-picker').style.display = 'block';
+      document.getElementById('task-page-icon').textContent = '🛠️';
+      document.getElementById('task-page-title').textContent = currentLang === 'de' ? 'Dienst auswählen' : 'Select Service';
+      document.querySelectorAll('.task-shortcut').forEach(b => b.style.display = 'inline-block');
+      showStep('step-form');
+    }
+    updateMiniCharButtons();
+  }
+}
+
+function updateMiniCharButtons() {
+  document.querySelectorAll('.mini-char-btn').forEach(b => b.classList.remove('active'));
+  const activeId = selectedCharacter === 'female' ? 'mini-char-female' : 'mini-char-male';
+  const el = document.getElementById(activeId);
+  if (el) el.classList.add('active');
+}
+
+function pickService(type) {
+  document.getElementById('service-picker').style.display = 'none';
+  const icons = { email: '📧', report: '📊', reply: '✉️', document: '📝' };
+  const titles = {
+    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'Antworten schreiben', document: 'Dokument erstellen' },
+    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Replies', document: 'Create Document' }
+  };
+  document.getElementById('task-page-icon').textContent = icons[type] || '🛠️';
+  document.getElementById('task-page-title').textContent = titles[currentLang]?.[type] || titles['de'][type];
+  const fakeEvent = { target: document.querySelector(`.task-shortcut[onclick*="${type}"]`) };
+  const descriptions = {
+    de: {
+      email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
+      report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
+      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
+      document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
+    },
+    en: {
+      email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
+      report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
+      reply:    'Write professional and friendly replies to the provided messages or emails.',
+      document: 'Create a professional, well-structured document with clear headings and sections.'
+    }
+  };
+  document.getElementById('task-description').value = descriptions[currentLang]?.[type] || descriptions['de'][type];
+  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
+  if (btn) btn.classList.add('active');
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  showStep('step-form');
+}
+
+function preselectPDF() {
+  const desc = currentLang === 'de'
+    ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
+    : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
+  document.getElementById('task-description').value = desc;
+  document.querySelectorAll('.task-shortcut').forEach(b => {
+    const isPDF = b.getAttribute('onclick')?.includes("'pdf'");
+    b.style.display = isPDF ? 'inline-block' : 'none';
+    b.classList.toggle('active', isPDF);
+  });
+  document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
+  document.getElementById('depth-selector').style.display = 'block';
 }
 
 // =====================
@@ -478,6 +1061,7 @@ function submitTask(e) {
   updateActivity();
   currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
   showStep('step-price');
+  document.getElementById('price-icon').textContent = getCharacterEmoji();
   const name = getCharacterName();
   document.getElementById('price-time-text').textContent = currentLang === 'de' ? `${name} braucht ca. ${currentEstimate.minutes} Minute${currentEstimate.minutes !== 1 ? 'n' : ''}` : `${name} needs about ${currentEstimate.minutes} minute${currentEstimate.minutes !== 1 ? 's' : ''}`;
   document.getElementById('price-amount').textContent = `€${currentEstimate.price.toFixed(2)}`;
@@ -552,9 +1136,38 @@ function confirmPayment() {
   const method = typeof selectedPaymentMethod === 'string' ? selectedPaymentMethod : selectedPaymentMethod?.type || 'unknown';
   saveSale(desc, currentEstimate.price.toFixed(2), method);
   saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
-  showStep('step-setup');
-  applyLangToSetup();
+  
+  // Email tasks → Gmail connect step (no local agent needed)
+  if (detectTaskType(desc) === 'email') {
+    window.skippedSetup = true;
+    document.getElementById('gmail-step-icon').textContent = getCharacterEmoji();
+    showStep('step-gmail');
+    return;
+  }
+
+  // Document/report creation → skip setup & apps, go straight to AI generation
+  const taskType = detectTaskType(desc);
+  if (taskType === 'document' || taskType === 'report' || taskType === 'reply') {
+    window.skippedSetup = true;
+    startTask();
+    return;
+  }
+
   applySmartPermissions();
+
+  const needsLocalAccess = document.getElementById('perm-email').checked ||
+                           document.getElementById('perm-files').checked ||
+                           document.getElementById('perm-browser').checked ||
+                           document.getElementById('perm-calendar').checked;
+
+  window.skippedSetup = !needsLocalAccess;
+
+  if (needsLocalAccess) {
+    showStep('step-setup');
+    applyLangToSetup();
+  } else {
+    goToAppSelection();
+  }
 }
 
 // =====================
@@ -567,13 +1180,16 @@ function applyLangToSetup() {
 // Auto-checks only the permissions that are actually needed for this task
 function applySmartPermissions() {
   const desc = document.getElementById('task-description').value.toLowerCase();
-  const isPDF    = uploadedPDFs.length > 0 || desc.includes('pdf') || desc.includes('dokument') || desc.includes('document') || desc.includes('datei') || desc.includes('file');
+  
+  // If they uploaded a PDF, we don't need local file permissions because we already have the file.
+  const isFiles  = (desc.includes('pdf') || desc.includes('dokument') || desc.includes('document') || desc.includes('datei') || desc.includes('file')) && uploadedPDFs.length === 0;
+  
   const isEmail  = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || desc.includes('inbox') || desc.includes('antwort') || desc.includes('reply');
   const isBrowser = desc.includes('browser') || desc.includes('website') || desc.includes('web') || desc.includes('online') || desc.includes('recherch');
   const isCalendar = desc.includes('kalender') || desc.includes('calendar') || desc.includes('termin') || desc.includes('appointment') || desc.includes('meeting');
 
   document.getElementById('perm-email').checked    = isEmail;
-  document.getElementById('perm-files').checked    = isPDF;
+  document.getElementById('perm-files').checked    = isFiles;
   document.getElementById('perm-browser').checked  = isBrowser;
   document.getElementById('perm-calendar').checked = isCalendar;
 
@@ -663,23 +1279,13 @@ function goToAppSelection() {
   const active = Object.entries(checked).filter(([,v]) => v).map(([k]) => k);
   const showDepth = isRealAIEnabled() && uploadedPDFs.length > 0;
 
-  // Show depth selector if real AI + PDF
-  const depthEl = document.getElementById('depth-selector');
-  if (depthEl) depthEl.style.display = showDepth ? 'block' : 'none';
-  // Reset to medium by default
-  if (showDepth) { window.selectedAnalysisLength = 'medium'; setDepth('medium'); }
-
-  // If nothing is checked and no depth selector needed, skip directly to task
-  if (active.length === 0 && !showDepth) { startTask(); return; }
-  // If nothing is checked but depth selector needed, show step-apps just for depth
-  if (active.length === 0 && showDepth) {
-    document.getElementById('app-step-icon').textContent = getCharacterEmoji();
-    document.getElementById('app-step-title').textContent  = currentLang === 'de' ? 'Letzte Einstellung...' : 'One last setting...';
-    document.getElementById('app-step-subtitle').textContent = currentLang === 'de' ? 'Wie tief soll die KI analysieren?' : 'How deep should the AI analyse?';
-    document.getElementById('app-questions').innerHTML = '';
-    showStep('step-apps');
-    return;
+  const backBtn = document.getElementById('btn-back-apps');
+  if (backBtn) {
+    backBtn.onclick = () => showStep(window.skippedSetup ? 'step-payment' : 'step-setup');
   }
+
+  // If nothing is checked, skip directly to task
+  if (active.length === 0) { startTask(); return; }
 
   // Update character icon + name in the step header
   document.getElementById('app-step-icon').textContent = getCharacterEmoji();
@@ -794,20 +1400,24 @@ async function startTask() {
   const taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
-  const useRealAI = isRealAIEnabled() && uploadedPDFs.length > 0;
+  // Always use real AI for document/report/reply creation (no PDF required)
+  const taskKind = detectTaskType(taskDesc);
+  const useRealAI = uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply';
 
   if (useRealAI) {
-    // Real AI mode: run steps faster (UI feedback while Gemini processes)
+    // Real AI mode — PDF uploaded, call server-side Gemini API
     for (const [pct, msg] of steps) { await delay(600); setProgress(pct, msg); }
     setProgress(95, currentLang === 'de' ? 'KI analysiert — bitte warten...' : 'AI is analysing — please wait...');
     try {
       currentResult = await runRealAI(taskDesc, businessDetails, analysisLength);
     } catch (err) {
-      console.error('Real AI failed, falling back to demo:', err);
-      currentResult = generateDemoResult(taskDesc);
+      console.error('Real AI failed:', err);
+      currentResult = currentLang === 'de'
+        ? `⚠️ Analyse konnte nicht abgeschlossen werden.\n\nFehler: ${err.message}\n\nBitte versuche es erneut oder kontaktiere den Support.`
+        : `⚠️ Analysis could not be completed.\n\nError: ${err.message}\n\nPlease try again or contact support.`;
     }
   } else {
-    // Demo mode: original timing
+    // Demo mode — no PDF uploaded, run without real document content
     for (const [pct, msg] of steps) { await delay(1200); setProgress(pct, msg); }
     await delay(800);
     currentResult = generateDemoResult(taskDesc);
@@ -829,18 +1439,13 @@ function setProgress(pct, msg) {
 // =====================
 function downloadResult() {
   const desc = document.getElementById('task-description').value.toLowerCase();
-  const isPDF   = uploadedPDFs.length > 0 || desc.includes('pdf');
   const isEmail = desc.includes('email') || desc.includes('mail') || desc.includes('postfach') || (window.selectedApps && window.selectedApps.email);
 
-  if (isPDF) {
-    // Show length selector before generating PDF
-    document.getElementById('length-char-icon').textContent = getCharacterEmoji();
-    document.getElementById('length-selector-overlay').classList.remove('hidden');
-    document.querySelectorAll('[data-de]').forEach(el => { el.textContent = el.getAttribute(`data-${currentLang}`); });
-  } else if (isEmail) {
+  if (isEmail) {
     downloadEmailResult();
   } else {
-    downloadHTMLReport();
+    // PDF for everything else (PDF analysis, document creation, reports, replies)
+    downloadPDF(window.selectedAnalysisLength || 'medium');
   }
 }
 
@@ -863,9 +1468,24 @@ function parseResultBlocks(text) {
     if (!t) { afterDivider = false; blocks.push({ type: 'gap' }); return; }
 
     // ━━━ divider → flag that next line is a section title
-    if (/^━{3,}/.test(t)) { afterDivider = true; return; }
+    if (/^━{3,}/.test(t)) { 
+      // Check if this is likely a bottom divider closing a section title
+      let lastType = null;
+      for (let j = blocks.length - 1; j >= 0; j--) {
+        if (blocks[j].type !== 'gap') {
+          lastType = blocks[j].type;
+          break;
+        }
+      }
+      if (lastType === 'section') {
+        afterDivider = false; // It's a bottom divider, don't treat next line as section
+      } else {
+        afterDivider = true; // It's a top divider
+      }
+      return; 
+    }
 
-    // Section title (line immediately after a ━━━)
+    // Section title (line immediately after a top ━━━)
     if (afterDivider) {
       afterDivider = false;
       // Strip leading emojis/symbols
@@ -876,6 +1496,34 @@ function parseResultBlocks(text) {
     }
 
     afterDivider = false;
+
+    // Markdown headings: ###, ##, # — AI sometimes outputs these instead of ━━━ dividers
+    const mdHeading = t.match(/^#{1,6}\s+(.+)/);
+    if (mdHeading) {
+      const hText = mdHeading[1]
+        .replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '')
+        .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '')
+        .trim();
+      blocks.push({ type: 'section', text: hText || mdHeading[1] });
+      return;
+    }
+
+    // **Bold line** on its own → treat as section heading
+    const boldLine = t.match(/^\*\*([^*]{3,})\*\*[:\s]*$/);
+    if (boldLine) {
+      blocks.push({ type: 'section', text: boldLine[1].trim() });
+      return;
+    }
+
+    // KPI lines inside KENNZAHLEN / KEY METRICS section: "Label: Value" with numbers/% /€/$
+    // Detect if we're inside a KPI section
+    const prevSection = blocks.slice().reverse().find(b => b.type === 'section');
+    const inKpiSection = prevSection && /kennzahl|metric|glance|blick/i.test(prevSection.text);
+    if (inKpiSection && /^[^:]+:\s*[+\-]?[\d€$£%,.]+/.test(t)) {
+      const colonIdx = t.indexOf(':');
+      blocks.push({ type: 'kpi', label: t.slice(0, colonIdx).trim(), value: t.slice(colonIdx + 1).trim() });
+      return;
+    }
 
     // Risk bullets  🔴 🟡 🟢
     if (/^[\uD83D][\uDD34]/.test(t) || t.startsWith('\uD83D\uDD34') || /^\u{1F534}/u.test(t)) {
@@ -888,37 +1536,13 @@ function parseResultBlocks(text) {
       blocks.push({ type: 'risk', level: 'low', text: stripLeadingSymbol(t) }); return;
     }
 
-    // Markdown headings  ### ## #
-    if (/^#{1,3}\s/.test(t)) {
-      const title = t.replace(/^#{1,3}\s+/, '').replace(/\*\*/g, '').trim();
-      blocks.push({ type: 'section', text: title }); return;
-    }
-
-    // Bold-only line  **Label**
-    if (/^\*\*[^*]+\*\*\s*$/.test(t)) {
-      const title = t.replace(/\*\*/g, '').trim();
-      blocks.push({ type: 'section', text: title }); return;
-    }
-
-    // Labeled bullet  * **Label:** text  or  - **Label:** text
-    const lblM = t.match(/^[*\-]\s+\*\*([^*:]+):\*\*\s*(.*)/);
-    if (lblM) {
-      const label = lblM[1].trim();
-      const text  = lblM[2].trim();
-      // Special insight block
-      if (/^(Erkenntnis|Insight|Hinweis|Note)/i.test(label)) {
-        blocks.push({ type: 'insight', label, text }); return;
-      }
-      blocks.push({ type: 'labeled_bullet', label, text }); return;
-    }
-
     // Numbered items  1. 2. etc.
     const numM = t.match(/^(\d+)\.\s+(.+)/);
     if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); return; }
 
-    // Arrow / dash / star bullets  →  -  •  *
-    if (/^(→|•|\-\s|\*\s)/.test(t)) {
-      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); return;
+    // Arrow / dash bullets  →  -  •
+    if (/^(→|•|\-\s)/.test(t)) {
+      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+)/, '').trim() }); return;
     }
 
     // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
@@ -965,12 +1589,23 @@ function downloadPDF(length) {
   const amber  = [217,119, 6];
   const green  = [22, 163, 74];
 
-  const fileName = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : 'Dokument';
-  const fileBase = fileName.replace(/\.pdf$/i,'');
+  const fileName   = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
+  // When no PDF is uploaded use the task description as the cover title
+  const taskDescEl = document.getElementById('task-description');
+  const taskDescVal = (taskDescEl?.value || '').trim().slice(0, 70);
+  const fileBase   = fileName
+    ? fileName.replace(/\.pdf$/i, '')
+    : (taskDescVal || (currentLang === 'de' ? 'KI-Analyse' : 'AI Analysis'));
   const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
   const nowTime  = new Date().toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-GB', { hour:'2-digit', minute:'2-digit' });
   const refNr    = 'REF-' + Date.now().toString(36).toUpperCase().slice(-6);
   const depthLbl = { de:{ short:'Kurzzusammenfassung', medium:'Standardanalyse', long:'Tiefenanalyse' }, en:{ short:'Brief Summary', medium:'Standard Analysis', long:'In-Depth Analysis' } }[currentLang][length];
+  const docType  = window.currentDocType || 'allgemein';
+  const docTypeLabels = {
+    de: { geschaeftsbericht:'GESCHÄFTSBERICHT', vertrag:'VERTRAG', jahresabschluss:'JAHRESABSCHLUSS', rechnung:'RECHNUNG', protokoll:'PROTOKOLL', allgemein:'DOKUMENT' },
+    en: { geschaeftsbericht:'BUSINESS REPORT', vertrag:'CONTRACT', jahresabschluss:'FINANCIAL STATEMENT', rechnung:'INVOICE', protokoll:'MEETING MINUTES', allgemein:'DOCUMENT' }
+  };
+  const dtLabel = docTypeLabels[currentLang === 'de' ? 'de' : 'en'][docType] || 'DOKUMENT';
 
   // ── HELPERS ──
   function newPage() {
@@ -987,8 +1622,8 @@ function downloadPDF(length) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
-    doc.text(`${refNr}  •  ${today}`, pageW - mR, 6.5, { align:'right' });
-    // Defensive reset so subsequent content uses body defaults
+    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align:'right' });
+    // Always reset text state after header so body content starts clean
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
@@ -1003,27 +1638,21 @@ function downloadPDF(length) {
   }
 
   function sectionHead(label) {
-    guard(16);
-    y += 4;
-    // Full-width dark background
-    doc.setFillColor(...navy);
-    doc.rect(0, y, pageW, 10, 'F');
-    // Bold accent left bar
+    guard(14);
+    y += 3;
+    // Left accent bar
     doc.setFillColor(...accent);
-    doc.rect(0, y, 4, 10, 'F');
-    // Subtle right glow stripe
-    doc.setFillColor(37, 99, 235);
-    doc.rect(pageW - 2, y, 2, 10, 'F');
-    // White label text
-    doc.setTextColor(...white);
+    doc.rect(mL, y, 3, 8, 'F');
+    // Label
+    doc.setFillColor(...ice);
+    doc.rect(mL + 3, y, cW - 3, 8, 'F');
+    doc.setTextColor(...navy);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
-    doc.text(clean.toUpperCase(), mL, y + 6.8);
-    y += 14;
-    // Reset state
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
+    // Strip emojis but keep Latin/umlauts for jsPDF
+    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
+    doc.text(clean, mL + 7, y + 5.6);
+    y += 11;
     doc.setTextColor(...steel);
   }
 
@@ -1048,15 +1677,14 @@ function downloadPDF(length) {
     // Clean risk prefix icons
     const cleaned = text.replace(/^[🔴🟡🟢]\s*/u,'').replace(/^\[(KRITISCH|CRITICAL|WICHTIG|IMPORTANT|GERING|LOW)\]\s*/,'');
 
-    guard(7);
+    const lines = doc.splitTextToSize(cleaned, cW - indent - 5);
+    guard(lines.length * 5.2 + 3); // guard full bullet height before drawing
     doc.setFillColor(...dotColor);
-    doc.circle(mL + indent + 1.2, y - 1.2, 1, 'F');
+    doc.circle(mL + indent + 1.2, y - 1.5, 1, 'F');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
-    const lines = doc.splitTextToSize(cleaned, cW - indent - 5);
-    lines.forEach((ln, i) => {
-      guard(6);
+    lines.forEach(ln => {
       doc.text(ln, mL + indent + 4, y);
       y += 5.2;
     });
@@ -1064,7 +1692,8 @@ function downloadPDF(length) {
   }
 
   function numberedItem(n, text) {
-    guard(7);
+    const lines = doc.splitTextToSize(text, cW - 9);
+    guard(lines.length * 5.2 + 3);
     doc.setFillColor(...accent);
     doc.circle(mL + 3, y - 1.5, 2.5, 'F');
     doc.setTextColor(...white);
@@ -1074,97 +1703,208 @@ function downloadPDF(length) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
-    const lines = doc.splitTextToSize(text, cW - 9);
-    lines.forEach((ln, i) => { guard(6); doc.text(ln, mL + 9, y); y += 5.2; });
+    lines.forEach(ln => { doc.text(ln, mL + 9, y); y += 5.2; });
     y += 1;
   }
 
-  // ── COVER PAGE ──
-  // Full dark background
+  // ── COVER PAGE (#5) ──
   doc.setFillColor(...navy);
   doc.rect(0, 0, pageW, pageH, 'F');
 
-  // Top accent stripe
+  // Bold left accent bar
   doc.setFillColor(...accent);
-  doc.rect(0, 0, pageW, 3, 'F');
+  doc.rect(0, 0, 6, pageH, 'F');
 
-  // Report type label
-  doc.setTextColor(...silver);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const typeLabel = currentLang === 'de' ? 'ANALYSEBERICHT' : 'ANALYSIS REPORT';
-  doc.text(typeLabel, mL, 28);
-  // Underline
+  // Top-right decoration — three concentric faint rings
+  const cx = pageW - 2, cy = 0; // anchor to top-right corner
+  [[55, 0.08], [38, 0.12], [22, 0.18]].forEach(([r, alpha]) => {
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.6);
+    doc.setGState(doc.GState({ opacity: alpha }));
+    doc.circle(cx, cy, r, 'S');
+  });
+  doc.setGState(doc.GState({ opacity: 1 })); // reset opacity
+
+  // Document type chip
+  const chipW = doc.getTextWidth(dtLabel) + 16;
+  doc.setFillColor(...accent);
+  doc.roundedRect(mL + 8, 24, chipW, 8, 1.5, 1.5, 'F');
+  doc.setTextColor(...white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.text(dtLabel, mL + 8 + 8, 29.5);
+
+  // Depth badge (right of chip)
+  const depthX = mL + 8 + chipW + 6;
+  const depthChipW = doc.getTextWidth(depthLbl) + 14;
+  doc.setFillColor(30, 41, 59);
+  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'F');
   doc.setDrawColor(...accent);
-  doc.setLineWidth(0.6);
-  doc.line(mL, 29.5, mL + doc.getTextWidth(typeLabel), 29.5);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'S');
+  doc.setTextColor(...silver);
+  doc.text(depthLbl, depthX + 7, 29.5);
 
-  // Main title
+  // ── Title (larger, shifted down to give breathing room below chips) ──
   doc.setTextColor(...white);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(26);
-  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 10);
-  let ty = 44;
-  titleLines.forEach(ln => { doc.text(ln, mL, ty); ty += 11; });
+  doc.setFontSize(30);
+  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 26);
+  let ty = 56;
+  titleLines.slice(0, 4).forEach(ln => { doc.text(ln, mL + 8, ty); ty += 13; });
 
-  // Depth label badge
-  doc.setFillColor(...accent);
-  doc.roundedRect(mL, ty + 4, doc.getTextWidth(depthLbl) + 12, 9, 1.5, 1.5, 'F');
-  doc.setTextColor(...white);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text(depthLbl, mL + 6, ty + 10);
+  // Subtitle
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(148, 163, 184);
+  const subtitle = currentLang === 'de' ? 'KI-gestützte Dokumentenanalyse' : 'AI-powered document analysis';
+  doc.text(subtitle, mL + 8, ty + 5);
   ty += 20;
 
-  // Metadata block
-  doc.setTextColor(...silver);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const meta = [
-    (currentLang === 'de' ? 'Datei: ' : 'File: ') + fileName,
-    (currentLang === 'de' ? 'Erstellt: ' : 'Created: ') + today + '  ' + nowTime,
-    (currentLang === 'de' ? 'Referenz: ' : 'Reference: ') + refNr,
-    (currentLang === 'de' ? 'Status: ' : 'Status: ') + (currentLang === 'de' ? 'Abgeschlossen — Vertraulich' : 'Complete — Confidential'),
-  ];
-  meta.forEach(m => { doc.text(m, mL, ty); ty += 7; });
+  // Divider under subtitle
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.6);
+  doc.line(mL + 8, ty, pageW - mR, ty);
+  ty += 12;
 
-  // Confidential stamp bottom-right
+  // Metadata grid — 2-column layout (label left, value right)
+  const metaPairs = [
+    [currentLang === 'de' ? 'Datei' : 'File',      fileName ? (fileName.length > 38 ? fileName.slice(0,35)+'...' : fileName) : '—'],
+    [currentLang === 'de' ? 'Erstellt' : 'Created', today + '  ' + nowTime],
+    [currentLang === 'de' ? 'Tiefe' : 'Depth',     depthLbl],
+    [currentLang === 'de' ? 'Referenz' : 'Reference', refNr],
+  ];
+  doc.setFontSize(8.5);
+  metaPairs.forEach(([label, val]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...silver);
+    doc.text(label + ':', mL + 8, ty);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...white);
+    doc.text(val, mL + 8 + 32, ty);
+    ty += 9;
+  });
+  ty += 8;
+
+  // ── Mid-page info card (fills the empty space) ──
+  const cardY = ty;
+  const cardH = 52;
+  doc.setFillColor(20, 32, 54); // slightly lighter than navy
+  doc.roundedRect(mL + 8, cardY, cW - 8, cardH, 3, 3, 'F');
+  doc.setFillColor(...accent);
+  doc.rect(mL + 8, cardY, 3, cardH, 'F');
+  // Card heading
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
   doc.setTextColor(...accent);
+  doc.text(
+    currentLang === 'de' ? 'ANALYSE — ÜBERSICHT' : 'ANALYSIS OVERVIEW',
+    mL + 16, cardY + 9
+  );
+  // Horizontal rule inside card
+  doc.setDrawColor(37, 60, 100);
+  doc.setLineWidth(0.3);
+  doc.line(mL + 16, cardY + 13, pageW - mR - 8, cardY + 13);
+  // Feature rows — 2 columns, 3 rows
+  const de = currentLang === 'de';
+  const features = [
+    [de ? 'Visuelle KI-Analyse' : 'Visual AI Analysis',   de ? 'Tabellen & Grafiken erkannt' : 'Tables & charts detected'],
+    [de ? 'Seitenreferenzen' : 'Page References',         de ? 'Jede Aussage belegt' : 'Every claim sourced'],
+    [de ? 'Vertraulich' : 'Confidential',                 de ? 'Daten nach Analyse geloscht' : 'Data deleted after analysis'],
+  ];
+  doc.setFontSize(8.5);
+  features.forEach(([left, right], i) => {
+    const fy = cardY + 21 + i * 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...white);
+    doc.text(left, mL + 16, fy);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 130, 180);
+    doc.text(right, mL + 16 + 58, fy);
+  });
+
+  // ── Task description preview (if available) ──
+  const taskPreview = (taskDescEl?.value || '').trim().slice(0, 160);
+  if (taskPreview && fileName) { // only show when we also have a real file name
+    const qY = cardY + cardH + 12;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(80, 100, 140);
+    const qLines = doc.splitTextToSize('\u201E' + taskPreview + '\u201C', cW - 20);
+    qLines.slice(0, 3).forEach((ln, i) => doc.text(ln, mL + 8, qY + i * 6));
+  }
+
+  // ── Bottom info bar ──
+  doc.setFillColor(10, 18, 35);
+  doc.rect(0, pageH - 22, pageW, 22, 'F');
+  doc.setFillColor(...accent);
+  doc.rect(0, pageH - 22, pageW, 0.5, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', pageW - mR, pageH - 18, { align:'right' });
+  doc.setTextColor(...accent);
+  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', mL + 8, pageH - 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(...mid);
-  doc.text(currentLang === 'de'
-    ? 'Erstellt mit AI Employee Agent  •  Alle Daten nach Analyse geloscht'
-    : 'Created with AI Employee Agent  •  All data deleted after analysis',
-    pageW - mR, pageH - 12, { align:'right' });
+  doc.setTextColor(...silver);
+  doc.text(
+    currentLang === 'de'
+      ? 'Erstellt mit AI Employee Agent  \u2022  Alle Daten nach Analyse geloscht'
+      : 'Created with AI Employee Agent  \u2022  All data deleted after analysis',
+    pageW - mR, pageH - 12, { align: 'right' }
+  );
 
-  // Bottom accent stripe
-  doc.setFillColor(...accent);
-  doc.rect(0, pageH - 3, pageW, 3, 'F');
+  // ── PARSE blocks early (needed for TOC) ──
+  const blocks = parseResultBlocks(currentResult || '');
+  let nCounter = 0;
+
+  // ── TABLE OF CONTENTS PAGE (#7) — for medium and long ──
+  if (length !== 'short') {
+    doc.addPage();
+    drawRunningHeader();
+    let ty2 = mTop + 14;
+
+    doc.setFillColor(...accent);
+    doc.rect(mL, ty2, 3, 8, 'F');
+    doc.setFillColor(...ice);
+    doc.rect(mL + 3, ty2, cW - 3, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...navy);
+    doc.text(currentLang === 'de' ? 'INHALTSVERZEICHNIS' : 'TABLE OF CONTENTS', mL + 7, ty2 + 5.5);
+    ty2 += 14;
+
+    const sectionNames = blocks.filter(b => b.type === 'section').map(b => b.text);
+    sectionNames.forEach((name, idx) => {
+      const clean = name.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
+      if (!clean) return;
+      doc.setFont('helvetica', idx === 0 ? 'bold' : 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...steel);
+      doc.text(`${idx + 1}.  ${clean}`, mL + 4, ty2);
+      // Dotted leader line
+      doc.setDrawColor(...ice);
+      doc.setLineWidth(0.3);
+      const textEnd = mL + 4 + doc.getTextWidth(`${idx + 1}.  ${clean}`) + 3;
+      for (let dx = textEnd; dx < pageW - mR - 14; dx += 3) {
+        doc.line(dx, ty2 - 1, dx + 1.5, ty2 - 1);
+      }
+      ty2 += 8;
+    });
+  }
 
   // ── CONTENT PAGES ──
   doc.addPage();
   drawRunningHeader();
   y = mTop + 12;
 
-  // ── PARSE + RENDER currentResult ──
-  // Parse into typed blocks first, then render — avoids emoji detection failures
-  const blocks = parseResultBlocks(currentResult || '');
-  let nCounter = 0;
-
   // Helper: safely strip all non-printable / non-latin characters for jsPDF
   function safe(s) {
     return s
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // strip bold markdown
-      .replace(/\*([^*]+)\*/g, '$1')     // strip italic markdown
-      .replace(/\u2014|\u2013/g, ' - ')
-      .replace(/\u2018|\u2019/g, "'")
-      .replace(/\u201C|\u201D/g, '"')
-      .replace(/\u2022/g, '-')
-      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')
+      .replace(/\u2014|\u2013/g, ' - ')   // em dash / en dash → " - " (keeps readability + breaks long lines)
+      .replace(/\u2018|\u2019/g, "'")     // curly single quotes → straight
+      .replace(/\u201C|\u201D/g, '"')     // curly double quotes → straight
+      .replace(/\u2022/g, '-')            // bullet dot → hyphen
+      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')  // strip remaining non-Latin
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1176,6 +1916,7 @@ function downloadPDF(length) {
         break;
 
       case 'section': {
+        if (nCounter % 2 === 1) y += 15; // close incomplete KPI row before heading
         nCounter = 0;
         const t = safe(b.text);
         if (t) sectionHead(t);
@@ -1207,72 +1948,32 @@ function downloadPDF(length) {
         break;
       }
 
-      case 'labeled_bullet': {
+      case 'kpi': { // colored KPI tiles — 2-column grid
         const lbl = safe(b.label);
-        const txt = safe(b.text);
-        if (!lbl) break;
-        guard(8);
-        // Accent square dot
+        const val = safe(b.value);
+        if (!lbl || !val) break;
+        const tileW = (cW - 4) / 2;
+        const isLeft = nCounter % 2 === 0;
+        const col = isLeft ? mL : mL + tileW + 4;
+        if (isLeft) guard(14); // only check page break at start of new row
+        // tile background (drawn at current y, height 12)
+        doc.setFillColor(...ice);
+        doc.roundedRect(col, y, tileW, 12, 2, 2, 'F');
+        // left accent bar
         doc.setFillColor(...accent);
-        doc.rect(mL + 2, y - 3, 2.5, 2.5, 'F');
-        // Bold blue label
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...accent);
-        const lblW = doc.getTextWidth(lbl + ':') + 2;
-        doc.text(lbl + ':', mL + 7, y);
-        // Text on same line if fits, else next line
-        if (txt) {
-          const remaining = cW - 7 - lblW - 2;
-          const txtLines = doc.splitTextToSize(txt, remaining);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...steel);
-          if (txtLines.length === 1 && doc.getTextWidth(txt) <= remaining) {
-            doc.text(txt, mL + 7 + lblW + 2, y);
-            y += 5.5;
-          } else {
-            y += 5.5;
-            txtLines.forEach(ln => { guard(6); doc.text(ln, mL + 12, y); y += 5.2; });
-          }
-        } else {
-          y += 5.5;
-        }
+        doc.roundedRect(col, y, 3, 12, 1, 1, 'F');
+        // label
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...steel);
-        y += 0.5;
-        break;
-      }
-
-      case 'insight': {
-        const lbl = safe(b.label);
-        const txt = safe(b.text);
-        if (!txt && !lbl) break;
-        const insightLines = doc.splitTextToSize(txt || lbl, cW - 14);
-        const boxH = 6 + insightLines.length * 5.2 + 4;
-        guard(boxH + 4);
-        y += 2;
-        // Green tinted box
-        doc.setFillColor(236, 253, 245);
-        doc.roundedRect(mL, y, cW, boxH, 3, 3, 'F');
-        // Green left bar
-        doc.setFillColor(...green);
-        doc.roundedRect(mL, y, 4, boxH, 1, 1, 'F');
-        // ERKENNTNIS label
-        doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(...green);
-        doc.text((lbl || 'ERKENNTNIS').toUpperCase(), mL + 8, y + 5);
-        // Text
-        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(lbl, col + 6, y + 4.5);
+        // value
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
-        doc.setTextColor(6, 78, 59);
-        let iy = y + 10;
-        insightLines.forEach(ln => { doc.text(ln, mL + 8, iy); iy += 5.2; });
-        y += boxH + 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...steel);
+        doc.setTextColor(...navy);
+        doc.text(val, col + 6, y + 10);
+        nCounter++;
+        if (nCounter % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
         break;
       }
 
@@ -1303,6 +2004,9 @@ function downloadPDF(length) {
       }
     }
   });
+
+  // Close any incomplete KPI row at end of content
+  if (nCounter % 2 === 1) y += 15;
 
   // ── FINAL PAGE FOOTER ──
   sep(4);
@@ -1451,9 +2155,22 @@ function downloadHTMLReport() {
 
 async function deleteData() {
   showStep('step-deleting');
-  const items = currentLang === 'de'
-    ? [{icon:'🗑',text:'Aufgabendaten werden gelöscht...'},{icon:'📧',text:'E-Mail-Zugriff wird entzogen...'},{icon:'📁',text:'Dateizugriff wird entzogen...'},{icon:'🌐',text:'Browser-Zugriff wird entzogen...'},{icon:'🔌',text:'Agent wird vom Computer getrennt...'}]
-    : [{icon:'🗑',text:'Deleting task data...'},{icon:'📧',text:'Revoking email access...'},{icon:'📁',text:'Revoking file access...'},{icon:'🌐',text:'Revoking browser access...'},{icon:'🔌',text:'Disconnecting agent from computer...'}];
+  const emailChecked    = document.getElementById('perm-email')?.checked;
+  const filesChecked    = document.getElementById('perm-files')?.checked;
+  const browserChecked  = document.getElementById('perm-browser')?.checked;
+  const calendarChecked = document.getElementById('perm-calendar')?.checked;
+  const agentInstalled  = !window.skippedSetup;
+
+  const de = currentLang === 'de';
+  const items = [
+    { icon: '🗑', text: de ? 'Aufgabendaten werden gelöscht...' : 'Deleting task data...' },
+    ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff wird entzogen...'   : 'Revoking email access...' }]    : []),
+    ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff wird entzogen...'     : 'Revoking file access...' }]     : []),
+    ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff wird entzogen...' : 'Revoking browser access...' }]  : []),
+    ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff wird entzogen...' : 'Revoking calendar access...' }] : []),
+    ...(agentInstalled  ? [{ icon: '🔌', text: de ? 'Agent wird vom Computer getrennt...' : 'Disconnecting agent...' }]    : [])
+  ];
+
   const list = document.getElementById('revoke-list');
   list.innerHTML = '';
   for (const item of items) {
@@ -1467,6 +2184,20 @@ async function deleteData() {
     el.querySelector('span:last-child').textContent = item.text.replace('...', ' ✓');
   }
   await delay(600);
+
+  const checklist = document.getElementById('deleted-checklist');
+  if (checklist) {
+    const doneItems = [
+      { icon: '🗑', text: de ? 'Alle Aufgabendaten gelöscht' : 'All task data deleted' },
+      ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff entzogen'   : 'Email access revoked' }]    : []),
+      ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff entzogen'     : 'File access revoked' }]     : []),
+      ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff entzogen' : 'Browser access revoked' }]  : []),
+      ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff entzogen' : 'Calendar access revoked' }] : []),
+      ...(agentInstalled  ? [{ icon: '🔌', text: de ? 'Agent vom Computer getrennt' : 'Agent disconnected' }]    : [])
+    ];
+    checklist.innerHTML = doneItems.map(i => `<div class="deleted-check"><span>${i.icon}</span><span>${i.text}</span></div>`).join('');
+  }
+
   currentResult = null;
   showStep('step-deleted');
 }
@@ -1475,19 +2206,19 @@ function resetForm() {
   document.getElementById('task-description').value = '';
   document.getElementById('business-details').value = '';
   document.getElementById('pdf-file-list').innerHTML = '';
-  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.task-shortcut').forEach(b => { b.classList.remove('active'); b.style.display = 'inline-block'; });
   uploadedPDFs = [];
   window.selectedApps = {};
   selectedPaymentMethod = null; currentEstimate = null;
   showStep('step-form');
 }
 
-function goHome() { resetForm(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function goHome() { resetForm(); showPage('main'); }
 
 // =====================
 // STEP NAVIGATION
 // =====================
-const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
+const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
 function showStep(id) { ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; }); }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2293,9 +3024,7 @@ function isRealAIEnabled() {
 // PDF TEXT EXTRACTION (PDF.js)
 // =====================
 async function extractPDFText(file) {
-  if (typeof pdfjsLib === 'undefined') {
-    throw new Error('PDF.js nicht geladen');
-  }
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -2303,28 +3032,63 @@ async function extractPDFText(file) {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
         const totalPages = pdf.numPages;
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
-        // Extract all pages (cap at 300 to stay within Gemini token limit)
         const maxPages = Math.min(totalPages, 300);
-        for (let i = 1; i <= maxPages; i++) {
+
+        // Extract each page with table-aware reconstruction (#9)
+        async function extractPage(i) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          const pageText = content.items
-            .map(item => item.str)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          if (pageText.length > 10) {
-            fullText += `--- Seite ${i} ---\n${pageText}\n\n`;
-          }
+          const items = content.items;
+          if (!items.length) return '';
+
+          // Group items by row (y-coordinate within 4 units = same row)
+          const rows = {};
+          items.forEach(item => {
+            if (!item.str.trim()) return;
+            const y = Math.round(item.transform[5] / 4) * 4;
+            if (!rows[y]) rows[y] = [];
+            rows[y].push({ x: item.transform[4], text: item.str });
+          });
+
+          // Sort rows top-to-bottom (PDF y is bottom-up), cells left-to-right
+          const sortedRows = Object.entries(rows)
+            .sort(([a], [b]) => Number(b) - Number(a))
+            .map(([_, cells]) => {
+              const sorted = cells.sort((a, b) => a.x - b.x).map(c => c.text);
+              // If row has multiple cells with clear x-gaps → format as table row
+              if (sorted.length > 2) return sorted.join(' | ');
+              return sorted.join(' ');
+            });
+
+          return sortedRows.join('\n').replace(/[ \t]+/g, ' ').trim();
         }
+
+        let allPages = [];
+        for (let i = 1; i <= maxPages; i++) {
+          const pageText = await extractPage(i);
+          if (pageText.length > 10) allPages.push({ page: i, text: pageText });
+        }
+
+        // Smart chunking (#6): if too long, keep first 40% + last 60% (intro + conclusions)
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
+        const MAX_CHARS = 110000;
+        const allCombined = allPages.map(p => `--- Seite ${p.page} ---\n${p.text}`).join('\n\n');
+
+        if (allCombined.length <= MAX_CHARS) {
+          fullText += allCombined;
+        } else {
+          const front = Math.floor(MAX_CHARS * 0.4);
+          const back  = MAX_CHARS - front;
+          const frontText = allCombined.slice(0, front);
+          const backText  = allCombined.slice(-back);
+          fullText += frontText + '\n\n[... mittlere Seiten übersprungen — Anfang & Ende priorisiert ...]\n\n' + backText;
+        }
+
         if (totalPages > maxPages) {
-          fullText += `[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} Seiten analysiert.]\n`;
+          fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} analysiert.]`;
         }
         resolve(fullText);
-      } catch (err) {
-        reject(err);
-      }
+      } catch (err) { reject(err); }
     };
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
@@ -2334,6 +3098,17 @@ async function extractPDFText(file) {
 // =====================
 // BUILD PROMPT FOR REAL AI
 // =====================
+
+// Detect document type for tailored prompt (#1)
+function detectDocType(filename, taskDesc) {
+  const t = (filename + ' ' + taskDesc).toLowerCase();
+  if (/(geschäftsbericht|jahresbericht|annual.?report|geschaeftsbericht|quartalsbericht|konzernbericht|quarterly|q[1-4]\s*20\d\d|halbjahresbericht|interim.?report)/.test(t)) return 'geschaeftsbericht';
+  if (/(vertrag|contract|agreement|vereinbarung|lizenz|mietvertrag|kaufvertrag|dienstleistungsvertrag|nda|terms.of)/.test(t)) return 'vertrag';
+  if (/(jahresabschluss|bilanz|gewinn.verlust|balance.sheet|income.statement|ifrs|gaap|buchführung|buchfuehrung|cashflow|p&l)/.test(t)) return 'jahresabschluss';
+  if (/(rechnung|invoice|faktura|angebot|quotation)/.test(t)) return 'rechnung';
+  if (/(protokoll|minutes|meeting|sitzung|besprechung)/.test(t)) return 'protokoll';
+  return 'allgemein';
+}
 
 // Detect language from the task description text
 function detectLanguage(text) {
@@ -2345,447 +3120,450 @@ function detectLanguage(text) {
   return 'en';
 }
 
-function buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength) {
-  // Detect language from what the user wrote — respond in THAT language
+function buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength) {
   const writtenLang = detectLanguage(taskDesc);
   const isDE = writtenLang === 'de';
-
-  const outputTarget = analysisLength === 'short'
-    ? (isDE
-        ? 'ANALYSETIEFE: KURZ — Ziel 500-900 Wörter. Nur das Wichtigste. Executive Summary + Top-3-Erkenntnisse + 1 Aktionsplan. Kein Padding, jeder Satz verdient seinen Platz.'
-        : 'ANALYSIS DEPTH: SHORT — Target 500-900 words. Key points only. Executive Summary + Top 3 findings + 1 action plan. No padding, every sentence must earn its place.')
-    : analysisLength === 'long'
-    ? (isDE
-        ? 'ANALYSETIEFE: TIEF — So lang wie nötig. Für ein 50-seitiges Dokument mindestens 2500-4000 Wörter. Jeder Abschnitt vollständig analysiert. NIEMALS abkürzen oder zusammenfassen wo Detail möglich ist.'
-        : 'ANALYSIS DEPTH: DEEP — As long as necessary. For a 50-page document minimum 2500-4000 words. Every section fully analysed. NEVER truncate or summarise where detail is possible.')
-    : (isDE
-        ? 'ANALYSETIEFE: MITTEL — Ziel 1200-2200 Wörter. Gründlich aber fokussiert. Alle wichtigen Punkte, keine unnötigen Wiederholungen.'
-        : 'ANALYSIS DEPTH: MEDIUM — Target 1200-2200 words. Thorough but focused. All key points, no unnecessary repetition.');
-
   const businessCtx = businessDetails
-    ? (isDE ? `Kontext des Unternehmens: ${businessDetails}` : `Business context: ${businessDetails}`)
+    ? (isDE ? `Kontext des Unternehmens: ${businessDetails}\n` : `Business context: ${businessDetails}\n`)
     : '';
 
-  if (taskType === 'investor') {
-    return isDE
-      ? `Du bist der beste Finanzanalyst und Investmentberater der Welt. Du denkst wie ein Top-Analyst bei Goldman Sachs kombiniert mit einem von Warren Buffett ausgebildeten Value-Investor.
-
-Du listest keine Zahlen auf — du DENKST über ihre Bedeutung nach, erkennst die Geschichte dahinter, beurteilst ob das Unternehmen gesund oder im Verfall ist, und sagst dem Investor klar was er tun soll.
-
-WICHTIG — AUFGABE DES KUNDEN GENAU LESEN: ${taskDesc}
-Passe deine Analyse exakt auf diese Aufgabe an. Wenn der Kunde nur eine Zusammenfassung will, liefere eine Zusammenfassung. Wenn er einen Artikel will, schreibe einen Artikel. Wenn er Details zu einer bestimmten Kennzahl will, fokussiere dich darauf. Folge der Aufgabe — nicht einem starren Template.
-${businessCtx}
-${outputTarget}
-
-ANTWORTSPRACHE: Antworte IMMER in der Sprache in der der Kunde geschrieben hat. Wenn die Aufgabe auf Deutsch ist, antworte auf Deutsch. Wenn auf Englisch, auf Englisch. Wenn der Kunde explizit eine andere Sprache verlangt (z.B. "schreibe auf Russisch"), folge dieser Anweisung.
-
-DENKWEISE — FOLGE GENAU:
-1. Lies das gesamte Dokument durch, bevor du schreibst
-2. Beantworte die Kernfragen: Wächst Umsatz oder schrumpft er — und warum? Sind Margen strukturell oder temporär komprimiert? Generiert das Unternehmen echten Cashflow oder nur Buchgewinne? Wie ist die Bilanz? Was hat Management versprochen — und geliefert? Ist die Guidance glaubwürdig? Gibt es Einmallasten — wirklich einmalig oder wiederkehrend? Ist die Dividende nachhaltig?
-3. Berechne IMMER: ausgewiesenes Ergebnis UND bereinigtes Ergebnis (ohne Sonderlasten)
-4. Prüfe Management-Glaubwürdigkeit: Vorjahres-Guidance vs. tatsächliche Ergebnisse — Abweichung in %
-5. Gib ein klares Urteil: KAUFEN / HALTEN / VERKAUFEN / ZU FRÜH + Begründung
-
-ABSOLUTE REGELN:
-- Jede Zahl muss exakt sein
-- Jeder Trend: aktuelles Jahr vs. Vorjahr vs. 2 Jahre davor wenn verfügbar
-- Einmalig vs. Wiederkehrend IMMER kennzeichnen
-- Keine generischen Risiken — jedes Risiko spezifisch + quantifiziert + realistisches Worst-Case
-- NIEMALS abkürzen
-
-AUSGABE-FORMAT (genau diese Überschriften):
+  // Doc-type specific section templates (#1, #4)
+  const docTypeSections = {
+    geschaeftsbericht: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INVESTOR SUMMARY — SCHNELLÜBERBLICK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Unternehmen: [Name und Geschäftsmodell — ein Satz]
-Dokument: [Typ und Zeitraum]
-Urteil: [KAUFEN / HALTEN / VERKAUFEN / ZU FRÜH — mit 2-Satz-Begründung]
-Wichtigster Fakt: [die eine Zahl oder Aussage die kein Investor verpassen darf]
-Größtes Risiko: [spezifisch, quantifiziert]
-Größte Chance: [spezifisch, quantifiziert]
+[Alle wichtigen Zahlen als: Bezeichnung: Wert (z.B. Umsatz 2024: €1,2 Mrd. | Wachstum: +12% | EBITDA-Marge: 18%). JEDE Zeile = eine Kennzahl.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WICHTIGSTE KENNZAHLEN
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Vollständige GuV-Tabelle: Umsatz, Bruttogewinn, EBIT, Nettogewinn, EPS — jeweils aktuelles Jahr, Vorjahr, Veränderung % + dein Kommentar]
+[Kompaktes Fazit: Wie läuft das Unternehmen? Was sind die wichtigsten Botschaften des Berichts?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AUSGEWIESENE vs. BEREINIGTE ERGEBNISSE
+JAHRESVERGLEICH & ENTWICKLUNG
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle Einmallasten auflisten. Ausgewiesenes EBIT + Sonderlasten = Bereinigtes EBIT + Bereinigte Marge. Sind diese Lasten wirklich einmalig?]
+[Vergleich mit Vorjahr: Was ist besser geworden, was schlechter? Konkrete Zahlen und Prozent-Veränderungen nennen, inkl. Seitenreferenz (laut Seite X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANAGEMENT-GLAUBWÜRDIGKEITS-CHECK
+SEGMENTANALYSE & MARKTPOSITION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Vorjahres-Guidance vs. tatsächliche Ergebnisse als Tabelle. 2-3 Sätze: Ist Management zuverlässig?]
+[Welche Bereiche/Segmente laufen gut, welche schwächeln? Marktposition und Wettbewerbsstellung.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SEGMENT- UND PRODUKTANALYSE
+RISIKEN & CHANCEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Nach Geschäftsbereich / Geografie / Produkt: Umsatz, Marge, Wachstum, Bewertung: wächst / stabil / rückläufig / gefährdet]
+[Alle genannten Risiken und Chancen — quantifiziert wo möglich, mit Seitenreferenz.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CASHFLOW & BILANZSTÄRKE
+AUSBLICK & HANDLUNGSEMPFEHLUNGEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Free Cashflow, operativer Cashflow, Capex, Nettoliquidität/-verschuldung. Ist die Dividende durch FCF gedeckt?]
+[Prognose des Unternehmens für die Zukunft + konkrete Empfehlungen für Investoren/Management]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All key numbers as: Label: Value (e.g. Revenue 2024: €1.2bn | Growth: +12% | EBITDA margin: 18%). ONE metric per line.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VERSTECKTE VERBINDUNGEN — WAS DIE MEISTEN ÜBERSEHEN
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Wo interagieren 2+ Datenpunkte um ein Risiko zu erzeugen das man nicht sieht wenn man die Punkte einzeln betrachtet? Format: VERBINDUNG N: [A] + [B] = [Erkenntnis]. Warum es für Investoren wichtig ist. Was zu beobachten ist.]
+[Compact conclusion: How is the company performing? What are the report's key messages?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AUSBLICK & GUIDANCE-BEWERTUNG
+YEAR-ON-YEAR COMPARISON & TRENDS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Offizielle Guidance wörtlich. Deine Bewertung: realistisch / optimistisch / konservativ. Was muss stimmen damit sie eintrifft. Was könnte sie scheitern lassen.]
+[Compare to prior year: what improved, what declined? Specific numbers and % changes, with page references (see page X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISIKOREGISTER
+SEGMENT ANALYSIS & MARKET POSITION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Jedes Risiko: KRITISCH / WICHTIG / BEOBACHTEN. Beschreibung spezifisch. Realistisches Worst-Case + geschätzte finanzielle Auswirkung. Wahrscheinlichkeit mit Begründung.]
+[Which segments are performing well, which are struggling? Market and competitive position.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BULL CASE vs. BEAR CASE
+RISKS & OPPORTUNITIES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BULL CASE: [3-4 Bedingungen + geschätzter Upside wenn sie eintreten]
-BEAR CASE: [3-4 Risiken + geschätzter Downside]
-Der entscheidende Indikator: [die eine Variable die verrät welcher Fall sich entfaltet]
+[All stated risks and opportunities — quantified where possible, with page reference.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INVESTOR-AKTIONSPLAN
+OUTLOOK & RECOMMENDATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Konkrete Aktionen. Format: N. [SOFORT / VOR NÄCHSTEN EARNINGS / LANGFRISTIG] — Aktion: [spezifisch] — Grund: [ein Satz] — Beobachten: [spezifischer Trigger der die Empfehlung ändern würde]]
+[Company's own forecast + concrete recommendations for investors/management]`,
+
+    vertrag: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle wichtigen Zahlen/Fristen als: Bezeichnung: Wert (z.B. Laufzeit: 24 Monate | Kündigungsfrist: 3 Monate | Preissteigerung: 5% p.a.). JEDE Zeile = ein Wert.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DOKUMENT QUALITÄTSBEWERTUNG
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Transparenz: X/5 — [Grund]
-Vollständigkeit: X/5 — [was fehlt]
-Konservativität der Guidance: X/5 — [historisch zuverlässig?]
-Gesamturteil: [KAUFEN / HALTEN / VERKAUFEN + 2-Satz-Begründung]
+[Kernaussage: Worum geht es, wer sind die Parteien, was sind die Hauptpflichten?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MEINE PERSÖNLICHE EINSCHÄTZUNG
+KRITISCHE KLAUSELN & RISIKEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-4 Sätze ehrliche persönliche Meinung. Was dich an diesem Unternehmen überzeugt oder beunruhigt. Wenn der Kunde explizit nach deiner Meinung fragt, gehe tiefer ein. Immer direkt und ehrlich — keine Absicherungsfloskeln.]
-
-DOKUMENT ZUM ANALYSIEREN:
-${docText}`
-      : `You are the world's best financial analyst and investment advisor. You think like a top-tier Goldman Sachs analyst combined with a Warren Buffett-trained value investor.
-
-You do NOT just list numbers — you THINK about what they mean, identify the story behind them, assess whether the company is healthy or deteriorating, and tell the investor clearly what to do.
-
-IMPORTANT — READ THE CLIENT'S TASK CAREFULLY: ${taskDesc}
-Adapt your analysis exactly to this task. If they want a summary, give a summary. If they want an article, write one. If they want detail on a specific metric, focus on that. Follow the task — not a rigid template.
-${businessCtx}
-${outputTarget}
-
-RESPONSE LANGUAGE: ALWAYS respond in the language the client used. If the task is in German, respond in German. If in English, respond in English. If they explicitly request another language (e.g. "write in Russian"), follow that instruction.
-
-HOW TO THINK:
-1. Read the entire document before writing anything
-2. Answer core investor questions: Is revenue growing or shrinking — and why? Are margins structurally or temporarily compressed? Does the company generate real cash or just accounting profit? How is the balance sheet? What did management promise — and deliver? Is guidance credible? Are extraordinary charges truly one-time? Is the dividend sustainable?
-3. ALWAYS calculate: reported result AND adjusted result (excluding one-time items)
-4. Check management credibility: prior guidance vs. actual results — deviation in %
-5. Give a clear verdict: BUY / HOLD / SELL / TOO EARLY + reasoning
-
-ABSOLUTE RULES:
-- Every number must be exact
-- Every trend: current year vs. prior year vs. 2 years ago where available
-- ALWAYS flag one-time vs. recurring
-- No generic risks — every risk must be specific + quantified + realistic worst-case
-- NEVER truncate
-
-OUTPUT FORMAT (use exactly these headers):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INVESTOR SUMMARY — ONE-PAGE VIEW
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Company: [name and business model — one sentence]
-Document: [type and period covered]
-Verdict: [BUY / HOLD / SELL / TOO EARLY — with 2-sentence justification]
-The single most important fact: [the one number or statement no investor can miss]
-Biggest risk: [specific, quantified]
-Biggest opportunity: [specific, quantified]
+[Alle einseitigen, riskanten oder ungewöhnlichen Klauseln — mit Klausel-Nummer und Seitenangabe (laut Seite X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KEY FINANCIAL FIGURES
+FRISTEN & TERMINE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Full P&L table: Revenue, Gross Profit, EBIT, Net Income, EPS — each with current year, prior year, change % + your commentary]
+[Alle Fristen, Laufzeiten, Kündigungsfristen, Verlängerungsklauseln — konkret]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REPORTED vs. ADJUSTED RESULTS
+EMPFEHLUNG
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[List all one-time items. Reported EBIT + charges = Adjusted EBIT + adjusted margin. Are these truly one-time?]
+[Unterschreiben? Was nachverhandeln? Konkrete Punkte.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All key numbers/deadlines as: Label: Value (e.g. Term: 24 months | Notice period: 3 months | Price increase: 5% p.a.). ONE value per line.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MANAGEMENT CREDIBILITY CHECK
+EXECUTIVE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Prior guidance vs. actual results as a table. 2-3 sentences: is management trustworthy?]
+[Core: what is this about, who are the parties, what are the main obligations?]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SEGMENT & PRODUCT ANALYSIS
+CRITICAL CLAUSES & RISKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[By business unit / geography / product: revenue, margin, growth, verdict: growing/stable/declining/at risk]
+[All one-sided, risky or unusual clauses — with clause number and page reference (see page X).]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CASH FLOW & BALANCE SHEET HEALTH
+DEADLINES & TERMS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Free cash flow, operating cash flow, capex, net cash/debt. Is the dividend covered by FCF?]
+[All deadlines, terms, notice periods, renewal clauses — specific dates]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HIDDEN CONNECTIONS — WHAT MOST ANALYSTS MISS
+RECOMMENDATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Where do 2+ data points interact to create a risk invisible when reading them individually? Format: CONNECTION N: [A] + [B] = [insight]. Why it matters. What to watch.]
+[Sign or not? What to renegotiate? Specific points.]`,
+
+    create_document: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EINLEITUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Zweck und Hintergrund des Dokuments — klar und professionell.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTLOOK & GUIDANCE ASSESSMENT
+HAUPTTEIL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Official guidance verbatim. Your assessment: realistic/optimistic/conservative. What must go right. What could cause it to fail.]
+[Strukturierter Hauptinhalt mit klaren Unterabschnitten. Vollständig ausgearbeitet gemäß Aufgabe.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISK REGISTER
+DETAILS & ERLÄUTERUNGEN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Every risk: CRITICAL / IMPORTANT / MONITOR. Specific description. Realistic worst-case + estimated financial impact. Probability with reasoning.]
+[Alle relevanten Details, Hintergründe, Begründungen — professionell und präzise formuliert.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BULL CASE vs. BEAR CASE
+FAZIT & NÄCHSTE SCHRITTE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BULL CASE: [3-4 conditions + estimated upside if they materialise]
-BEAR CASE: [3-4 risks + estimated downside]
-The deciding factor: [the one variable that reveals which case is unfolding]
+[Abschluss und konkrete nächste Schritte.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Purpose and background of the document — clear and professional.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INVESTOR ACTION PLAN
+MAIN CONTENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Concrete actions. Format: N. [IMMEDIATE / BEFORE NEXT EARNINGS / LONG-TERM] — Action: [specific] — Reason: [one sentence] — Watch for: [specific trigger that would change this recommendation]]
+[Structured main content with clear subsections. Fully developed per the task.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DOCUMENT QUALITY ASSESSMENT
+DETAILS & EXPLANATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Transparency: X/5 — [reason]
-Completeness: X/5 — [what is missing]
-Guidance conservatism: X/5 — [historically reliable?]
-Overall verdict: [BUY / HOLD / SELL + 2-sentence justification]
+[All relevant details, background, reasoning — professional and precise.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MY PERSONAL TAKE
+CONCLUSION & NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-4 sentences of honest personal opinion. What convinces or concerns you about this company. If the client explicitly asks for your opinion, go deeper. Always direct and honest — no hedging phrases.]
+[Closing and concrete next steps.]`,
 
-DOCUMENT TO ANALYSE:
-${docText}`;
+    create_report: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Die wichtigsten Erkenntnisse und Empfehlungen in 3-5 Sätzen.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSE & ERKENNTNISSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ausführliche Analyse mit allen relevanten Erkenntnissen, strukturiert und nummeriert.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle relevanten Risiken und Chancen — quantifiziert und bewertet.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HANDLUNGSEMPFEHLUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Konkrete, umsetzbare Empfehlungen mit klaren Prioritäten und Zeitrahmen.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Key findings and recommendations in 3-5 sentences.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSIS & FINDINGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Detailed analysis with all relevant findings, structured and numbered.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & OPPORTUNITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All relevant risks and opportunities — quantified and assessed.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Concrete, actionable recommendations with clear priorities and timeframes.]`,
+
+    create_reply: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANTWORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Professionelle, vollständige Antwort — im richtigen Ton, direkt umsetzbar.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REPLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Professional, complete reply — right tone, ready to send.]`,
+
+    allgemein: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle wichtigen Zahlen/Werte aus dem Dokument als: Bezeichnung: Wert. JEDE Zeile = ein Wert. Falls keine Zahlen vorhanden, diesen Abschnitt weglassen.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Kompaktes Fazit]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HAUPTERKENNTNISSE & ANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Die wichtigsten Punkte, gut strukturiert, mit Seitenangaben (laut Seite X).]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Konkrete Risiken und Chancen]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NÄCHSTE SCHRITTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Klarer Aktionsplan]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[All important numbers from the document as: Label: Value. ONE per line. Omit if no numbers present.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Compact conclusion]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY FINDINGS & ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Most important points, well structured, with page references (see page X).]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISKS & OPPORTUNITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Concrete risks and opportunities]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Clear action plan]`
+  };
+
+  // Calculate page-count-based targets (#2 — length control)
+  // Detect source page count from docText header "[Dokument: name | X Seiten]"
+  const pageMatch = docText.match(/\|\s*(\d+)\s*Seit/i);
+  const sourcePages = pageMatch ? parseInt(pageMatch[1]) : 0;
+  let shortTarget, mediumTarget, longTarget;
+  if (sourcePages > 0) {
+    // Percentage of source: short=12.5%, medium=25%, long=50%
+    shortTarget  = isDE ? `ca. ${Math.max(2, Math.round(sourcePages * 0.125))} Seiten (12,5% des Originals mit ${sourcePages} Seiten)` : `approx. ${Math.max(2, Math.round(sourcePages * 0.125))} pages (12.5% of the ${sourcePages}-page original)`;
+    mediumTarget = isDE ? `ca. ${Math.max(4, Math.round(sourcePages * 0.25))} Seiten (25% des Originals)`  : `approx. ${Math.max(4, Math.round(sourcePages * 0.25))} pages (25% of original)`;
+    longTarget   = isDE ? `ca. ${Math.max(8, Math.round(sourcePages * 0.5))} Seiten (50% des Originals)`   : `approx. ${Math.max(8, Math.round(sourcePages * 0.5))} pages (50% of original)`;
+  } else {
+    shortTarget  = isDE ? 'ca. 3 Seiten (700-900 Wörter)'    : 'approx. 3 pages (700-900 words)';
+    mediumTarget = isDE ? 'ca. 5 Seiten (1400-1800 Wörter)'  : 'approx. 5 pages (1400-1800 words)';
+    longTarget   = isDE ? 'ca. 8-10 Seiten (2500-3500 Wörter)' : 'approx. 8-10 pages (2500-3500 words)';
+  }
+  const depthInstructions = {
+    short: isDE
+      ? `AUSGABELÄNGE: KURZ — Ziel ${shortTarget}. Klar und prägnant, alle Abschnitte trotzdem vollständig.`
+      : `OUTPUT LENGTH: SHORT — Target ${shortTarget}. Clear and concise, but all sections still complete.`,
+    medium: isDE
+      ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}. Fokussiert und informativ, alle Abschnitte gut ausgeführt.`
+      : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}. Focused and informative, all sections well developed.`,
+    long: isDE
+      ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}. Extrem gründlich, keine Kürzungen, jede Kennzahl kommentiert.`
+      : `OUTPUT LENGTH: LONG — Target ${longTarget}. Extremely thorough, no truncation, every metric commented on.`
+  };
+
+  const sections = docTypeSections[docType] || docTypeSections['allgemein'];
+  const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
+  const learningCtx = getLearningContext(isDE);
+
+  const docTypeLabels = {
+    de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
+    en: { geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
+  };
+  const dtLabel = docTypeLabels[isDE ? 'de' : 'en'][docType.replace('create_','')] || 'Dokument';
+  const isCreation = docType.startsWith('create_');
+
+  const personaDE = isCreation
+    ? `Du bist ein professioneller Texter und Dokumentenersteller. Deine Aufgabe ist es, ein hochwertiges Dokument zu erstellen — kein Analyse, sondern echte Erstellung.
+
+AUFGABE: ${taskDesc}
+${businessCtx}${learningCtx}
+
+KERNREGELN:
+1. Erstelle ein vollständiges, professionelles Dokument — direkt verwendbar.
+2. KEINE FLOSKELN: Nie "Ich werde jetzt...", "Hier ist das Dokument:". Direkt mit dem Inhalt starten.
+3. PROFESSIONELLE SPRACHE: Klar, präzise, sachlich — passend zum Unternehmenskontext.
+4. VOLLSTÄNDIG: Nicht abkürzen oder zusammenfassen — komplette Sätze und Abschnitte.
+5. ANTWORTE AUF DEUTSCH.
+
+${depth}
+
+AUSGABE-FORMAT (genau diese Abschnitte):
+${sections}
+
+QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung? Falls nein — überarbeiten.`
+    : `Du bist der präziseste PDF-Analyst der Welt — spezialisiert auf ${dtLabel}e. Deine Analyse ist messbar besser als jedes andere KI-Tool.
+
+AUFGABE DES KUNDEN: ${taskDesc}
+DOKUMENTTYP: ${dtLabel}
+${businessCtx}${learningCtx}
+KERNREGELN — NIEMALS BRECHEN:
+1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
+2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
+3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...". Direkt starten.
+4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
+5. JEDER SATZ trägt Information — keine Füllsätze.
+6. ANTWORTE AUF DEUTSCH.
+
+${depth}
+
+AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
+${sections}
+
+QUALITÄTSPRÜFUNG:
+- Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen?
+- Hat jede wichtige Aussage eine Seitenreferenz (laut Seite X)?
+- Überschreite ich die Mindestlänge?`;
+
+  const personaEN = isCreation
+    ? `You are a professional writer and document creator. Your task is to create a high-quality document — not an analysis, but actual creation.
+
+TASK: ${taskDesc}
+${businessCtx}${learningCtx}
+CORE RULES:
+1. Create a complete, professional document — directly usable.
+2. NO FILLER: Never "I will now...", "Here is the document:". Start directly with content.
+3. PROFESSIONAL LANGUAGE: Clear, precise, formal — appropriate to the business context.
+4. COMPLETE: Do not abbreviate or summarise — full sentences and sections.
+5. RESPOND IN ENGLISH.
+
+${depth}
+
+OUTPUT FORMAT (exactly these sections):
+${sections}
+
+QUALITY CHECK: Is the document directly usable without further editing? If not — revise.`
+    : `You are the world's most precise PDF analyst — specialised in ${dtLabel}s. Your analysis is measurably better than any other AI tool.
+
+CLIENT TASK: ${taskDesc}
+DOCUMENT TYPE: ${dtLabel}
+${businessCtx}${learningCtx}
+CORE RULES — NEVER BREAK:
+1. PAGE REFERENCES MANDATORY: After EVERY important claim write "(see page X)".
+2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
+3. NO FILLER: Banned: "It is important to note...", "The document describes...". Start directly.
+4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
+5. EVERY SENTENCE carries information — no padding.
+6. RESPOND IN ENGLISH.
+
+${depth}
+
+OUTPUT FORMAT (exactly these sections, in this order):
+${sections}
+
+QUALITY CHECK:
+- Have I entered all key numbers as "Label: Value" in the METRICS section?
+- Does every important claim have a page reference (see page X)?
+- Am I meeting the minimum length?`;
+
+  const docSection = (!isCreation && docText && docText.length > 50)
+    ? `\n\n━━━ QUELLDOKUMENT ━━━\n${docText}`
+    : '';
+  return (isDE ? personaDE : personaEN) + docSection;
+}
+
+// =====================
+// VISUAL PDF RENDERING — renders pages to JPEG for Gemini Vision
+// =====================
+async function renderPDFPagesToImages(file, maxPages = 12) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const totalPages = pdf.numPages;
+  const pagesToRender = Math.min(totalPages, maxPages);
+  const images = [];
+
+  for (let i = 1; i <= pagesToRender; i++) {
+    const page = await pdf.getPage(i);
+    // scale 1.5 → 893×1263px for A4 — sharp enough for Gemini to read tables
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    // JPEG 70% ≈ 100–150 KB per page → 12 pages ≈ 1.5 MB total (well under Vercel's 4.5 MB limit)
+    images.push(canvas.toDataURL('image/jpeg', 0.70).split(',')[1]);
   }
 
-  // Generic PDF / document analysis
-  return isDE
-    ? `Du bist der beste KI-Assistent der Welt für Dokumente, Analysen und alle Arten von Aufgaben. Du arbeitest für Unternehmen, Investoren und Privatpersonen. Dein Ziel: Ihnen helfen schneller, besser und effektiver zu arbeiten.
-
-WICHTIG — AUFGABE DES KUNDEN GENAU LESEN UND EXAKT ERFÜLLEN: ${taskDesc}
-
-Du passt dich vollständig an die Aufgabe an:
-- Zusammenfassung gewünscht? Liefere eine präzise, klare Zusammenfassung.
-- Analyse gewünscht? Analysiere tief und gründlich.
-- Artikel schreiben? Schreibe einen professionellen, lesbaren Artikel.
-- Rechnung prüfen? Extrahiere alle Zahlen, prüfe auf Fehler, erkläre was zu tun ist.
-- Vertrag analysieren? Finde Risiken, fehlende Klauseln, Handlungsbedarf.
-- Businessplan bewerten? Beurteile Markt, Zahlen, Schwächen, Chancen.
-- Oder etwas ganz anderes? Tu genau das was der Kunde braucht.
-
-FOLGE DER AUFGABE — NICHT EINEM STARREN TEMPLATE. Wenn der Kunde eine Zusammenfassung will, schreibe keine vollständige Analyse. Wenn er einen Artikel will, schreibe keinen Bericht.
-${businessCtx}
-${outputTarget}
-
-ANTWORTSPRACHE: Antworte IMMER in der Sprache in der der Kunde geschrieben hat. Wenn die Aufgabe auf Deutsch ist, antworte auf Deutsch. Wenn auf Englisch, auf Englisch. Wenn der Kunde explizit eine andere Sprache verlangt (z.B. "schreibe auf Russisch"), folge dieser Anweisung sofort.
-
-DENKWEISE:
-1. Lies das gesamte Dokument durch bevor du schreibst
-2. Für jeden Abschnitt: Was steht da? Was bedeutet das in der Praxis? Was ist das nicht-offensichtliche Detail? Welches Risiko oder welche Pflicht liegt darin versteckt?
-3. Finde Verbindungen zwischen Abschnitten die einzeln harmlos wirken aber zusammen ein Risiko erzeugen
-4. Benenne was FEHLT — fehlende Informationen sind oft wichtiger als was da steht
-5. Gib ein ehrliches Urteil — kein "Sie möchten möglicherweise" — direkte, klare Aussagen
-
-ABSOLUTE REGELN:
-- Jeder Fund muss mit genauer Seitenangabe zitiert werden wenn möglich: (S.X) oder (Kl. X.Y)
-- Keine generischen Aussagen — immer konkret mit echten Zahlen und Fristen
-- Jedes Risiko quantifiziert: finanzielle/rechtliche Konsequenz + Wahrscheinlichkeit
-- Jede Aktion hat einen Verantwortlichen und eine Deadline
-- NIEMALS abkürzen wenn die gewählte Tiefe es nicht verlangt
-
-AUSGABE-FORMAT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTIVE SUMMARY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Dokumenttyp: [was für ein Dokument ist das]
-Gesamtumfang: [Seiten, Abschnitte, Klauseln]
-Zweck: [wofür dieses Dokument da ist — ein Satz der den echten Zweck beschreibt]
-Wichtigste Sofortmaßnahme: [die EINE Sache die der Leser jetzt sofort tun muss + genaue Deadline]
-Klartexturteil: [2-3 Sätze — deine ehrliche Einschätzung. Würdest du das unterschreiben? Warum oder warum nicht?]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ABSCHNITTSWEISE ANALYSE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Jeden Abschnitt/Kapitel der Reihe nach. Für jeden: Name + Seitenbereich | Was steht da | Was bedeutet das | Verstecktes Detail | Risiko oder Pflicht]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KEY FINDINGS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Nummerierte Liste ALLER bedeutsamen Funde. Format: N. TITEL (S.X / Kl. Y.Z) | Was steht da | Warum es wichtig ist (Konsequenzenkette) | Was dagegen zu tun ist]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-VERSTECKTE VERBINDUNGEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[VERBINDUNG N: [Kl./Abschnitt A] + [Kl./Abschnitt B] = [das kombinierte Risiko das nur aus ihrem Zusammenspiel entsteht]. Praktische Bedeutung. Erforderliche Maßnahme.]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WAS FEHLT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[FEHLT N: [was nicht da ist] — Warum es wichtig ist — Was einzufügen ist]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ZAHLEN, DATEN UND BETRÄGE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Jede Zahl, jeder Betrag, jedes Datum, jede Frist im gesamten Dokument. Format: [Wert] — Kontext — Fundort (S.X) — Hinweis wenn relevant]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISIKEN UND KRITISCHE PUNKTE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[KRITISCH / WICHTIG / GERING — Titel — Fundort | Was es bedeutet | Realistisches Worst-Case + Betrag | Wahrscheinlichkeit | Gegenmaßnahme]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MAßNAHMENPLAN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[N. [SOFORT / DIESE WOCHE / DIESEN MONAT / VOR UNTERZEICHNUNG] — Maßnahme: [exakt was zu tun ist] — Bis: [Datum/Zeitrahmen] — Wer: [Rolle] — Wenn nicht: [Konsequenz in einem Satz]]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DOKUMENT-QUALITÄTSBEWERTUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Klarheit: X/5 — [Grund + Beispiel]
-Vollständigkeit: X/5 — [was fehlt]
-Ausgewogenheit: X/5 — [welche Partei profitiert mehr]
-Gesamturteil: [GENEHMIGEN / MIT ÄNDERUNGEN / NICHT OHNE PRÜFUNG / ABLEHNEN + 2-Satz-Begründung] (nur wenn relevant für den Dokumenttyp)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MEINE PERSÖNLICHE EINSCHÄTZUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-4 Sätze ehrliche persönliche Meinung zu diesem Dokument oder dieser Aufgabe. Was ist gut, was ist schlecht, was würdest du dem Kunden raten? Wenn der Kunde explizit nach deiner Meinung fragt ("was denkst du?", "gib mir deine Meinung"), gehe deutlich tiefer ein. Immer direkt und ehrlich — keine Absicherungsfloskeln wie "Sie möchten vielleicht".]
-
-ZU ANALYSIERENDES DOKUMENT:
-${docText}`
-    : `You are the world's best AI assistant for documents, analysis, and all kinds of tasks. You work for businesses, investors and individuals. Your goal: help them work faster, better, and more effectively.
-
-IMPORTANT — READ THE CLIENT'S TASK CAREFULLY AND FULFIL IT EXACTLY: ${taskDesc}
-
-You adapt completely to the task:
-- Summary requested? Deliver a precise, clear summary.
-- Analysis requested? Analyse deeply and thoroughly.
-- Write an article? Write a professional, readable article.
-- Check an invoice? Extract all numbers, check for errors, explain what to do.
-- Analyse a contract? Find risks, missing clauses, required actions.
-- Evaluate a business plan? Assess market, numbers, weaknesses, opportunities.
-- Something else entirely? Do exactly what the client needs.
-
-FOLLOW THE TASK — NOT A RIGID TEMPLATE. If the client wants a summary, don't write a full analysis. If they want an article, don't write a report.
-${businessCtx}
-${outputTarget}
-
-RESPONSE LANGUAGE: ALWAYS respond in the language the client used. If the task is in German, respond in German. If in English, respond in English. If they explicitly request another language (e.g. "write in Russian"), follow that instruction immediately.
-
-HOW TO THINK:
-1. Read the entire document before writing anything
-2. For each section: What does it say? What does it mean in practice? What is the non-obvious detail? What risk or obligation is hidden in it?
-3. Find connections between sections that look harmless individually but create a risk together
-4. Identify what is MISSING — absent information is often more important than what is there
-5. Give an honest verdict — no "you may wish to consider" — direct, clear statements
-
-ABSOLUTE RULES:
-- Every finding must cite exact page location where possible: (p.X) or (Cl. X.Y)
-- No generic statements — always specific with real numbers and deadlines
-- Every risk quantified: financial/legal consequence + probability
-- Every action has an owner and a deadline
-- NEVER truncate unless the chosen depth requires it
-
-OUTPUT FORMAT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTIVE SUMMARY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Document type: [what kind of document is this]
-Total scope: [pages, sections, clauses]
-Purpose: [what this document is actually for — one sentence capturing the real purpose]
-Most critical immediate action: [THE one thing the reader must do right now + exact deadline]
-Plain-language verdict: [2-3 sentences — your honest assessment. Would you sign this? Why or why not?]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SECTION-BY-SECTION ANALYSIS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Every section/chapter in order. For each: Name + page range | What it says | What it means | Hidden detail | Risk or obligation found]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KEY FINDINGS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Numbered list of ALL significant findings. Format: N. TITLE (p.X / Cl. Y.Z) | What it says | Why it matters (chain of consequences) | What to do about it]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HIDDEN CONNECTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[CONNECTION N: [Cl./Section A] + [Cl./Section B] = [the combined risk visible only from their interaction]. Practical meaning. Action required.]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WHAT IS MISSING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[MISSING N: [what is absent] — Why it matters — What to add/request]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NUMBERS, DATES AND AMOUNTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Every number, amount, date, deadline in the document. Format: [Value] — Context — Location (p.X) — Note if relevant]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISKS AND CRITICAL ATTENTION POINTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[CRITICAL / IMPORTANT / LOW — Title — Location | What it means | Realistic worst-case + amount | Probability | Mitigation]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACTION PLAN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[N. [IMMEDIATE / THIS WEEK / THIS MONTH / BEFORE SIGNING] — Action: [exactly what to do] — By: [date/timeframe] — Who: [role] — If not done: [consequence in one sentence]]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DOCUMENT QUALITY ASSESSMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Clarity: X/5 — [reason + example]
-Completeness: X/5 — [what is missing]
-Balance/Fairness: X/5 — [which party benefits more]
-Overall verdict: [APPROVE / WITH AMENDMENTS / REVIEW FIRST / REJECT + 2-sentence justification] (only if relevant for the document type)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MY PERSONAL TAKE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[2-4 sentences of honest personal opinion on this document or task. What is good, what is bad, what would you advise the client? If the client explicitly asks for your opinion ("what do you think?", "give me your opinion"), go significantly deeper. Always direct and honest — no hedging phrases like "you may wish to consider".]
-
-DOCUMENT TO ANALYSE:
-${docText}`;
+  return { images, totalPages, renderedPages: pagesToRender };
 }
 
 // =====================
 // REAL AI ENGINE — replaces demo mode when API key is set
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
-  const apiKey = getGeminiKey();
-  if (!apiKey) throw new Error('NO_KEY');
+  const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
+  const taskKind = detectTaskType(taskDesc);
+  const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
+  const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
+  window.currentDocType = docType;
 
-  const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name.toLowerCase() : '';
-  const investorKws = ['investor','geschäftsbericht','geschaeftsbericht','jahresbericht',
-    'annual report','finanzbericht','konzernabschluss','ifrs','gaap','ebit','ebitda',
-    'dividende','earnings','revenue','profit','bericht_2024','bericht_2025','bericht_2026',
-    'porsche','volkswagen','bmw','mercedes','siemens','sap','allianz','apple','microsoft','amazon'];
-  const d = taskDesc.toLowerCase();
-  const isInvestorTask = investorKws.some(kw => d.includes(kw) || fn.includes(kw));
-  const taskType = isInvestorTask ? 'investor' : 'pdf';
-
-  // Extract text from all uploaded PDFs
   let docText = '';
+  let pageImages = [];   // base64 JPEG strings sent to Gemini Vision
+  let totalPages  = 0;
+
   if (uploadedPDFs.length > 0) {
-    setProgress(15, currentLang === 'de' ? 'PDF wird gelesen und extrahiert...' : 'Reading and extracting PDF...');
+    // ── Step 1: render visible pages as images (Gemini sees layout, tables, charts)
+    setProgress(10, currentLang === 'de'
+      ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
+      : 'Rendering PDF pages for visual analysis...');
+    try {
+      const rendered = await renderPDFPagesToImages(uploadedPDFs[0], 12);
+      pageImages  = rendered.images;
+      totalPages  = rendered.totalPages;
+    } catch (err) {
+      console.warn('Visual rendering failed, falling back to text:', err);
+    }
+
+    // ── Step 2: text extraction for pages beyond the image limit (context for long docs)
+    setProgress(25, currentLang === 'de'
+      ? 'Text wird extrahiert (für lange Dokumente)...'
+      : 'Extracting text (for long documents)...');
     for (const file of uploadedPDFs) {
       try {
         const text = await extractPDFText(file);
@@ -2794,38 +3572,32 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
         docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
       }
     }
+
+    // If all pages were rendered visually, the text extraction is supplementary —
+    // trim it down so we don't send redundant content.
+    if (pageImages.length >= totalPages && docText.length > 30000) {
+      docText = docText.slice(0, 30000) + '\n\n[Volltext gekürzt — visuelle Analyse hat alle Seiten abgedeckt]';
+    }
   } else {
     docText = `[Kein Dokument hochgeladen. Aufgabe basiert nur auf der Beschreibung: ${taskDesc}]`;
   }
 
-  setProgress(35, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
+  setProgress(40, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
-  const prompt = buildPrompt(taskDesc, businessDetails, docText, taskType, analysisLength);
+  const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
 
-  setProgress(55, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
+  setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 8192,
-          temperature: 0.2,
-          topP: 0.85,
-          topK: 40
-        }
-      })
-    }
-  );
+  const response = await fetch('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, images: pageImages })
+  });
 
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message);
-  const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!result) throw new Error('Keine Antwort von der KI erhalten');
-  return result;
+  if (data.error) throw new Error(data.error);
+  if (!data.result) throw new Error('Keine Antwort von der KI erhalten');
+  return data.result;
 }
 
 // =====================
@@ -2836,6 +3608,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAuth();
   renderTestimonials();
   initCharacterSelection();
+  checkDueTasks();
 
   // Show API key status in owner settings when it loads
   const existingKey = getGeminiKey();
