@@ -1497,6 +1497,24 @@ function parseResultBlocks(text) {
 
     afterDivider = false;
 
+    // Markdown headings: ###, ##, # — AI sometimes outputs these instead of ━━━ dividers
+    const mdHeading = t.match(/^#{1,6}\s+(.+)/);
+    if (mdHeading) {
+      const hText = mdHeading[1]
+        .replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '')
+        .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '')
+        .trim();
+      blocks.push({ type: 'section', text: hText || mdHeading[1] });
+      return;
+    }
+
+    // **Bold line** on its own → treat as section heading
+    const boldLine = t.match(/^\*\*([^*]{3,})\*\*[:\s]*$/);
+    if (boldLine) {
+      blocks.push({ type: 'section', text: boldLine[1].trim() });
+      return;
+    }
+
     // KPI lines inside KENNZAHLEN / KEY METRICS section: "Label: Value" with numbers/% /€/$
     // Detect if we're inside a KPI section
     const prevSection = blocks.slice().reverse().find(b => b.type === 'section');
@@ -1571,8 +1589,13 @@ function downloadPDF(length) {
   const amber  = [217,119, 6];
   const green  = [22, 163, 74];
 
-  const fileName = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : 'Dokument';
-  const fileBase = fileName.replace(/\.pdf$/i,'');
+  const fileName   = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
+  // When no PDF is uploaded use the task description as the cover title
+  const taskDescEl = document.getElementById('task-description');
+  const taskDescVal = (taskDescEl?.value || '').trim().slice(0, 70);
+  const fileBase   = fileName
+    ? fileName.replace(/\.pdf$/i, '')
+    : (taskDescVal || (currentLang === 'de' ? 'KI-Analyse' : 'AI Analysis'));
   const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
   const nowTime  = new Date().toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-GB', { hour:'2-digit', minute:'2-digit' });
   const refNr    = 'REF-' + Date.now().toString(36).toUpperCase().slice(-6);
@@ -1599,7 +1622,11 @@ function downloadPDF(length) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
-    doc.text(`${refNr}  •  ${today}`, pageW - mR, 6.5, { align:'right' });
+    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align:'right' });
+    // Always reset text state after header so body content starts clean
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...steel);
   }
 
   function sep(gap = 3) {
@@ -1714,34 +1741,34 @@ function downloadPDF(length) {
   doc.setTextColor(...silver);
   doc.text(depthLbl, depthX + 7, 29.5);
 
-  // Main title — document filename large (#5)
+  // ── Title (larger, shifted down to give breathing room below chips) ──
   doc.setTextColor(...white);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 20);
-  let ty = 50;
-  titleLines.forEach(ln => { doc.text(ln, mL + 8, ty); ty += 13; });
+  doc.setFontSize(30);
+  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 26);
+  let ty = 56;
+  titleLines.slice(0, 4).forEach(ln => { doc.text(ln, mL + 8, ty); ty += 13; });
 
-  // Subtitle line
+  // Subtitle
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(148, 163, 184);
   const subtitle = currentLang === 'de' ? 'KI-gestützte Dokumentenanalyse' : 'AI-powered document analysis';
-  doc.text(subtitle, mL + 8, ty + 4);
-  ty += 18;
+  doc.text(subtitle, mL + 8, ty + 5);
+  ty += 20;
 
-  // Divider
+  // Divider under subtitle
   doc.setDrawColor(...accent);
   doc.setLineWidth(0.6);
   doc.line(mL + 8, ty, pageW - mR, ty);
-  ty += 10;
+  ty += 12;
 
-  // Metadata grid — 2 columns
+  // Metadata grid — 2-column layout (label left, value right)
   const metaPairs = [
-    [currentLang === 'de' ? 'Datei' : 'File', fileName.length > 35 ? fileName.slice(0,32)+'...' : fileName],
+    [currentLang === 'de' ? 'Datei' : 'File',      fileName ? (fileName.length > 38 ? fileName.slice(0,35)+'...' : fileName) : '—'],
     [currentLang === 'de' ? 'Erstellt' : 'Created', today + '  ' + nowTime],
+    [currentLang === 'de' ? 'Tiefe' : 'Depth',     depthLbl],
     [currentLang === 'de' ? 'Referenz' : 'Reference', refNr],
-    [currentLang === 'de' ? 'Status' : 'Status', currentLang === 'de' ? 'Abgeschlossen — Vertraulich' : 'Complete — Confidential'],
   ];
   doc.setFontSize(8.5);
   metaPairs.forEach(([label, val]) => {
@@ -1750,12 +1777,61 @@ function downloadPDF(length) {
     doc.text(label + ':', mL + 8, ty);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...white);
-    doc.text(val, mL + 8 + 30, ty);
-    ty += 8;
+    doc.text(val, mL + 8 + 32, ty);
+    ty += 9;
+  });
+  ty += 8;
+
+  // ── Mid-page info card (fills the empty space) ──
+  const cardY = ty;
+  const cardH = 52;
+  doc.setFillColor(20, 32, 54); // slightly lighter than navy
+  doc.roundedRect(mL + 8, cardY, cW - 8, cardH, 3, 3, 'F');
+  doc.setFillColor(...accent);
+  doc.rect(mL + 8, cardY, 3, cardH, 'F');
+  // Card heading
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...accent);
+  doc.text(
+    currentLang === 'de' ? 'ANALYSE — ÜBERSICHT' : 'ANALYSIS OVERVIEW',
+    mL + 16, cardY + 9
+  );
+  // Horizontal rule inside card
+  doc.setDrawColor(37, 60, 100);
+  doc.setLineWidth(0.3);
+  doc.line(mL + 16, cardY + 13, pageW - mR - 8, cardY + 13);
+  // Feature rows — 2 columns, 3 rows
+  const de = currentLang === 'de';
+  const features = [
+    [de ? 'Visuelle KI-Analyse' : 'Visual AI Analysis',   de ? 'Tabellen & Grafiken erkannt' : 'Tables & charts detected'],
+    [de ? 'Seitenreferenzen' : 'Page References',         de ? 'Jede Aussage belegt' : 'Every claim sourced'],
+    [de ? 'Vertraulich' : 'Confidential',                 de ? 'Daten nach Analyse geloscht' : 'Data deleted after analysis'],
+  ];
+  doc.setFontSize(8.5);
+  features.forEach(([left, right], i) => {
+    const fy = cardY + 21 + i * 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...white);
+    doc.text(left, mL + 16, fy);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 130, 180);
+    doc.text(right, mL + 16 + 58, fy);
   });
 
-  // Bottom info bar
-  doc.setFillColor(15, 23, 42);
+  // ── Task description preview (if available) ──
+  const taskPreview = (taskDescEl?.value || '').trim().slice(0, 160);
+  if (taskPreview && fileName) { // only show when we also have a real file name
+    const qY = cardY + cardH + 12;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(80, 100, 140);
+    const qLines = doc.splitTextToSize('\u201E' + taskPreview + '\u201C', cW - 20);
+    qLines.slice(0, 3).forEach((ln, i) => doc.text(ln, mL + 8, qY + i * 6));
+  }
+
+  // ── Bottom info bar ──
+  doc.setFillColor(10, 18, 35);
   doc.rect(0, pageH - 22, pageW, 22, 'F');
   doc.setFillColor(...accent);
   doc.rect(0, pageH - 22, pageW, 0.5, 'F');
@@ -1767,7 +1843,9 @@ function downloadPDF(length) {
   doc.setFontSize(7.5);
   doc.setTextColor(...silver);
   doc.text(
-    currentLang === 'de' ? 'Erstellt mit AI Employee Agent  •  Alle Daten nach Analyse geloscht' : 'Created with AI Employee Agent  •  All data deleted after analysis',
+    currentLang === 'de'
+      ? 'Erstellt mit AI Employee Agent  \u2022  Alle Daten nach Analyse geloscht'
+      : 'Created with AI Employee Agent  \u2022  All data deleted after analysis',
     pageW - mR, pageH - 12, { align: 'right' }
   );
 
