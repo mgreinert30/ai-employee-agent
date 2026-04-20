@@ -700,7 +700,7 @@ function connectGmail() {
 
 async function fetchGmailEmails(token) {
   const listRes = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=is:inbox',
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${emailCount}&q=is:inbox`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const listData = await listRes.json();
@@ -866,6 +866,16 @@ function detectTaskType(description) {
 function estimateTask(description) {
   const depth = window.selectedAnalysisLength || 'medium';
   const type = detectTaskType(description);
+  if (type === 'email') {
+    // Email: price/time determined by emailCount, not depth
+    const emailTiers = {
+      200:  { price: 0.99, minutes: 2, depth: 'short'  },
+      500:  { price: 1.99, minutes: 4, depth: 'medium' },
+      1000: { price: 2.99, minutes: 6, depth: 'long'   },
+    };
+    const tier = emailTiers[emailCount] || emailTiers[200];
+    return { minutes: tier.minutes, price: tier.price, type, depth: tier.depth };
+  }
   const price = TASK_PRICES[type][depth];
   const minutes = TASK_TIMES[type][depth];
   return { minutes, price, type, depth };
@@ -905,6 +915,9 @@ function selectShortcut(type) {
   event.target.classList.add('active');
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  const ecs = document.getElementById('email-count-selector');
+  if (ecs) ecs.style.display = (type === 'email') ? 'block' : 'none';
+  if (type === 'email') setEmailCount(emailCount);
 }
 
 // =====================
@@ -979,6 +992,9 @@ function pickService(type) {
   const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
   if (btn) btn.classList.add('active');
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  const ecs3 = document.getElementById('email-count-selector');
+  if (ecs3) ecs3.style.display = (type === 'email') ? 'block' : 'none';
+  if (type === 'email') setEmailCount(emailCount);
   showStep('step-form');
 }
 
@@ -1328,6 +1344,24 @@ function selectApp(key, btn) {
 
 function clearAppSelection(key) {
   document.querySelectorAll(`#app-opts-${key} .task-shortcut`).forEach(b => b.classList.remove('active'));
+}
+
+let emailCount = 200;
+function setEmailCount(count) {
+  emailCount = count;
+  [200, 500, 1000].forEach(n => {
+    const btn = document.getElementById('ecount-' + n);
+    if (!btn) return;
+    btn.style.border = n === count ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.1)';
+    btn.style.background = n === count ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.04)';
+  });
+  const td = document.getElementById('task-description');
+  if (td) {
+    const de = currentLang === 'de';
+    td.value = de
+      ? `Sortiere meine E-Mails (bis zu ${count} E-Mails) nach Dringlichkeit in die Kategorien DRINGEND, WICHTIG, NIEDRIG und SPAM. Schreibe eine Zusammenfassung und verfasse Entwürfe für dringende Antworten.`
+      : `Sort my emails (up to ${count} emails) by urgency into URGENT, IMPORTANT, LOW and SPAM. Write a summary and draft replies for urgent ones.`;
+  }
 }
 
 function setDepth(level) {
@@ -2630,7 +2664,7 @@ Alle hochgeladenen Daten wurden nach der Analyse sicher geloscht.`
     if (isEmail || isReply) return (
 `📧 E-MAIL POSTFACH — VOLLSTÄNDIG SORTIERT
 Zugriff: Microsoft Outlook — Posteingang
-Gefundene E-Mails: 22 | Verarbeitet: 22 | Übersprungen: 0
+Gefundene E-Mails: ${emailCount} | Verarbeitet: ${emailCount} | Übersprungen: 0
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔴  DRINGEND — Sofort bearbeiten (3)
@@ -2941,7 +2975,7 @@ All uploaded files were securely deleted after analysis.`
     if (isEmail || isReply) return (
 `📧 EMAIL INBOX — FULLY SORTED
 Access: Microsoft Outlook — Inbox
-Emails found: 22 | Processed: 22 | Skipped: 0
+Emails found: ${emailCount} | Processed: ${emailCount} | Skipped: 0
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔴  URGENT — Act immediately (3)
