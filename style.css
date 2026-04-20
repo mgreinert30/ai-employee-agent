@@ -274,9 +274,9 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
   letter-spacing: 0.2px;
 }
 .chip-dark {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.16);
-  color: rgba(255,255,255,0.8);
+  background: rgba(37,99,235,0.08);
+  border: 1px solid rgba(37,99,235,0.25);
+  color: var(--blue-dark);
 }
 
 /* =====================
