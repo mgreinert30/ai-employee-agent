@@ -6,19 +6,16 @@ export const config = {
 
 // Vision models see the actual rendered page layout, including tables and charts.
 
-// Models that support multimodal (image) input
+// Models confirmed available via /api/models endpoint
 const VISION_MODELS = [
-  'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
-  'gemini-1.5-flash-latest',
+  'gemini-flash-latest',
 ];
 
-// All models for text-only requests
 const TEXT_MODELS = [
-  'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
-  'gemini-1.5-flash-latest',
-  'gemini-1.5-flash',
+  'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
 ];
 
 export default async function handler(req, res) {
@@ -84,37 +81,37 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const allErrors = [];
 
-  // Try each model on v1beta first, then v1 as fallback
   for (const model of models) {
-    for (const apiVersion of ['v1beta', 'v1']) {
-      try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
-        );
-        const data = await geminiRes.json();
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
+      );
 
-        if (data.error) {
-          allErrors.push(`[${model}/${apiVersion}] ${data.error.message}`);
-          break; // same model won't work on v1 either if it's a permissions issue
-        }
+      let data;
+      try { data = await geminiRes.json(); }
+      catch (_) { allErrors.push(`[${model}] HTTP ${geminiRes.status} — kein JSON`); continue; }
 
-        const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!result) {
-          allErrors.push(`[${model}/${apiVersion}] Keine Antwort erhalten`);
-          break;
-        }
-
-        return res.status(200).json({ result, model, pagesAnalysed: hasImages ? images.length : 0 });
-
-      } catch (err) {
-        allErrors.push(`[${model}/${apiVersion}] ${err.message}`);
+      if (!geminiRes.ok || data.error) {
+        allErrors.push(`[${model}] HTTP ${geminiRes.status}: ${data.error?.message || JSON.stringify(data).slice(0,120)}`);
+        continue;
       }
+
+      const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!result) {
+        allErrors.push(`[${model}] Leere Antwort: ${JSON.stringify(data).slice(0,120)}`);
+        continue;
+      }
+
+      return res.status(200).json({ result, model, pagesAnalysed: hasImages ? images.length : 0 });
+
+    } catch (err) {
+      allErrors.push(`[${model}] ${err.message}`);
     }
   }
 
   return res.status(500).json({
-    error: allErrors[allErrors.length - 1] || 'Kein Modell verfügbar',
+    error: allErrors.join(' | '),
     allErrors,
   });
 }
