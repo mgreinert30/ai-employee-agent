@@ -3426,20 +3426,62 @@ QUALITY CHECK:
 }
 
 // =====================
+// VISUAL PDF RENDERING — renders pages to JPEG for Gemini Vision
+// =====================
+async function renderPDFPagesToImages(file, maxPages = 12) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const totalPages = pdf.numPages;
+  const pagesToRender = Math.min(totalPages, maxPages);
+  const images = [];
+
+  for (let i = 1; i <= pagesToRender; i++) {
+    const page = await pdf.getPage(i);
+    // scale 1.5 → 893×1263px for A4 — sharp enough for Gemini to read tables
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    // JPEG 70% ≈ 100–150 KB per page → 12 pages ≈ 1.5 MB total (well under Vercel's 4.5 MB limit)
+    images.push(canvas.toDataURL('image/jpeg', 0.70).split(',')[1]);
+  }
+
+  return { images, totalPages, renderedPages: pagesToRender };
+}
+
+// =====================
 // REAL AI ENGINE — replaces demo mode when API key is set
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
   const taskKind = detectTaskType(taskDesc);
-  // For pure creation tasks (no source PDF), use creation docType
   const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
   const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
   window.currentDocType = docType;
 
-  // Extract text from all uploaded PDFs
   let docText = '';
+  let pageImages = [];   // base64 JPEG strings sent to Gemini Vision
+  let totalPages  = 0;
+
   if (uploadedPDFs.length > 0) {
-    setProgress(15, currentLang === 'de' ? 'PDF wird gelesen und extrahiert...' : 'Reading and extracting PDF...');
+    // ── Step 1: render visible pages as images (Gemini sees layout, tables, charts)
+    setProgress(10, currentLang === 'de'
+      ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
+      : 'Rendering PDF pages for visual analysis...');
+    try {
+      const rendered = await renderPDFPagesToImages(uploadedPDFs[0], 12);
+      pageImages  = rendered.images;
+      totalPages  = rendered.totalPages;
+    } catch (err) {
+      console.warn('Visual rendering failed, falling back to text:', err);
+    }
+
+    // ── Step 2: text extraction for pages beyond the image limit (context for long docs)
+    setProgress(25, currentLang === 'de'
+      ? 'Text wird extrahiert (für lange Dokumente)...'
+      : 'Extracting text (for long documents)...');
     for (const file of uploadedPDFs) {
       try {
         const text = await extractPDFText(file);
@@ -3448,21 +3490,26 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
         docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
       }
     }
+
+    // If all pages were rendered visually, the text extraction is supplementary —
+    // trim it down so we don't send redundant content.
+    if (pageImages.length >= totalPages && docText.length > 30000) {
+      docText = docText.slice(0, 30000) + '\n\n[Volltext gekürzt — visuelle Analyse hat alle Seiten abgedeckt]';
+    }
   } else {
     docText = `[Kein Dokument hochgeladen. Aufgabe basiert nur auf der Beschreibung: ${taskDesc}]`;
   }
 
-  setProgress(35, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
+  setProgress(40, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
   const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
 
-  setProgress(55, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
+  setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  // Call the Vercel serverless function — API key is stored securely server-side
   const response = await fetch('/api/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ prompt, images: pageImages })
   });
 
   const data = await response.json();
