@@ -1,4 +1,9 @@
 // Vercel Serverless Function — Gemini PDF Analysis (text + vision)
+// Increase body size limit so PDF page images (up to ~6 MB base64) can be transmitted
+export const config = {
+  api: { bodyParser: { sizeLimit: '8mb' } },
+};
+
 // Vision models see the actual rendered page layout, including tables and charts.
 
 // Models that support multimodal (image) input
