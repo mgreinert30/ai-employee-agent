@@ -905,8 +905,6 @@ function selectShortcut(type) {
   event.target.classList.add('active');
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
-  const rms = document.getElementById('report-mode-selector');
-  if (rms) rms.style.display = (type === 'report' || type === 'pdf') ? 'block' : 'none';
 }
 
 // =====================
@@ -981,8 +979,6 @@ function pickService(type) {
   const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
   if (btn) btn.classList.add('active');
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
-  const rms2 = document.getElementById('report-mode-selector');
-  if (rms2) rms2.style.display = (type === 'report') ? 'block' : 'none';
   showStep('step-form');
 }
 
@@ -1349,17 +1345,6 @@ function setDepth(level) {
   });
 }
 
-let reportMode = 'standard';
-function setReportMode(mode) {
-  reportMode = mode;
-  ['standard','stats','investor'].forEach(m => {
-    const btn = document.getElementById('rmode-' + m);
-    if (!btn) return;
-    btn.style.border = m === mode ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.1)';
-    btn.style.background = m === mode ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.04)';
-  });
-}
-
 function confirmApps() {
   // Collect answers and store for use in progress messages
   window.selectedApps = {};
@@ -1503,12 +1488,9 @@ function parseResultBlocks(text) {
     // Section title (line immediately after a top ━━━)
     if (afterDivider) {
       afterDivider = false;
-      const title = t
-        .replace(/\*\*/g, '')   // strip bold markdown
-        .replace(/^[\u{0080}-\u{FFFF}\u{10000}-\u{10FFFF}]+\s*/gu, '')
-        .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '')
-        .replace(/[^a-zA-Z0-9\u00C0-\u024F\s\-&().,:/]+$/, '') // strip trailing junk
-        .trim();
+      // Strip leading emojis/symbols
+      const title = t.replace(/^[\u{0080}-\u{FFFF}\u{10000}-\u{10FFFF}]+\s*/gu, '')
+                     .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '').trim();
       blocks.push({ type: 'section', text: title || t.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim() });
       return;
     }
@@ -1572,21 +1554,6 @@ function parseResultBlocks(text) {
     // Arrow / dash / star bullets  →  -  •  *
     if (/^(→|•|\-\s|\*\s)/.test(t)) {
       blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); return;
-    }
-
-    // Markdown table rows  | col | col |
-    if (/^\|.+\|/.test(t)) {
-      // Skip separator rows like |---|---|
-      if (/^\|[\s\-:]+\|/.test(t)) return;
-      const cells = t.split('|').slice(1, -1).map(c => c.trim());
-      // Check if previous block is also a table row — if so append, else start new
-      const last = blocks[blocks.length - 1];
-      if (last && last.type === 'data_table') {
-        last.rows.push(cells);
-      } else {
-        blocks.push({ type: 'data_table', rows: [cells] });
-      }
-      return;
     }
 
     // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
@@ -2030,51 +1997,6 @@ function downloadPDF(length) {
         doc.text(val, col + 6, y + 10);
         nCounter++;
         if (nCounter % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
-        break;
-      }
-
-      case 'data_table': {
-        if (!b.rows || b.rows.length === 0) break;
-        const colCount = Math.max(...b.rows.map(r => r.length));
-        if (colCount === 0) break;
-        const colW = (cW - 2) / colCount;
-        const rowH = 7;
-        const tableH = b.rows.length * rowH + 2;
-        guard(tableH + 4);
-        y += 3;
-        b.rows.forEach((row, ri) => {
-          const isHeader = ri === 0;
-          // Row background
-          if (isHeader) {
-            doc.setFillColor(...navy);
-          } else {
-            doc.setFillColor(ri % 2 === 0 ? 248 : 241, ri % 2 === 0 ? 250 : 245, ri % 2 === 0 ? 255 : 249);
-          }
-          doc.rect(mL, y, cW, rowH, 'F');
-          // Accent left bar on header
-          if (isHeader) {
-            doc.setFillColor(...accent);
-            doc.rect(mL, y, 3, rowH, 'F');
-          }
-          // Cell text
-          doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
-          doc.setFontSize(isHeader ? 8 : 8.5);
-          doc.setTextColor(...(isHeader ? white : steel));
-          row.slice(0, colCount).forEach((cell, ci) => {
-            const cx = mL + (ci === 0 && isHeader ? 5 : 2) + ci * colW;
-            const cellText = safe(cell).slice(0, 30);
-            doc.text(cellText, cx, y + 4.8, { maxWidth: colW - 3 });
-          });
-          y += rowH;
-        });
-        // Bottom border
-        doc.setDrawColor(...accent);
-        doc.setLineWidth(0.4);
-        doc.line(mL, y, mL + cW, y);
-        y += 5;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...steel);
         break;
       }
 
@@ -3285,7 +3207,7 @@ function detectLanguage(text) {
   return 'en';
 }
 
-function buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength, rptMode) {
+function buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength) {
   const writtenLang = detectLanguage(taskDesc);
   const isDE = writtenLang === 'de';
   const businessCtx = businessDetails
@@ -3576,16 +3498,6 @@ NEXT STEPS
   const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
   const learningCtx = getLearningContext(isDE);
 
-  const reportModeExtra = rptMode === 'stats'
-    ? (isDE
-        ? `\nSTATISTIKEN-MODUS: Pflichtanforderungen:\n- Füge Datentabellen im Markdown-Format ein: | Spalte | Spalte | Spalte |\n- Vergleiche Kennzahlen nach Jahr/Quartal mit konkreten %-Veränderungen\n- Jede Zahl muss eine Einheit haben (€, %, Tsd., Mio.)\n- Kennzahlen-Abschnitt: mindestens 6 Einträge\n`
-        : `\nSTATISTICS MODE: Mandatory requirements:\n- Include data tables in Markdown format: | Column | Column | Column |\n- Compare metrics year/quarter with concrete % changes\n- Every number must have a unit (€, %, k, m)\n- Metrics section: minimum 6 entries\n`)
-    : rptMode === 'investor'
-    ? (isDE
-        ? `\nINVESTOR-BERICHT-MODUS: Pflichtanforderungen:\n- Abschnitt "INVESTMENT HIGHLIGHTS" mit 3-5 starken Kernbotschaften\n- Betone: EBITDA, Umsatzwachstum, Margen, Marktgröße, Wettbewerbsposition\n- Datentabellen für alle Finanzkennzahlen: | Kennzahl | 2022 | 2023 | 2024 | Veränd. |\n- Bewerte Risiken nach Kapitalrendite-Auswirkung\n- Bewertungsannahmen und Multiplikatoren wenn vorhanden\n`
-        : `\nINVESTOR REPORT MODE: Mandatory requirements:\n- Section "INVESTMENT HIGHLIGHTS" with 3-5 strong key messages\n- Emphasise: EBITDA, revenue growth, margins, market size, competitive position\n- Data tables for all financial metrics: | Metric | 2022 | 2023 | 2024 | Change |\n- Assess risks by capital return impact\n- Valuation assumptions and multiples where available\n`)
-    : '';
-
   const docTypeLabels = {
     de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
     en: { geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
@@ -3624,7 +3536,7 @@ KERNREGELN — NIEMALS BRECHEN:
 4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
 5. JEDER SATZ trägt Information — keine Füllsätze.
 6. ANTWORTE AUF DEUTSCH.
-${reportModeExtra}
+
 ${depth}
 
 AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
@@ -3665,7 +3577,7 @@ CORE RULES — NEVER BREAK:
 4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
 5. EVERY SENTENCE carries information — no padding.
 6. RESPOND IN ENGLISH.
-${reportModeExtra}
+
 ${depth}
 
 OUTPUT FORMAT (exactly these sections, in this order):
@@ -3759,7 +3671,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(40, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
-  const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength, reportMode);
+  const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
 
   setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
