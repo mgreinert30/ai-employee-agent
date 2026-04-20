@@ -82,33 +82,39 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
     generationConfig: { maxOutputTokens: 8192, temperature: 0.3, topP: 0.9, topK: 40 },
   });
 
-  let lastError = 'Kein Modell verfügbar';
+  const allErrors = [];
 
+  // Try each model on v1beta first, then v1 as fallback
   for (const model of models) {
-    try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
-      );
-      const data = await geminiRes.json();
+    for (const apiVersion of ['v1beta', 'v1']) {
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
+        );
+        const data = await geminiRes.json();
 
-      if (data.error) {
-        lastError = `[${model}] ${data.error.message}`;
-        continue;
+        if (data.error) {
+          allErrors.push(`[${model}/${apiVersion}] ${data.error.message}`);
+          break; // same model won't work on v1 either if it's a permissions issue
+        }
+
+        const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!result) {
+          allErrors.push(`[${model}/${apiVersion}] Keine Antwort erhalten`);
+          break;
+        }
+
+        return res.status(200).json({ result, model, pagesAnalysed: hasImages ? images.length : 0 });
+
+      } catch (err) {
+        allErrors.push(`[${model}/${apiVersion}] ${err.message}`);
       }
-
-      const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!result) {
-        lastError = `[${model}] Keine Antwort erhalten`;
-        continue;
-      }
-
-      return res.status(200).json({ result, model, pagesAnalysed: hasImages ? images.length : 0 });
-
-    } catch (err) {
-      lastError = `[${model}] ${err.message}`;
     }
   }
 
-  return res.status(500).json({ error: lastError });
+  return res.status(500).json({
+    error: allErrors[allErrors.length - 1] || 'Kein Modell verfügbar',
+    allErrors,
+  });
 }
