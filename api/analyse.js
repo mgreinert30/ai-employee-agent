@@ -10,15 +10,15 @@ export const config = {
 const VISION_MODELS = [
   'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
-  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
 ];
 
 // All models for text-only requests
 const TEXT_MODELS = [
   'gemini-2.5-flash-preview-05-20',
   'gemini-2.5-flash',
+  'gemini-1.5-flash-latest',
   'gemini-1.5-flash',
-  'gemini-1.5-pro',
 ];
 
 export default async function handler(req, res) {
