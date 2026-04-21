@@ -389,8 +389,21 @@ function chainTask(type) {
                  : 'Convert the following text into concise, clearly structured bullet points — no prose:\n\n'
   };
   const prefix = instructions[type] || instructions.shorten;
-  const input = currentResult ? currentResult.slice(0, 5000) : '';
-  document.getElementById('task-description').value = prefix + input;
+  // Strip any HTML from currentResult (e.g. email sort card grid)
+  const rawText = currentResult
+    ? (currentResult.replace ? currentResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : String(currentResult))
+    : '';
+  if (!rawText || rawText.length < 20) {
+    alert(de ? 'Kein Textinhalt zum Weiterverarbeiten verfügbar.' : 'No text content available to process.');
+    return;
+  }
+  const input = rawText.slice(0, 6000);
+  // Reset shortcut type so routing uses description text, not old task type
+  currentShortcutType = null;
+  const td = document.getElementById('task-description');
+  td.value = prefix + input;
+  td.style.display = 'block';
+  td.required = true;
   window.selectedAnalysisLength = 'medium';
   window.skippedSetup = true;
   showStep('step-progress');
