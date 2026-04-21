@@ -1010,11 +1010,27 @@
         <!-- CHAIN ACTIONS (#5 Multi-Step) -->
         <div class="chain-section">
           <div class="chain-label" data-de="↩️ Ergebnis weiterverarbeiten:" data-en="↩️ Process result further:">↩️ Ergebnis weiterverarbeiten:</div>
-          <div class="chain-buttons">
-            <button onclick="chainTask('shorten')" class="btn-chain" data-de="📝 Kürzer fassen" data-en="📝 Shorten">📝 Kürzer fassen</button>
-            <button onclick="chainTask('translate')" class="btn-chain" data-de="🌍 Übersetzen" data-en="🌍 Translate">🌍 Übersetzen</button>
-            <button onclick="chainTask('report')" class="btn-chain" data-de="📊 Als Bericht" data-en="📊 As Report">📊 Als Bericht</button>
-            <button onclick="chainTask('bullets')" class="btn-chain" data-de="• Stichpunkte" data-en="• Bullet points">• Stichpunkte</button>
+          <div class="chain-buttons" id="chain-buttons">
+            <button id="chain-btn-shorten" onclick="chainTask('shorten')" class="btn-chain">📝 Kürzer fassen</button>
+            <button id="chain-btn-translate" onclick="showLangPicker()" class="btn-chain">🌍 Übersetzen</button>
+            <button id="chain-btn-report" onclick="chainTask('report')" class="btn-chain">📊 Als Bericht</button>
+            <button id="chain-btn-bullets" onclick="chainTask('bullets')" class="btn-chain">• Stichpunkte</button>
+          </div>
+          <!-- Language picker (shown on Übersetzen click) -->
+          <div id="lang-picker" style="display:none;margin-top:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px;">
+            <p style="font-size:12px;color:var(--gray);margin-bottom:10px;" data-de="Zielsprache wählen:" data-en="Choose target language:">Zielsprache wählen:</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Englisch')">🇬🇧 Englisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Spanisch')">🇪🇸 Spanisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Französisch')">🇫🇷 Französisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Italienisch')">🇮🇹 Italienisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Portugiesisch')">🇵🇹 Portugiesisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Russisch')">🇷🇺 Russisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Arabisch')">🇸🇦 Arabisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Chinesisch')">🇨🇳 Chinesisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Japanisch')">🇯🇵 Japanisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('Türkisch')">🇹🇷 Türkisch</button>
+            </div>
           </div>
         </div>
 

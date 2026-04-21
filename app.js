@@ -376,20 +376,102 @@ function getLearningContext(isDE) {
 // =====================
 // #5 MULTI-STEP (Task Chaining)
 // =====================
+let lastCompletedTaskType = null;
+
+function updateChainButtons(taskType) {
+  const de = currentLang === 'de';
+  const labels = {
+    reply: {
+      shorten:   de ? '📝 E-Mail kürzer fassen'  : '📝 Shorten email',
+      translate: de ? '🌍 E-Mail übersetzen'      : '🌍 Translate email',
+      report:    de ? '📊 Als Bericht'            : '📊 As Report',
+      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
+    },
+    email: {
+      shorten:   de ? '📝 Zusammenfassung kürzen' : '📝 Shorten summary',
+      translate: de ? '🌍 Übersetzen'             : '🌍 Translate',
+      report:    de ? '📊 Als Bericht'            : '📊 As Report',
+      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
+    },
+    pdf: {
+      shorten:   de ? '📝 Analyse kürzen'         : '📝 Shorten analysis',
+      translate: de ? '🌍 Analyse übersetzen'     : '🌍 Translate analysis',
+      report:    de ? '📊 Als Bericht'            : '📊 As Report',
+      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
+    },
+    document: {
+      shorten:   de ? '📝 Dokument kürzen'        : '📝 Shorten document',
+      translate: de ? '🌍 Dokument übersetzen'    : '🌍 Translate document',
+      report:    de ? '📊 Als Bericht'            : '📊 As Report',
+      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
+    },
+    report: {
+      shorten:   de ? '📝 Bericht kürzen'         : '📝 Shorten report',
+      translate: de ? '🌍 Bericht übersetzen'     : '🌍 Translate report',
+      report:    de ? '📊 Als Bericht'            : '📊 As Report',
+      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
+    },
+  };
+  const set = labels[taskType] || labels.report;
+  const b = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  b('chain-btn-shorten',   set.shorten);
+  b('chain-btn-translate', set.translate);
+  b('chain-btn-report',    set.report);
+  b('chain-btn-bullets',   set.bullets);
+  const lp = document.getElementById('lang-picker');
+  if (lp) lp.style.display = 'none';
+}
+
+function showLangPicker() {
+  const lp = document.getElementById('lang-picker');
+  if (lp) lp.style.display = lp.style.display === 'none' ? 'block' : 'none';
+}
+
+function chainTranslate(language) {
+  document.getElementById('lang-picker').style.display = 'none';
+  const de = currentLang === 'de';
+  const taskType = lastCompletedTaskType || 'report';
+  const contextWord = {
+    reply: de ? 'E-Mail' : 'email',
+    pdf: de ? 'Analyse' : 'analysis',
+    document: de ? 'Dokument' : 'document',
+    report: de ? 'Bericht' : 'report',
+    email: de ? 'Text' : 'text',
+  }[taskType] || (de ? 'Text' : 'text');
+  const prefix = de
+    ? `Übersetze folgenden ${contextWord} vollständig und professionell ins ${language}e. Behalte Struktur und Formatierung bei:\n\n`
+    : `Translate the following ${contextWord} completely and professionally into ${language}. Keep the structure and formatting:\n\n`;
+  runChain(prefix);
+}
+
 function chainTask(type) {
   const de = currentLang === 'de';
+  const taskType = lastCompletedTaskType || 'report';
+  const contextWord = {
+    reply: de ? 'E-Mail' : 'email',
+    pdf: de ? 'Analyse' : 'analysis',
+    document: de ? 'Dokument' : 'document',
+    report: de ? 'Bericht' : 'report',
+    email: de ? 'Text' : 'text',
+  }[taskType] || (de ? 'Text' : 'text');
+
   const instructions = {
-    shorten:  de ? 'Fasse folgenden Text in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen:\n\n'
-                 : 'Summarise the following text in 50% shorter — keep all key points, remove filler:\n\n',
-    translate:de ? 'Übersetze folgenden Text vollständig und professionell ins Englische:\n\n'
-                 : 'Translate the following text completely and professionally into German:\n\n',
-    report:   de ? 'Erstelle aus folgendem Text einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n'
-                 : 'Create a professional report with executive summary, key findings and recommendations from the following text:\n\n',
-    bullets:  de ? 'Forme folgenden Text in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n'
-                 : 'Convert the following text into concise, clearly structured bullet points — no prose:\n\n'
+    shorten: de
+      ? `Fasse folgende ${contextWord} in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen. Gib nur die gekürzte ${contextWord} aus, kein Kommentar:\n\n`
+      : `Summarise the following ${contextWord} in 50% shorter — keep all key points, remove filler. Output only the shortened ${contextWord}, no commentary:\n\n`,
+    report: de
+      ? `Erstelle aus folgendem ${contextWord}-Inhalt einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n`
+      : `Create a professional report with executive summary, key findings and recommendations from the following ${contextWord} content:\n\n`,
+    bullets: de
+      ? `Forme folgende ${contextWord} in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n`
+      : `Convert the following ${contextWord} into concise, clearly structured bullet points — no prose:\n\n`,
   };
   const prefix = instructions[type] || instructions.shorten;
-  // Strip any HTML from currentResult (e.g. email sort card grid)
+  runChain(prefix);
+}
+
+function runChain(prefix) {
+  const de = currentLang === 'de';
   const rawText = currentResult
     ? (currentResult.replace ? currentResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : String(currentResult))
     : '';
@@ -398,7 +480,6 @@ function chainTask(type) {
     return;
   }
   const input = rawText.slice(0, 6000);
-  // Reset shortcut type so routing uses description text, not old task type
   currentShortcutType = null;
   const td = document.getElementById('task-description');
   td.value = prefix + input;
@@ -924,6 +1005,8 @@ ${emailList}`;
       📂 ${de ? 'Gmail öffnen → linke Seite → Label' : 'Open Gmail → left sidebar → label'} <strong>"KI-Sortierung"</strong> ${de ? '→ deine sortierten E-Mails' : '→ your sorted emails'}
     </div>`;
 
+  lastCompletedTaskType = 'email';
+  updateChainButtons('email');
   showStep('step-result');
   document.getElementById('result-content').innerHTML = resultHTML;
 }
@@ -1588,6 +1671,8 @@ async function startTask() {
   }
 
   setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
+  lastCompletedTaskType = currentShortcutType || detectTaskType(taskDesc);
+  updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
   document.getElementById('result-content').textContent = currentResult;
 }
