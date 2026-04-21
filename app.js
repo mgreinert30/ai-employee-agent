@@ -700,7 +700,7 @@ function connectGmail() {
 
 async function fetchGmailEmails(token) {
   const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${emailCount}&q=is:inbox`,
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${emailCount}&q=is:inbox%20is:unread`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const listData = await listRes.json();
