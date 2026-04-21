@@ -776,33 +776,54 @@ async function startGmailTask() {
 
   setProgress(40, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
 
-  const emailList = emails.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
-  const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
+  function keywordCategorize(batch) {
+    const urgentWords = ['dringend','urgent','sofort','fällig','deadline','asap','wichtig','kritisch'];
+    const spamWords = ['newsletter','rabatt','sale','promo','werb','abmelden','angebot','sonderangebot','unsubscribe'];
+    return batch.map(e => {
+      const text = (e.from + ' ' + e.subject).toLowerCase();
+      if (spamWords.some(w => text.includes(w))) return { id: e.id, kategorie: 'INFO' };
+      if (urgentWords.some(w => text.includes(w))) return { id: e.id, kategorie: 'DRINGEND' };
+      return { id: e.id, kategorie: 'WICHTIG' };
+    });
+  }
+
+  async function categorizeBatch(batch) {
+    const emailList = batch.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
+    const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
 Kategorien: DRINGEND, WICHTIG, NIEDRIG, INFO
 Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
 
 E-Mails:
 ${emailList}`;
+    try {
+      const res = await fetch('/api/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      let data;
+      try { data = await res.json(); } catch (_) { return keywordCategorize(batch); }
+      if (data.error || !data.result) return keywordCategorize(batch);
+      const jsonMatch = data.result.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return keywordCategorize(batch);
+      return JSON.parse(jsonMatch[0]);
+    } catch (_) {
+      return keywordCategorize(batch);
+    }
+  }
 
   let categorized = [];
-  try {
-    setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
-    const res = await fetch('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    const jsonMatch = data.result.match(/\[[\s\S]*\]/);
-    if (jsonMatch) categorized = JSON.parse(jsonMatch[0]);
-  } catch (err) {
-    currentResult = (de ? '⚠️ Kategorisierung fehlgeschlagen: ' : '⚠️ Categorisation failed: ') + err.message;
-    setProgress(100, de ? 'Fertig.' : 'Done.');
-    showStep('step-result');
-    document.getElementById('result-content').textContent = currentResult;
-    gmailAccessToken = null;
-    return;
+  setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
+  const batchSize = 40;
+  for (let i = 0; i < emails.length; i += batchSize) {
+    const batch = emails.slice(i, i + batchSize);
+    const batchNum = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(emails.length / batchSize);
+    setProgress(60 + Math.round((i / emails.length) * 15),
+      de ? `KI kategorisiert Batch ${batchNum}/${totalBatches}...` : `AI categorising batch ${batchNum}/${totalBatches}...`);
+    const result = await categorizeBatch(batch);
+    categorized = categorized.concat(result);
+    if (i + batchSize < emails.length) await delay(500);
   }
 
   setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
