@@ -663,6 +663,7 @@ function initCharacterSelection() {
 // =====================
 const GMAIL_CLIENT_ID = '81791575409-uff7u3p59b2nk13d4ogqrg9oo7q4oq8g.apps.googleusercontent.com';
 let gmailAccessToken = null;
+let gmailWasUsed = false;
 
 function connectGmail() {
   const btn = document.getElementById('gmail-connect-btn');
@@ -690,6 +691,7 @@ function connectGmail() {
         return;
       }
       gmailAccessToken = response.access_token;
+      gmailWasUsed = true;
       btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analyse startet...' : '✓ Connected — Starting analysis...';
       status.style.display = 'none';
       await startGmailTask();
@@ -2356,16 +2358,20 @@ function downloadHTMLReport() {
 
 async function deleteData() {
   showStep('step-deleting');
-  const emailChecked    = document.getElementById('perm-email')?.checked;
+  const emailChecked    = document.getElementById('perm-email')?.checked || gmailWasUsed;
   const filesChecked    = document.getElementById('perm-files')?.checked;
   const browserChecked  = document.getElementById('perm-browser')?.checked;
   const calendarChecked = document.getElementById('perm-calendar')?.checked;
   const agentInstalled  = !window.skippedSetup;
 
+  // Clear Gmail token and flag
+  gmailAccessToken = null;
+  gmailWasUsed = false;
+
   const de = currentLang === 'de';
   const items = [
     { icon: '🗑', text: de ? 'Aufgabendaten werden gelöscht...' : 'Deleting task data...' },
-    ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff wird entzogen...'   : 'Revoking email access...' }]    : []),
+    ...(emailChecked    ? [{ icon: '📧', text: de ? 'Gmail-Zugang wird gelöscht...'   : 'Removing Gmail access...' }]    : []),
     ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff wird entzogen...'     : 'Revoking file access...' }]     : []),
     ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff wird entzogen...' : 'Revoking browser access...' }]  : []),
     ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff wird entzogen...' : 'Revoking calendar access...' }] : []),
@@ -2390,7 +2396,7 @@ async function deleteData() {
   if (checklist) {
     const doneItems = [
       { icon: '🗑', text: de ? 'Alle Aufgabendaten gelöscht' : 'All task data deleted' },
-      ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff entzogen'   : 'Email access revoked' }]    : []),
+      ...(emailChecked    ? [{ icon: '📧', text: de ? 'Gmail-Zugang aus den Daten gelöscht'   : 'Gmail access removed from data' }]    : []),
       ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff entzogen'     : 'File access revoked' }]     : []),
       ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff entzogen' : 'Browser access revoked' }]  : []),
       ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff entzogen' : 'Calendar access revoked' }] : []),
@@ -2411,6 +2417,8 @@ function resetForm() {
   uploadedPDFs = [];
   window.selectedApps = {};
   selectedPaymentMethod = null; currentEstimate = null;
+  gmailAccessToken = null;
+  gmailWasUsed = false;
   showStep('step-form');
 }
 
