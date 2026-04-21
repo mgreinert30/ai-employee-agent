@@ -1052,30 +1052,32 @@ function updateMiniCharButtons() {
 }
 
 function pickService(type) {
+  currentShortcutType = type;
   document.getElementById('service-picker').style.display = 'none';
   const icons = { email: '📧', report: '📊', reply: '✉️', document: '📝' };
   const titles = {
-    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'Antworten schreiben', document: 'Dokument erstellen' },
-    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Replies', document: 'Create Document' }
+    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'E-Mail schreiben', document: 'Dokument erstellen' },
+    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Email', document: 'Create Document' }
   };
   document.getElementById('task-page-icon').textContent = icons[type] || '🛠️';
   document.getElementById('task-page-title').textContent = titles[currentLang]?.[type] || titles['de'][type];
-  const fakeEvent = { target: document.querySelector(`.task-shortcut[onclick*="${type}"]`) };
   const descriptions = {
     de: {
       email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
       report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
-      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
+      reply:    '',
       document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
     },
     en: {
       email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
       report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
-      reply:    'Write professional and friendly replies to the provided messages or emails.',
+      reply:    '',
       document: 'Create a professional, well-structured document with clear headings and sections.'
     }
   };
-  document.getElementById('task-description').value = descriptions[currentLang]?.[type] || descriptions['de'][type];
+  const td = document.getElementById('task-description');
+  td.value = descriptions[currentLang]?.[type] || descriptions['de'][type];
+  td.style.display = (type === 'reply') ? 'none' : 'block';
   document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
   if (btn) btn.classList.add('active');
@@ -1083,6 +1085,8 @@ function pickService(type) {
   const ecs3 = document.getElementById('email-count-selector');
   if (ecs3) ecs3.style.display = (type === 'email') ? 'block' : 'none';
   if (type === 'email') setEmailCount(emailCount);
+  const ewr = document.getElementById('email-write-form');
+  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
   showStep('step-form');
 }
 
