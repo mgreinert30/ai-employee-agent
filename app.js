@@ -1218,22 +1218,31 @@ function preselectPDF() {
 // =====================
 // PDF UPLOAD
 // =====================
+function isImageFile(f) {
+  return f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/i.test(f.name);
+}
+
 function handlePDFUpload(files) {
-  const allowed = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  const allowed = Array.from(files).filter(f =>
+    f.type === 'application/pdf' || f.name.endsWith('.pdf') || isImageFile(f)
+  );
   allowed.forEach(f => { if (uploadedPDFs.length < 10) uploadedPDFs.push(f); });
   renderPDFList();
 
-  // Auto-suggest PDF analysis if description is still empty or generic
   if (uploadedPDFs.length > 0) {
     const td = document.getElementById('task-description');
     const empty = !td.value.trim();
     const generic = td.value.includes('Sortiere') || td.value.includes('Sort my');
+    const hasImages = uploadedPDFs.some(isImageFile);
+    const hasPDFs   = uploadedPDFs.some(f => !isImageFile(f));
     if (empty || generic) {
-      const fakeEvent = { target: document.querySelector('.task-shortcut') };
-      // Directly set the analysis description without needing the event object
       const desc = currentLang === 'de'
-        ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
-        : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
+        ? hasImages && !hasPDFs
+          ? 'Analysiere die hochgeladenen Bilder vollständig. Beschreibe was du siehst, extrahiere alle wichtigen Informationen, Texte und Details.'
+          : 'Analysiere die hochgeladenen Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
+        : hasImages && !hasPDFs
+          ? 'Fully analyse the uploaded images. Describe what you see, extract all important information, text and details.'
+          : 'Fully analyse the uploaded files and create a professional report with the key findings, summary, and recommended actions.';
       td.value = desc;
       document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
       const pdfBtn = document.querySelector('.task-shortcut[onclick*="pdf"]');
@@ -1268,8 +1277,9 @@ function renderPDFList() {
   list.innerHTML = uploadedPDFs.map((f, i) => {
     const kb = (f.size / 1024).toFixed(0);
     const size = kb > 1024 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
+    const icon = isImageFile(f) ? '🖼️' : '📄';
     return `<div class="pdf-file-item">
-      <span class="pdf-file-name">📄 ${f.name}<span class="pdf-file-size">${size}</span></span>
+      <span class="pdf-file-name">${icon} ${f.name}<span class="pdf-file-size">${size}</span></span>
       <button type="button" class="pdf-file-remove" onclick="removePDF(${i})">×</button>
     </div>`;
   }).join('');
@@ -3905,29 +3915,58 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
   let totalPages  = 0;
 
   if (uploadedPDFs.length > 0) {
-    // ── Step 1: render visible pages as images (Gemini sees layout, tables, charts)
-    setProgress(10, currentLang === 'de'
-      ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
-      : 'Rendering PDF pages for visual analysis...');
-    try {
-      const rendered = await renderPDFPagesToImages(uploadedPDFs[0], 12);
-      pageImages  = rendered.images;
-      totalPages  = rendered.totalPages;
-    } catch (err) {
-      console.warn('Visual rendering failed, falling back to text:', err);
+    const imageFiles = uploadedPDFs.filter(isImageFile);
+    const pdfFiles   = uploadedPDFs.filter(f => !isImageFile(f));
+
+    // ── Step 1: images uploaded directly → read as base64 for Gemini Vision
+    if (imageFiles.length > 0) {
+      setProgress(10, currentLang === 'de'
+        ? 'Bilder werden geladen...'
+        : 'Loading images...');
+      for (const imgFile of imageFiles.slice(0, 10)) {
+        try {
+          const b64 = await new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = e => res(e.target.result.split(',')[1]);
+            r.onerror = rej;
+            r.readAsDataURL(imgFile);
+          });
+          pageImages.push(b64);
+          totalPages++;
+        } catch (err) {
+          console.warn('Image read failed:', err);
+        }
+      }
     }
 
-    // ── Step 2: text extraction for pages beyond the image limit (context for long docs)
+    // ── Step 2: render PDF pages as images (Gemini sees layout, tables, charts)
+    if (pdfFiles.length > 0) {
+      setProgress(15, currentLang === 'de'
+        ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
+        : 'Rendering PDF pages for visual analysis...');
+      try {
+        const rendered = await renderPDFPagesToImages(pdfFiles[0], 12);
+        pageImages  = [...pageImages, ...rendered.images];
+        totalPages  += rendered.totalPages;
+      } catch (err) {
+        console.warn('Visual rendering failed, falling back to text:', err);
+      }
+    }
+
+    // ── Step 3: text extraction from PDFs (context for long docs)
     setProgress(25, currentLang === 'de'
       ? 'Text wird extrahiert (für lange Dokumente)...'
       : 'Extracting text (for long documents)...');
-    for (const file of uploadedPDFs) {
+    for (const file of pdfFiles) {
       try {
         const text = await extractPDFText(file);
         docText += text + '\n\n';
       } catch (err) {
         docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
       }
+    }
+    if (imageFiles.length > 0 && pdfFiles.length === 0) {
+      docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
     }
 
     // If all pages were rendered visually, the text extraction is supplementary —

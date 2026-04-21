@@ -708,7 +708,8 @@
           <button type="button" class="task-shortcut" onclick="selectShortcut('reply')" data-de="✉️ E-Mail schreiben" data-en="✉️ Write email">✉️ E-Mail schreiben</button>
           <button type="button" class="task-shortcut" onclick="selectShortcut('document')" data-de="📝 Dokument erstellen" data-en="📝 Create document">📝 Dokument erstellen</button>
         </div>
-        <textarea id="task-description" rows="4" required placeholder="z.B. Sortiere meine E-Mails nach Dringlichkeit..."></textarea>
+        <label style="margin-top:10px;display:block;" data-de="Beschreibe genau was du haben möchtest (Vorlage oben auswählen oder selbst schreiben)" data-en="Describe exactly what you want (select a template above or write your own)">Beschreibe genau was du haben möchtest <span style="font-weight:400;color:var(--gray);">(Vorlage oben auswählen oder selbst anpassen)</span></label>
+        <textarea id="task-description" rows="4" required placeholder="z.B. Analysiere das PDF und erstelle einen Bericht über die wichtigsten Punkte..."></textarea>
 
         <!-- ANALYSIS DEPTH SELECTOR (Moved to Step 1) -->
         <div id="depth-selector" style="margin-top:15px; margin-bottom:20px; display:block;">
@@ -786,11 +787,11 @@
 
         <!-- PDF UPLOAD -->
         <div class="pdf-upload-area" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-          <input type="file" id="pdf-file-input" accept=".pdf" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
+          <input type="file" id="pdf-file-input" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
           <div class="pdf-upload-icon">📄</div>
           <div class="pdf-upload-text">
-            <strong data-de="PDF-Dateien hier ablegen oder klicken" data-en="Drop PDF files here or click">PDF-Dateien hier ablegen oder klicken</strong><br>
-            <span data-de="Bis zu 10 PDFs — werden nach Abschluss gelöscht" data-en="Up to 10 PDFs — deleted after completion">Bis zu 10 PDFs — werden nach Abschluss gelöscht</span>
+            <strong data-de="PDFs oder Bilder hier ablegen oder klicken" data-en="Drop PDFs or images here or click">PDFs oder Bilder hier ablegen oder klicken</strong><br>
+            <span data-de="PDF, JPG, PNG, WEBP — bis zu 10 Dateien — werden nach Abschluss gelöscht" data-en="PDF, JPG, PNG, WEBP — up to 10 files — deleted after completion">PDF, JPG, PNG, WEBP — bis zu 10 Dateien — werden nach Abschluss gelöscht</span>
           </div>
           <div class="pdf-file-list" id="pdf-file-list"></div>
         </div>
