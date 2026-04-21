@@ -814,7 +814,7 @@ ${emailList}`;
 
   let categorized = [];
   setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
-  const batchSize = 40;
+  const batchSize = 100;
   for (let i = 0; i < emails.length; i += batchSize) {
     const batch = emails.slice(i, i + batchSize);
     const batchNum = Math.floor(i / batchSize) + 1;
