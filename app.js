@@ -470,7 +470,7 @@ function chainTask(type) {
   runChain(prefix);
 }
 
-function runChain(prefix) {
+async function runChain(prefix) {
   const de = currentLang === 'de';
   const rawText = currentResult
     ? (currentResult.replace ? currentResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : String(currentResult))
@@ -480,16 +480,30 @@ function runChain(prefix) {
     return;
   }
   const input = rawText.slice(0, 6000);
-  currentShortcutType = null;
-  const td = document.getElementById('task-description');
-  td.value = prefix + input;
-  td.style.display = 'block';
-  td.required = true;
-  window.selectedAnalysisLength = 'medium';
-  window.skippedSetup = true;
+  const prompt = prefix + input;
+
   showStep('step-progress');
   document.querySelector('.agent-icon').textContent = getCharacterEmoji();
-  startTask();
+  setProgress(20, de ? 'KI verarbeitet...' : 'AI processing...');
+
+  try {
+    setProgress(55, de ? 'KI schreibt Ergebnis...' : 'AI writing result...');
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result || '';
+  } catch (err) {
+    currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
+  }
+
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+  updateChainButtons(lastCompletedTaskType);
+  showStep('step-result');
+  document.getElementById('result-content').textContent = currentResult;
 }
 
 // =====================
