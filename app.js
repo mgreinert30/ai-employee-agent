@@ -787,9 +787,10 @@ async function startGmailTask() {
     });
   }
 
-  async function categorizeBatch(batch) {
+  async function categorizeBatch(batch, totalEmails) {
     const emailList = batch.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
-    const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
+    const prompt = `Du analysierst einen Teil von insgesamt ${totalEmails} E-Mails (Nutzer hat ${totalEmails} E-Mails zur Sortierung ausgewählt).
+Kategorisiere jede dieser ${batch.length} E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
 Kategorien: DRINGEND, WICHTIG, NIEDRIG, INFO
 Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
 
@@ -821,7 +822,7 @@ ${emailList}`;
     const totalBatches = Math.ceil(emails.length / batchSize);
     setProgress(60 + Math.round((i / emails.length) * 15),
       de ? `KI kategorisiert Batch ${batchNum}/${totalBatches}...` : `AI categorising batch ${batchNum}/${totalBatches}...`);
-    const result = await categorizeBatch(batch);
+    const result = await categorizeBatch(batch, emails.length);
     categorized = categorized.concat(result);
     if (i + batchSize < emails.length) await delay(500);
   }
