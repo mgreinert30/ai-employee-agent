@@ -664,6 +664,7 @@ function initCharacterSelection() {
 const GMAIL_CLIENT_ID = '81791575409-uff7u3p59b2nk13d4ogqrg9oo7q4oq8g.apps.googleusercontent.com';
 let gmailAccessToken = null;
 let gmailWasUsed = false;
+let currentShortcutType = null;
 
 function connectGmail() {
   const btn = document.getElementById('gmail-connect-btn');
@@ -975,19 +976,20 @@ let uploadedPDFs = [];
 // TASK SHORTCUTS
 // =====================
 function selectShortcut(type) {
+  currentShortcutType = type;
   const descriptions = {
     de: {
       pdf:      'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.',
       email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
       report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
-      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
+      reply:    '',
       document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
     },
     en: {
       pdf:      'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.',
       email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
       report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
-      reply:    'Write professional and friendly replies to the provided messages or emails.',
+      reply:    '',
       document: 'Create a professional, well-structured document with clear headings and sections.'
     }
   };
@@ -1000,6 +1002,10 @@ function selectShortcut(type) {
   const ecs = document.getElementById('email-count-selector');
   if (ecs) ecs.style.display = (type === 'email') ? 'block' : 'none';
   if (type === 'email') setEmailCount(emailCount);
+  const ewr = document.getElementById('email-write-form');
+  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
+  const td = document.getElementById('task-description');
+  if (td) td.style.display = (type === 'reply') ? 'none' : 'block';
 }
 
 // =====================
@@ -1236,15 +1242,16 @@ function confirmPayment() {
   saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
   
   // Email tasks → Gmail connect step (no local agent needed)
-  if (detectTaskType(desc) === 'email') {
+  const resolvedType = currentShortcutType || detectTaskType(desc);
+  if (resolvedType === 'email') {
     window.skippedSetup = true;
     document.getElementById('gmail-step-icon').textContent = getCharacterEmoji();
     showStep('step-gmail');
     return;
   }
 
-  // Document/report creation → skip setup & apps, go straight to AI generation
-  const taskType = detectTaskType(desc);
+  // Document/report/reply creation → skip setup & apps, go straight to AI generation
+  const taskType = resolvedType;
   if (taskType === 'document' || taskType === 'report' || taskType === 'reply') {
     window.skippedSetup = true;
     startTask();
@@ -1429,6 +1436,16 @@ function clearAppSelection(key) {
 }
 
 let emailCount = 200;
+function setEmailTone(tone, btn) {
+  document.getElementById('ew-tone').value = tone;
+  document.querySelectorAll('#email-write-form button[type="button"]').forEach(b => {
+    b.style.border = '1.5px solid rgba(255,255,255,0.1)';
+    b.style.background = 'rgba(255,255,255,0.04)';
+  });
+  btn.style.border = '1.5px solid var(--accent)';
+  btn.style.background = 'rgba(37,99,235,0.15)';
+}
+
 function setEmailCount(count) {
   emailCount = count;
   [200, 500, 1000].forEach(n => {
@@ -1513,11 +1530,24 @@ async function startTask() {
             ? [[10,`${name} analysiert die Aufgabe...`],[25,`${name} wählt den besten Ansatz...`],[45,`${name} arbeitet an deiner Aufgabe...`],[65,`${name} verarbeitet die Ergebnisse...`],[85,`${name} bereitet dein Ergebnis vor...`],[100,'Fertig! Deine Ergebnisse sind bereit.']]
             : [[10,`${name} is analysing the task...`],[25,`${name} is choosing the best approach...`],[45,`${name} is working on your task...`],[65,`${name} is processing the results...`],[85,`${name} is preparing your results...`],[100,'Done! Your results are ready.']]);
 
-  const taskDesc = document.getElementById('task-description').value;
+  let taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
+
+  // For email writing form, build prompt from structured fields
+  if (currentShortcutType === 'reply') {
+    const to      = document.getElementById('ew-to')?.value || '';
+    const subject = document.getElementById('ew-subject')?.value || '';
+    const points  = document.getElementById('ew-points')?.value || '';
+    const tone    = document.getElementById('ew-tone')?.value || 'professionell';
+    const de = currentLang === 'de';
+    taskDesc = de
+      ? `Schreibe eine ${tone}e E-Mail an: ${to}.\nBetreff: ${subject}.\nFolgendes muss enthalten sein: ${points}.\nSchreibe eine vollständige E-Mail mit Anrede, Hauptteil und Grußformel. Lass 2-3 Stellen mit [ERGÄNZEN] offen, wo der Absender noch persönliche Details einfügen soll.`
+      : `Write a ${tone} email to: ${to}.\nSubject: ${subject}.\nMust include: ${points}.\nWrite a complete email with greeting, body, and sign-off. Leave 2-3 spots marked [ADD] where the sender should fill in personal details.`;
+  }
+
   // Always use real AI for document/report/reply creation (no PDF required)
-  const taskKind = detectTaskType(taskDesc);
+  const taskKind = currentShortcutType || detectTaskType(taskDesc);
   const useRealAI = uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply';
 
   if (useRealAI) {
@@ -2419,6 +2449,7 @@ function resetForm() {
   selectedPaymentMethod = null; currentEstimate = null;
   gmailAccessToken = null;
   gmailWasUsed = false;
+  currentShortcutType = null;
   showStep('step-form');
 }
 
@@ -3747,7 +3778,7 @@ async function renderPDFPagesToImages(file, maxPages = 12) {
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
-  const taskKind = detectTaskType(taskDesc);
+  const taskKind = currentShortcutType || detectTaskType(taskDesc);
   const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
   const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
   window.currentDocType = docType;

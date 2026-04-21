@@ -756,6 +756,34 @@
           </div>
         </div>
 
+        <!-- EMAIL WRITE FORM (shown only for Antworten schreiben) -->
+        <div id="email-write-form" style="display:none;margin-top:15px;margin-bottom:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;">
+          <p style="font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text);" data-de="✉️ E-Mail Details" data-en="✉️ Email Details">✉️ E-Mail Details</p>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="An wen geht die E-Mail?" data-en="Who is the email to?">An wen geht die E-Mail?</label>
+              <input type="text" id="ew-to" placeholder="z.B. Herr Müller, Kundendienst, mein Chef..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;" />
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="Thema / Betreff" data-en="Topic / Subject">Thema / Betreff</label>
+              <input type="text" id="ew-subject" placeholder="z.B. Rechnungsanfrage, Terminabsage, Bewerbung..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;" />
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="Was muss enthalten sein? (Stichpunkte)" data-en="What must be included? (key points)">Was muss enthalten sein?</label>
+              <textarea id="ew-points" rows="3" placeholder="z.B. Datum des Problems, Rechnungsnummer 4521, Bitte um Rückruf..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Ton der E-Mail" data-en="Email tone">Ton der E-Mail</label>
+              <div style="display:flex;gap:8px;">
+                <button type="button" onclick="setEmailTone('professionell', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--text);cursor:pointer;font-size:12px;">🤝 Professionell</button>
+                <button type="button" onclick="setEmailTone('freundlich', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:12px;">😊 Freundlich</button>
+                <button type="button" onclick="setEmailTone('formal', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:12px;">🎩 Formal</button>
+              </div>
+              <input type="hidden" id="ew-tone" value="professionell" />
+            </div>
+          </div>
+        </div>
+
         <!-- PDF UPLOAD -->
         <div class="pdf-upload-area" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
           <input type="file" id="pdf-file-input" accept=".pdf" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
