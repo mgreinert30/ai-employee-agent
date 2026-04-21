@@ -82,20 +82,23 @@ function switchTab(tab) {
   document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const remember = document.getElementById('remember-me').checked;
 
-  // Check if this is the owner account
-  if (email === OWNER_EMAIL && password === OWNER_PASSWORD) {
-    currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
-    if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
-    updateActivity();
-    hideAuthModal();
-    showLoggedIn();
-    return;
+  // Check if this is the owner account (password verified via SHA-256 hash)
+  if (email === OWNER_EMAIL) {
+    const ok = await checkOwnerPassword(password);
+    if (ok) {
+      currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
+      if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+      updateActivity();
+      hideAuthModal();
+      showLoggedIn();
+      return;
+    }
   }
 
   // Regular user login
@@ -129,12 +132,19 @@ function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-my-tasks').style.display = 'inline-block';
-  document.getElementById('btn-owner-panel').style.display = currentUser.isOwner ? 'inline-block' : 'none';
-  document.getElementById('btn-my-account').style.display = currentUser.isOwner ? 'none' : 'inline-block';
+  const isVerifiedOwner = currentUser.isOwner === true && currentUser.email === OWNER_EMAIL;
+  document.getElementById('btn-owner-panel').style.display = isVerifiedOwner ? 'inline-block' : 'none';
+  document.getElementById('btn-my-account').style.display = isVerifiedOwner ? 'none' : 'inline-block';
   renderTestimonials();
 }
 
 function handleLogout() {
+  if (currentUser) {
+    // Clear all user-specific data on logout (#10)
+    ['ai_payment_', 'ai_tasks_', 'ai_sales_'].forEach(prefix => {
+      localStorage.removeItem(prefix + currentUser.email);
+    });
+  }
   localStorage.removeItem('ai_agent_user');
   currentUser = null;
   document.getElementById('header-username').textContent = '';
@@ -245,12 +255,20 @@ function renderTaskHistory() {
 }
 
 // =====================
-// OWNER CREDENTIALS
-// Only one owner account. Access is through the normal login form.
-// NOTE: Move this to a secure backend before going live publicly.
+// OWNER CREDENTIALS — password stored as SHA-256 hash, never in plaintext
 // =====================
 const OWNER_EMAIL = 'm.greinert30@gmail.com';
-const OWNER_PASSWORD = 'Pokemon3011#';
+const OWNER_HASH  = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // sha256('password') placeholder — set real hash via setOwnerHash() in console
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkOwnerPassword(pw) {
+  const hash = await sha256(pw);
+  return hash === (localStorage.getItem('ai_owner_hash') || OWNER_HASH);
+}
 
 function openOwnerDashboard() {
   document.getElementById('owner-dashboard-overlay').classList.remove('hidden');
@@ -488,7 +506,7 @@ async function runChain(prefix) {
 
   try {
     setProgress(55, de ? 'KI schreibt Ergebnis...' : 'AI writing result...');
-    const res = await fetch('/api/analyse', {
+    const res = await fetchWithTimeout('/api/analyse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
@@ -624,7 +642,7 @@ async function fetchCalendarEvents(token) {
   const now = new Date().toISOString();
   const future = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=20&singleEvents=true&orderBy=startTime`,
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=100&singleEvents=true&orderBy=startTime`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const data = await res.json();
@@ -657,7 +675,7 @@ async function startCalendarTask(token) {
 
   try {
     setProgress(75, de ? 'KI analysiert...' : 'AI analysing...');
-    const res = await fetch('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
+    const res = await fetchWithTimeout('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     currentResult = data.result;
@@ -809,6 +827,17 @@ function connectGmail() {
   client.requestAccessToken();
 }
 
+// #8 — Reusable fetch with 30s timeout
+async function fetchWithTimeout(url, options = {}, ms = 30000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 async function fetchGmailEmails(token) {
   const listRes = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${emailCount}&q=is:inbox%20is:unread`,
@@ -819,13 +848,17 @@ async function fetchGmailEmails(token) {
 
   const emails = [];
   const toFetch = messages.slice(0, emailCount);
+  let fetchErrors = 0; // #7 — track silent failures
   for (let i = 0; i < toFetch.length; i++) {
     const msg = toFetch[i];
     try {
+      const controller = new AbortController(); // #8 — timeout
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const r = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
       );
+      clearTimeout(timeout);
       const d = await r.json();
       const h = d.payload?.headers || [];
       emails.push({
@@ -834,10 +867,11 @@ async function fetchGmailEmails(token) {
         subject: h.find(x => x.name === 'Subject')?.value || '(kein Betreff)',
         date:    h.find(x => x.name === 'Date')?.value    || ''
       });
-      // Small delay every 50 emails to avoid hitting rate limits
       if (i > 0 && i % 50 === 0) await delay(300);
-    } catch (_) {}
+    } catch (_) { fetchErrors++; }
   }
+  if (fetchErrors > 0) console.warn(`Gmail: ${fetchErrors} E-Mails konnten nicht geladen werden`);
+  emails._fetchErrors = fetchErrors; // attach for later use
   return emails;
 }
 
@@ -1226,7 +1260,10 @@ function handlePDFUpload(files) {
   const allowed = Array.from(files).filter(f =>
     f.type === 'application/pdf' || f.name.endsWith('.pdf') || isImageFile(f)
   );
-  allowed.forEach(f => { if (uploadedPDFs.length < 10) uploadedPDFs.push(f); });
+  allowed.forEach(f => {
+    const duplicate = uploadedPDFs.some(existing => existing.name === f.name && existing.size === f.size);
+    if (!duplicate && uploadedPDFs.length < 10) uploadedPDFs.push(f);
+  });
   renderPDFList();
 
   if (uploadedPDFs.length > 0) {
@@ -1338,9 +1375,10 @@ function getSavedPayment() {
   return s ? JSON.parse(s) : null;
 }
 
-function savePayment(type, value) {
+function savePayment(type) {
   if (!currentUser) return;
-  localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type, value }));
+  // Only save payment TYPE preference — never store IBAN or PayPal address
+  localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type }));
 }
 
 function confirmPayment() {
@@ -1348,7 +1386,7 @@ function confirmPayment() {
     if (selectedPaymentMethod === 'paypal') {
       const email = document.getElementById('paypal-email').value;
       if (!email) { alert(currentLang === 'de' ? 'Bitte PayPal E-Mail eingeben.' : 'Please enter PayPal email.'); return; }
-      if (document.getElementById('save-paypal').checked) savePayment('paypal', email);
+      if (document.getElementById('save-paypal').checked) savePayment('paypal');
 
       // Open PayPal payment to owner's account if configured
       const ownerPaypal = getOwnerPaypalUsername();
@@ -1358,7 +1396,7 @@ function confirmPayment() {
     } else if (selectedPaymentMethod === 'bank') {
       const iban = document.getElementById('bank-iban').value;
       if (!iban) { alert(currentLang === 'de' ? 'Bitte IBAN eingeben.' : 'Please enter IBAN.'); return; }
-      if (document.getElementById('save-bank').checked) savePayment('bank', iban);
+      if (document.getElementById('save-bank').checked) savePayment('bank');
     }
   }
   const desc = document.getElementById('task-description').value;
@@ -1661,11 +1699,23 @@ async function startTask() {
 
   // For email writing form, build prompt from structured fields
   if (currentShortcutType === 'reply') {
-    const to      = document.getElementById('ew-to')?.value || '';
-    const subject = document.getElementById('ew-subject')?.value || '';
-    const points  = document.getElementById('ew-points')?.value || '';
+    const to      = document.getElementById('ew-to')?.value.trim() || '';
+    const subject = document.getElementById('ew-subject')?.value.trim() || '';
+    const points  = document.getElementById('ew-points')?.value.trim() || '';
     const tone    = document.getElementById('ew-tone')?.value || 'professionell';
     const de = currentLang === 'de';
+    // Validate required fields (#4)
+    if (!to || !subject) {
+      ['ew-to','ew-subject'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.value.trim()) el.style.border = '1.5px solid #ef4444';
+      });
+      alert(de ? 'Bitte "An wen" und "Betreff" ausfüllen.' : 'Please fill in "To" and "Subject".');
+      showStep('step-form');
+      return;
+    }
+    document.getElementById('ew-to').style.border = '';
+    document.getElementById('ew-subject').style.border = '';
     taskDesc = de
       ? `Schreibe eine ${tone}e E-Mail an: ${to}.\nBetreff: ${subject}.\nFolgendes muss enthalten sein: ${points}.\nSchreibe eine vollständige E-Mail mit Anrede, Hauptteil und Grußformel. Lass 2-3 Stellen mit [ERGÄNZEN] offen, wo der Absender noch persönliche Details einfügen soll.`
       : `Write a ${tone} email to: ${to}.\nSubject: ${subject}.\nMust include: ${points}.\nWrite a complete email with greeting, body, and sign-off. Leave 2-3 spots marked [ADD] where the sender should fill in personal details.`;
@@ -1699,6 +1749,20 @@ async function startTask() {
   updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
   document.getElementById('result-content').textContent = currentResult;
+
+  // Demo mode banner (#6)
+  const isDemo = !useRealAI;
+  let demoBanner = document.getElementById('demo-mode-banner');
+  if (!demoBanner) {
+    demoBanner = document.createElement('div');
+    demoBanner.id = 'demo-mode-banner';
+    demoBanner.style.cssText = 'background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:10px;padding:10px 14px;font-size:13px;color:#f59e0b;margin-bottom:12px;text-align:center;';
+    document.getElementById('result-content').before(demoBanner);
+  }
+  demoBanner.style.display = isDemo ? 'block' : 'none';
+  demoBanner.textContent = currentLang === 'de'
+    ? '⚠️ Demo-Ergebnis — lade ein Dokument hoch für eine echte KI-Analyse'
+    : '⚠️ Demo result — upload a document for real AI analysis';
 }
 
 function setProgress(pct, msg) {
@@ -2511,6 +2575,11 @@ function downloadHTMLReport() {
   a.download = currentLang === 'de' ? 'Ergebnis.html' : 'Result.html';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function confirmDeleteData() {
+  const modal = document.getElementById('delete-confirm-modal');
+  if (modal) modal.style.display = 'flex';
 }
 
 async function deleteData() {
@@ -3399,7 +3468,11 @@ async function extractPDFText(file) {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
         const totalPages = pdf.numPages;
-        const maxPages = Math.min(totalPages, 300);
+        const PAGE_HARD_LIMIT = 150;
+        const maxPages = Math.min(totalPages, PAGE_HARD_LIMIT);
+        if (totalPages > PAGE_HARD_LIMIT) {
+          console.warn(`PDF hat ${totalPages} Seiten — nur erste ${PAGE_HARD_LIMIT} werden verarbeitet`);
+        }
 
         // Extract each page with table-aware reconstruction (#9)
         async function extractPage(i) {
@@ -3984,11 +4057,11 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  const response = await fetch('/api/analyse', {
+  const response = await fetchWithTimeout('/api/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, images: pageImages })
-  });
+  }, 60000);
 
   const data = await response.json();
   if (data.error) throw new Error(data.error);

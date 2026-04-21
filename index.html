@@ -1005,7 +1005,20 @@
         <div id="result-content" class="result-content"></div>
         <div class="result-buttons">
           <button onclick="downloadResult()" class="btn-primary" id="btn-download-result" data-de="⬇️ Ergebnis runterladen und in Dateien sichern" data-en="⬇️ Download result and save to files">⬇️ Ergebnis runterladen und in Dateien sichern</button>
-          <button onclick="deleteData()" class="btn-delete" data-de="🗑 Alle meine Daten löschen" data-en="🗑 Delete all my data">🗑 Alle meine Daten löschen</button>
+          <button onclick="confirmDeleteData()" class="btn-delete" data-de="🗑 Alle meine Daten löschen" data-en="🗑 Delete all my data">🗑 Alle meine Daten löschen</button>
+
+          <!-- Delete confirmation modal (#5) -->
+          <div id="delete-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:none;align-items:center;justify-content:center;">
+            <div style="background:#1a2235;border:1px solid rgba(239,68,68,0.4);border-radius:18px;padding:32px;max-width:360px;margin:16px;text-align:center;">
+              <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+              <h3 style="color:#ef4444;margin-bottom:10px;" data-de="Wirklich alle Daten löschen?" data-en="Really delete all data?">Wirklich alle Daten löschen?</h3>
+              <p style="color:#94a3b8;font-size:14px;margin-bottom:24px;" data-de="Alle Aufgabendaten, Zahlungsinfos und Ergebnisse werden unwiderruflich gelöscht." data-en="All task data, payment info and results will be permanently deleted.">Alle Aufgabendaten, Zahlungsinfos und Ergebnisse werden unwiderruflich gelöscht.</p>
+              <div style="display:flex;gap:12px;justify-content:center;">
+                <button onclick="document.getElementById('delete-confirm-modal').style.display='none'" style="padding:10px 22px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#f1f5f9;cursor:pointer;font-size:14px;" data-de="Abbrechen" data-en="Cancel">Abbrechen</button>
+                <button onclick="document.getElementById('delete-confirm-modal').style.display='none';deleteData()" style="padding:10px 22px;border-radius:10px;border:none;background:#ef4444;color:white;cursor:pointer;font-size:14px;font-weight:600;" data-de="Ja, löschen" data-en="Yes, delete">Ja, löschen</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- CHAIN ACTIONS (#5 Multi-Step) -->
