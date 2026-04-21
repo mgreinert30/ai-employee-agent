@@ -808,12 +808,30 @@ ${emailList}`;
   setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
 
   // Create parent label first — Gmail requires parent to exist before children
-  try { await getOrCreateLabel(gmailAccessToken, 'KI-Sortierung'); } catch (_) {}
+  try { await getOrCreateLabel(gmailAccessToken, 'KI-Sortierung'); } catch (e) {
+    console.error('Parent label error:', e);
+  }
   const categories = ['DRINGEND', 'WICHTIG', 'NIEDRIG', 'INFO'];
   const labelPrefix = 'KI-Sortierung/';
   const labelIds = {};
   for (const cat of categories) {
-    try { labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat); } catch (_) {}
+    try {
+      labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat);
+    } catch (e) {
+      console.error(`Label error for ${cat}:`, e);
+    }
+  }
+
+  const noLabels = Object.values(labelIds).every(v => !v);
+  if (noLabels) {
+    currentResult = de
+      ? '⚠️ Gmail Labels konnten nicht erstellt werden. Bitte prüfe die Gmail-Berechtigungen und versuche es erneut.'
+      : '⚠️ Gmail labels could not be created. Please check Gmail permissions and try again.';
+    setProgress(100, de ? 'Fehler.' : 'Error.');
+    showStep('step-result');
+    document.getElementById('result-content').innerHTML = `<div style="text-align:center;padding:20px;color:#ef4444;font-size:15px;">⚠️ ${de ? 'Labels konnten nicht in Gmail erstellt werden.<br><br>Bitte stelle sicher dass du die Gmail-Berechtigung vollständig erteilt hast, und versuche es erneut.' : 'Labels could not be created in Gmail.<br><br>Please ensure you granted full Gmail permission and try again.'}</div>`;
+    gmailAccessToken = null;
+    return;
   }
 
   setProgress(88, de ? `${name} sortiert E-Mails in Gmail...` : `${name} sorting emails in Gmail...`);
@@ -822,7 +840,9 @@ ${emailList}`;
   for (const item of categorized) {
     const labelId = labelIds[item.kategorie];
     if (labelId && item.id) {
-      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (_) {}
+      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (e) {
+        console.error('applyLabel error:', e);
+      }
     }
   }
 
