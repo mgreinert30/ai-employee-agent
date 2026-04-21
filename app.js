@@ -948,7 +948,7 @@ function detectTaskType(description) {
 
 function estimateTask(description) {
   const depth = window.selectedAnalysisLength || 'medium';
-  const type = detectTaskType(description);
+  const type = currentShortcutType || detectTaskType(description);
   if (type === 'email') {
     // Email: price/time determined by emailCount, not depth
     const emailTiers = {
@@ -1005,7 +1005,7 @@ function selectShortcut(type) {
   const ewr = document.getElementById('email-write-form');
   if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
   const td = document.getElementById('task-description');
-  if (td) td.style.display = (type === 'reply') ? 'none' : 'block';
+  if (td) { td.style.display = (type === 'reply') ? 'none' : 'block'; td.required = (type !== 'reply'); }
 }
 
 // =====================
@@ -1078,6 +1078,7 @@ function pickService(type) {
   const td = document.getElementById('task-description');
   td.value = descriptions[currentLang]?.[type] || descriptions['de'][type];
   td.style.display = (type === 'reply') ? 'none' : 'block';
+  td.required = (type !== 'reply');
   document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
   if (btn) btn.classList.add('active');
