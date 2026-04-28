@@ -76,7 +76,7 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
-    generationConfig: { maxOutputTokens: 8192, temperature: 0.3, topP: 0.9, topK: 40 },
+    generationConfig: { maxOutputTokens: 65536, temperature: 0.3, topP: 0.9, topK: 40 },
   });
 
   const allErrors = [];

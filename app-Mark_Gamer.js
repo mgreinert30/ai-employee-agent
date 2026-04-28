@@ -60,7 +60,6 @@ function loadAuth() {
   else if (differentDevice) showAuthModal('device');
   else {
     currentUser = JSON.parse(saved);
-    if (currentUser.email === OWNER_EMAIL) currentUser.isOwner = true;
     showLoggedIn();
   }
 }
@@ -83,23 +82,20 @@ function switchTab(tab) {
   document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
 }
 
-async function handleLogin(e) {
+function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const remember = document.getElementById('remember-me').checked;
 
-  // Check if this is the owner account (password verified via SHA-256 hash)
-  if (email === OWNER_EMAIL) {
-    const ok = await checkOwnerPassword(password);
-    if (ok) {
-      currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
-      if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
-      updateActivity();
-      hideAuthModal();
-      showLoggedIn();
-      return;
-    }
+  // Check if this is the owner account
+  if (email === OWNER_EMAIL && password === OWNER_PASSWORD) {
+    currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
+    if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+    updateActivity();
+    hideAuthModal();
+    showLoggedIn();
+    return;
   }
 
   // Regular user login
@@ -133,19 +129,12 @@ function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
   document.getElementById('btn-logout').style.display = 'inline-block';
   document.getElementById('btn-my-tasks').style.display = 'inline-block';
-  const isVerifiedOwner = currentUser.email === OWNER_EMAIL;
-  document.getElementById('btn-owner-panel').style.display = isVerifiedOwner ? 'inline-block' : 'none';
-  document.getElementById('btn-my-account').style.display = isVerifiedOwner ? 'none' : 'inline-block';
+  document.getElementById('btn-owner-panel').style.display = currentUser.isOwner ? 'inline-block' : 'none';
+  document.getElementById('btn-my-account').style.display = currentUser.isOwner ? 'none' : 'inline-block';
   renderTestimonials();
 }
 
 function handleLogout() {
-  if (currentUser) {
-    // Clear all user-specific data on logout (#10)
-    ['ai_payment_', 'ai_tasks_', 'ai_sales_'].forEach(prefix => {
-      localStorage.removeItem(prefix + currentUser.email);
-    });
-  }
   localStorage.removeItem('ai_agent_user');
   currentUser = null;
   document.getElementById('header-username').textContent = '';
@@ -256,20 +245,12 @@ function renderTaskHistory() {
 }
 
 // =====================
-// OWNER CREDENTIALS — password stored as SHA-256 hash, never in plaintext
+// OWNER CREDENTIALS
+// Only one owner account. Access is through the normal login form.
+// NOTE: Move this to a secure backend before going live publicly.
 // =====================
 const OWNER_EMAIL = 'm.greinert30@gmail.com';
-const OWNER_HASH  = 'fe40170f1db7f798f76c1129880d842287e19476a1d8570bbe03e7e28e9a7f4b';
-
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-async function checkOwnerPassword(pw) {
-  const hash = await sha256(pw);
-  return hash === (localStorage.getItem('ai_owner_hash') || OWNER_HASH);
-}
+const OWNER_PASSWORD = 'Pokemon3011#';
 
 function openOwnerDashboard() {
   document.getElementById('owner-dashboard-overlay').classList.remove('hidden');
@@ -395,134 +376,26 @@ function getLearningContext(isDE) {
 // =====================
 // #5 MULTI-STEP (Task Chaining)
 // =====================
-let lastCompletedTaskType = null;
-
-function updateChainButtons(taskType) {
-  const de = currentLang === 'de';
-  const labels = {
-    reply: {
-      shorten:   de ? '📝 E-Mail kürzer fassen'  : '📝 Shorten email',
-      translate: de ? '🌍 E-Mail übersetzen'      : '🌍 Translate email',
-      report:    de ? '📊 Als Bericht'            : '📊 As Report',
-      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
-    },
-    email: {
-      shorten:   de ? '📝 Zusammenfassung kürzen' : '📝 Shorten summary',
-      translate: de ? '🌍 Übersetzen'             : '🌍 Translate',
-      report:    de ? '📊 Als Bericht'            : '📊 As Report',
-      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
-    },
-    pdf: {
-      shorten:   de ? '📝 Analyse kürzen'         : '📝 Shorten analysis',
-      translate: de ? '🌍 Analyse übersetzen'     : '🌍 Translate analysis',
-      report:    de ? '📊 Als Bericht'            : '📊 As Report',
-      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
-    },
-    document: {
-      shorten:   de ? '📝 Dokument kürzen'        : '📝 Shorten document',
-      translate: de ? '🌍 Dokument übersetzen'    : '🌍 Translate document',
-      report:    de ? '📊 Als Bericht'            : '📊 As Report',
-      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
-    },
-    report: {
-      shorten:   de ? '📝 Bericht kürzen'         : '📝 Shorten report',
-      translate: de ? '🌍 Bericht übersetzen'     : '🌍 Translate report',
-      report:    de ? '📊 Als Bericht'            : '📊 As Report',
-      bullets:   de ? '• Stichpunkte'             : '• Bullet points',
-    },
-  };
-  const set = labels[taskType] || labels.report;
-  const b = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
-  b('chain-btn-shorten',   set.shorten);
-  b('chain-btn-translate', set.translate);
-  b('chain-btn-report',    set.report);
-  b('chain-btn-bullets',   set.bullets);
-  const lp = document.getElementById('lang-picker');
-  if (lp) lp.style.display = 'none';
-}
-
-function showLangPicker() {
-  const lp = document.getElementById('lang-picker');
-  if (lp) lp.style.display = lp.style.display === 'none' ? 'block' : 'none';
-}
-
-function chainTranslate(language) {
-  document.getElementById('lang-picker').style.display = 'none';
-  const de = currentLang === 'de';
-  const taskType = lastCompletedTaskType || 'report';
-  const contextWord = {
-    reply: de ? 'E-Mail' : 'email',
-    pdf: de ? 'Analyse' : 'analysis',
-    document: de ? 'Dokument' : 'document',
-    report: de ? 'Bericht' : 'report',
-    email: de ? 'Text' : 'text',
-  }[taskType] || (de ? 'Text' : 'text');
-  const prefix = de
-    ? `Übersetze folgenden ${contextWord} vollständig und professionell ins ${language}e. Behalte Struktur und Formatierung bei:\n\n`
-    : `Translate the following ${contextWord} completely and professionally into ${language}. Keep the structure and formatting:\n\n`;
-  runChain(prefix);
-}
-
 function chainTask(type) {
   const de = currentLang === 'de';
-  const taskType = lastCompletedTaskType || 'report';
-  const contextWord = {
-    reply: de ? 'E-Mail' : 'email',
-    pdf: de ? 'Analyse' : 'analysis',
-    document: de ? 'Dokument' : 'document',
-    report: de ? 'Bericht' : 'report',
-    email: de ? 'Text' : 'text',
-  }[taskType] || (de ? 'Text' : 'text');
-
   const instructions = {
-    shorten: de
-      ? `Fasse folgende ${contextWord} in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen. Gib nur die gekürzte ${contextWord} aus, kein Kommentar:\n\n`
-      : `Summarise the following ${contextWord} in 50% shorter — keep all key points, remove filler. Output only the shortened ${contextWord}, no commentary:\n\n`,
-    report: de
-      ? `Erstelle aus folgendem ${contextWord}-Inhalt einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n`
-      : `Create a professional report with executive summary, key findings and recommendations from the following ${contextWord} content:\n\n`,
-    bullets: de
-      ? `Forme folgende ${contextWord} in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n`
-      : `Convert the following ${contextWord} into concise, clearly structured bullet points — no prose:\n\n`,
+    shorten:  de ? 'Fasse folgenden Text in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen:\n\n'
+                 : 'Summarise the following text in 50% shorter — keep all key points, remove filler:\n\n',
+    translate:de ? 'Übersetze folgenden Text vollständig und professionell ins Englische:\n\n'
+                 : 'Translate the following text completely and professionally into German:\n\n',
+    report:   de ? 'Erstelle aus folgendem Text einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n'
+                 : 'Create a professional report with executive summary, key findings and recommendations from the following text:\n\n',
+    bullets:  de ? 'Forme folgenden Text in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n'
+                 : 'Convert the following text into concise, clearly structured bullet points — no prose:\n\n'
   };
   const prefix = instructions[type] || instructions.shorten;
-  runChain(prefix);
-}
-
-async function runChain(prefix) {
-  const de = currentLang === 'de';
-  const rawText = currentResult
-    ? (currentResult.replace ? currentResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : String(currentResult))
-    : '';
-  if (!rawText || rawText.length < 20) {
-    alert(de ? 'Kein Textinhalt zum Weiterverarbeiten verfügbar.' : 'No text content available to process.');
-    return;
-  }
-  const input = rawText.slice(0, 6000);
-  const prompt = prefix + input;
-
+  const input = currentResult ? currentResult.slice(0, 5000) : '';
+  document.getElementById('task-description').value = prefix + input;
+  window.selectedAnalysisLength = 'medium';
+  window.skippedSetup = true;
   showStep('step-progress');
   document.querySelector('.agent-icon').textContent = getCharacterEmoji();
-  setProgress(20, de ? 'KI verarbeitet...' : 'AI processing...');
-
-  try {
-    setProgress(55, de ? 'KI schreibt Ergebnis...' : 'AI writing result...');
-    const res = await fetchWithTimeout('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    currentResult = data.result || '';
-  } catch (err) {
-    currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
-  }
-
-  setProgress(100, de ? 'Fertig!' : 'Done!');
-  updateChainButtons(lastCompletedTaskType);
-  showStep('step-result');
-  document.getElementById('result-content').textContent = currentResult;
+  startTask();
 }
 
 // =====================
@@ -643,7 +516,7 @@ async function fetchCalendarEvents(token) {
   const now = new Date().toISOString();
   const future = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=100&singleEvents=true&orderBy=startTime`,
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${future}&maxResults=20&singleEvents=true&orderBy=startTime`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const data = await res.json();
@@ -676,7 +549,7 @@ async function startCalendarTask(token) {
 
   try {
     setProgress(75, de ? 'KI analysiert...' : 'AI analysing...');
-    const res = await fetchWithTimeout('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
+    const res = await fetch('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     currentResult = data.result;
@@ -790,8 +663,6 @@ function initCharacterSelection() {
 // =====================
 const GMAIL_CLIENT_ID = '81791575409-uff7u3p59b2nk13d4ogqrg9oo7q4oq8g.apps.googleusercontent.com';
 let gmailAccessToken = null;
-let gmailWasUsed = false;
-let currentShortcutType = null;
 
 function connectGmail() {
   const btn = document.getElementById('gmail-connect-btn');
@@ -819,7 +690,6 @@ function connectGmail() {
         return;
       }
       gmailAccessToken = response.access_token;
-      gmailWasUsed = true;
       btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analyse startet...' : '✓ Connected — Starting analysis...';
       status.style.display = 'none';
       await startGmailTask();
@@ -828,38 +698,21 @@ function connectGmail() {
   client.requestAccessToken();
 }
 
-// #8 — Reusable fetch with 30s timeout
-async function fetchWithTimeout(url, options = {}, ms = 30000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(id);
-  }
-}
-
 async function fetchGmailEmails(token) {
   const listRes = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${emailCount}&q=is:inbox%20is:unread`,
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=is:inbox',
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const listData = await listRes.json();
   const messages = listData.messages || [];
 
   const emails = [];
-  const toFetch = messages.slice(0, emailCount);
-  let fetchErrors = 0; // #7 — track silent failures
-  for (let i = 0; i < toFetch.length; i++) {
-    const msg = toFetch[i];
+  for (const msg of messages.slice(0, 20)) {
     try {
-      const controller = new AbortController(); // #8 — timeout
-      const timeout = setTimeout(() => controller.abort(), 8000);
       const r = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
-        { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      clearTimeout(timeout);
       const d = await r.json();
       const h = d.payload?.headers || [];
       emails.push({
@@ -868,11 +721,8 @@ async function fetchGmailEmails(token) {
         subject: h.find(x => x.name === 'Subject')?.value || '(kein Betreff)',
         date:    h.find(x => x.name === 'Date')?.value    || ''
       });
-      if (i > 0 && i % 50 === 0) await delay(300);
-    } catch (_) { fetchErrors++; }
+    } catch (_) {}
   }
-  if (fetchErrors > 0) console.warn(`Gmail: ${fetchErrors} E-Mails konnten nicht geladen werden`);
-  emails._fetchErrors = fetchErrors; // attach for later use
   return emails;
 }
 
@@ -908,7 +758,7 @@ async function startGmailTask() {
 
   setProgress(5,  de ? `${name} verbindet sich mit Gmail...` : `${name} connecting to Gmail...`);
   await delay(600);
-  setProgress(15, de ? `${name} lädt bis zu ${emailCount} E-Mails...` : `${name} loading up to ${emailCount} emails...`);
+  setProgress(20, de ? `${name} liest deine E-Mails...`     : `${name} reading your emails...`);
 
   let emails = [];
   try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
@@ -922,84 +772,42 @@ async function startGmailTask() {
 
   setProgress(40, de ? `${name} analysiert ${emails.length} E-Mails...` : `${name} analysing ${emails.length} emails...`);
 
-  function keywordCategorize(batch) {
-    const urgentWords = ['dringend','urgent','sofort','fällig','deadline','asap','wichtig','kritisch'];
-    const spamWords = ['newsletter','rabatt','sale','promo','werb','abmelden','angebot','sonderangebot','unsubscribe'];
-    return batch.map(e => {
-      const text = (e.from + ' ' + e.subject).toLowerCase();
-      if (spamWords.some(w => text.includes(w))) return { id: e.id, kategorie: 'INFO' };
-      if (urgentWords.some(w => text.includes(w))) return { id: e.id, kategorie: 'DRINGEND' };
-      return { id: e.id, kategorie: 'WICHTIG' };
-    });
-  }
-
-  async function categorizeBatch(batch, totalEmails) {
-    const emailList = batch.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
-    const prompt = `Du analysierst einen Teil von insgesamt ${totalEmails} E-Mails (Nutzer hat ${totalEmails} E-Mails zur Sortierung ausgewählt).
-Kategorisiere jede dieser ${batch.length} E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
+  const emailList = emails.map(e => `[ID:${e.id}] Von: ${e.from} | Betreff: ${e.subject}`).join('\n');
+  const prompt = `Kategorisiere jede dieser E-Mails. Antworte NUR mit einem JSON-Array, kein Text davor oder danach.
 Kategorien: DRINGEND, WICHTIG, NIEDRIG, INFO
 Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
 
 E-Mails:
 ${emailList}`;
-    try {
-      const res = await fetch('/api/analyse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      let data;
-      try { data = await res.json(); } catch (_) { return keywordCategorize(batch); }
-      if (data.error || !data.result) return keywordCategorize(batch);
-      const jsonMatch = data.result.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) return keywordCategorize(batch);
-      return JSON.parse(jsonMatch[0]);
-    } catch (_) {
-      return keywordCategorize(batch);
-    }
-  }
 
   let categorized = [];
-  setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
-  const batchSize = 100;
-  for (let i = 0; i < emails.length; i += batchSize) {
-    const batch = emails.slice(i, i + batchSize);
-    const batchNum = Math.floor(i / batchSize) + 1;
-    const totalBatches = Math.ceil(emails.length / batchSize);
-    setProgress(60 + Math.round((i / emails.length) * 15),
-      de ? `KI kategorisiert Batch ${batchNum}/${totalBatches}...` : `AI categorising batch ${batchNum}/${totalBatches}...`);
-    const result = await categorizeBatch(batch, emails.length);
-    categorized = categorized.concat(result);
-    if (i + batchSize < emails.length) await delay(500);
+  try {
+    setProgress(60, de ? 'KI kategorisiert E-Mails...' : 'AI categorising emails...');
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const jsonMatch = data.result.match(/\[[\s\S]*\]/);
+    if (jsonMatch) categorized = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    currentResult = (de ? '⚠️ Kategorisierung fehlgeschlagen: ' : '⚠️ Categorisation failed: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    gmailAccessToken = null;
+    return;
   }
 
   setProgress(75, de ? `${name} erstellt Labels in Gmail...` : `${name} creating labels in Gmail...`);
 
-  // Create parent label first — Gmail requires parent to exist before children
-  try { await getOrCreateLabel(gmailAccessToken, 'KI-Sortierung'); } catch (e) {
-    console.error('Parent label error:', e);
-  }
   const categories = ['DRINGEND', 'WICHTIG', 'NIEDRIG', 'INFO'];
   const labelPrefix = 'KI-Sortierung/';
   const labelIds = {};
   for (const cat of categories) {
-    try {
-      labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat);
-    } catch (e) {
-      console.error(`Label error for ${cat}:`, e);
-    }
-  }
-
-  const noLabels = Object.values(labelIds).every(v => !v);
-  if (noLabels) {
-    currentResult = de
-      ? '⚠️ Gmail Labels konnten nicht erstellt werden. Bitte prüfe die Gmail-Berechtigungen und versuche es erneut.'
-      : '⚠️ Gmail labels could not be created. Please check Gmail permissions and try again.';
-    setProgress(100, de ? 'Fehler.' : 'Error.');
-    showStep('step-result');
-    document.getElementById('result-content').innerHTML = `<div style="text-align:center;padding:20px;color:#ef4444;font-size:15px;">⚠️ ${de ? 'Labels konnten nicht in Gmail erstellt werden.<br><br>Bitte stelle sicher dass du die Gmail-Berechtigung vollständig erteilt hast, und versuche es erneut.' : 'Labels could not be created in Gmail.<br><br>Please ensure you granted full Gmail permission and try again.'}</div>`;
-    gmailAccessToken = null;
-    return;
+    try { labelIds[cat] = await getOrCreateLabel(gmailAccessToken, labelPrefix + cat); } catch (_) {}
   }
 
   setProgress(88, de ? `${name} sortiert E-Mails in Gmail...` : `${name} sorting emails in Gmail...`);
@@ -1008,9 +816,7 @@ ${emailList}`;
   for (const item of categorized) {
     const labelId = labelIds[item.kategorie];
     if (labelId && item.id) {
-      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (e) {
-        console.error('applyLabel error:', e);
-      }
+      try { await applyLabel(gmailAccessToken, item.id, labelId); counts[item.kategorie]++; } catch (_) {}
     }
   }
 
@@ -1019,45 +825,11 @@ ${emailList}`;
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   currentResult = de
-    ? `${total} E-Mails sortiert — DRINGEND: ${counts.DRINGEND} | WICHTIG: ${counts.WICHTIG} | NIEDRIG: ${counts.NIEDRIG} | INFO: ${counts.INFO}`
-    : `${total} emails sorted — URGENT: ${counts.DRINGEND} | IMPORTANT: ${counts.WICHTIG} | LOW: ${counts.NIEDRIG} | INFO: ${counts.INFO}`;
+    ? `✅ ${total} E-Mails wurden in Gmail sortiert!\n\nDu findest sie unter dem Label "KI-Sortierung" in deinem Gmail:\n\n🔴 DRINGEND: ${counts.DRINGEND} E-Mails\n🟡 WICHTIG: ${counts.WICHTIG} E-Mails\n🟢 NIEDRIG: ${counts.NIEDRIG} E-Mails\n🔵 INFO: ${counts.INFO} E-Mails\n\nÖffne Gmail → linke Seite → "KI-Sortierung" um die sortierten E-Mails zu sehen.`
+    : `✅ ${total} emails sorted in Gmail!\n\nFind them under the "KI-Sortierung" label in Gmail:\n\n🔴 URGENT: ${counts.DRINGEND} emails\n🟡 IMPORTANT: ${counts.WICHTIG} emails\n🟢 LOW: ${counts.NIEDRIG} emails\n🔵 INFO: ${counts.INFO} emails\n\nOpen Gmail → left sidebar → "KI-Sortierung" to see your sorted emails.`;
 
-  const cats = de
-    ? [
-        { label: 'DRINGEND',  count: counts.DRINGEND, color: '#ef4444', bg: '#fef2f2', desc: 'Sofort bearbeiten' },
-        { label: 'WICHTIG',   count: counts.WICHTIG,  color: '#f59e0b', bg: '#fffbeb', desc: 'Diese Woche' },
-        { label: 'NIEDRIG',   count: counts.NIEDRIG,  color: '#22c55e', bg: '#f0fdf4', desc: 'Wenn Zeit vorhanden' },
-        { label: 'INFO',      count: counts.INFO,     color: '#3b82f6', bg: '#eff6ff', desc: 'Zur Kenntnisnahme' },
-      ]
-    : [
-        { label: 'URGENT',    count: counts.DRINGEND, color: '#ef4444', bg: '#fef2f2', desc: 'Act immediately' },
-        { label: 'IMPORTANT', count: counts.WICHTIG,  color: '#f59e0b', bg: '#fffbeb', desc: 'This week' },
-        { label: 'LOW',       count: counts.NIEDRIG,  color: '#22c55e', bg: '#f0fdf4', desc: 'When time allows' },
-        { label: 'INFO',      count: counts.INFO,     color: '#3b82f6', bg: '#eff6ff', desc: 'For your info' },
-      ];
-
-  const resultHTML = `
-    <div style="text-align:center;margin-bottom:20px;">
-      <div style="font-size:40px;margin-bottom:8px;">✅</div>
-      <h2 style="font-size:22px;font-weight:700;color:#0f172a;margin:0 0 4px;">${total} ${de ? 'E-Mails sortiert' : 'Emails sorted'}</h2>
-      <p style="font-size:13px;color:#64748b;margin:0;">${de ? 'Labels in Gmail erstellt unter "KI-Sortierung"' : 'Labels created in Gmail under "KI-Sortierung"'}</p>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-      ${cats.map(c => `
-        <div style="background:${c.bg};border:1.5px solid ${c.color}22;border-radius:12px;padding:16px;text-align:center;">
-          <div style="font-size:28px;font-weight:800;color:${c.color};line-height:1;">${c.count}</div>
-          <div style="font-size:12px;font-weight:700;color:${c.color};margin:4px 0 2px;letter-spacing:0.5px;">${c.label}</div>
-          <div style="font-size:11px;color:#64748b;">${c.desc}</div>
-        </div>`).join('')}
-    </div>
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;font-size:13px;color:#475569;text-align:center;">
-      📂 ${de ? 'Gmail öffnen → linke Seite → Label' : 'Open Gmail → left sidebar → label'} <strong>"KI-Sortierung"</strong> ${de ? '→ deine sortierten E-Mails' : '→ your sorted emails'}
-    </div>`;
-
-  lastCompletedTaskType = 'email';
-  updateChainButtons('email');
   showStep('step-result');
-  document.getElementById('result-content').innerHTML = resultHTML;
+  document.getElementById('result-content').textContent = currentResult;
 }
 
 // =====================
@@ -1093,17 +865,7 @@ function detectTaskType(description) {
 
 function estimateTask(description) {
   const depth = window.selectedAnalysisLength || 'medium';
-  const type = currentShortcutType || detectTaskType(description);
-  if (type === 'email') {
-    // Email: price/time determined by emailCount, not depth
-    const emailTiers = {
-      200:  { price: 0.99, minutes: 2, depth: 'short'  },
-      500:  { price: 1.99, minutes: 4, depth: 'medium' },
-      1000: { price: 2.99, minutes: 6, depth: 'long'   },
-    };
-    const tier = emailTiers[emailCount] || emailTiers[200];
-    return { minutes: tier.minutes, price: tier.price, type, depth: tier.depth };
-  }
+  const type = detectTaskType(description);
   const price = TASK_PRICES[type][depth];
   const minutes = TASK_TIMES[type][depth];
   return { minutes, price, type, depth };
@@ -1121,20 +883,19 @@ let uploadedPDFs = [];
 // TASK SHORTCUTS
 // =====================
 function selectShortcut(type) {
-  currentShortcutType = type;
   const descriptions = {
     de: {
       pdf:      'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.',
       email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
       report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
-      reply:    '',
+      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
       document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
     },
     en: {
       pdf:      'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.',
       email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
       report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
-      reply:    '',
+      reply:    'Write professional and friendly replies to the provided messages or emails.',
       document: 'Create a professional, well-structured document with clear headings and sections.'
     }
   };
@@ -1144,13 +905,6 @@ function selectShortcut(type) {
   event.target.classList.add('active');
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
-  const ecs = document.getElementById('email-count-selector');
-  if (ecs) ecs.style.display = (type === 'email') ? 'block' : 'none';
-  if (type === 'email') setEmailCount(emailCount);
-  const ewr = document.getElementById('email-write-form');
-  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
-  const td = document.getElementById('task-description');
-  if (td) { td.style.display = (type === 'reply') ? 'none' : 'block'; td.required = (type !== 'reply'); }
 }
 
 // =====================
@@ -1197,42 +951,34 @@ function updateMiniCharButtons() {
 }
 
 function pickService(type) {
-  currentShortcutType = type;
   document.getElementById('service-picker').style.display = 'none';
   const icons = { email: '📧', report: '📊', reply: '✉️', document: '📝' };
   const titles = {
-    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'E-Mail schreiben', document: 'Dokument erstellen' },
-    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Email', document: 'Create Document' }
+    de: { email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'Antworten schreiben', document: 'Dokument erstellen' },
+    en: { email: 'Sort Emails', report: 'Create Report', reply: 'Write Replies', document: 'Create Document' }
   };
   document.getElementById('task-page-icon').textContent = icons[type] || '🛠️';
   document.getElementById('task-page-title').textContent = titles[currentLang]?.[type] || titles['de'][type];
+  const fakeEvent = { target: document.querySelector(`.task-shortcut[onclick*="${type}"]`) };
   const descriptions = {
     de: {
       email:    'Sortiere meine E-Mails nach Dringlichkeit (DRINGEND, WICHTIG, NIEDRIG, SPAM), schreibe eine kurze Zusammenfassung und verfasse Entwürfe für dringende Antworten.',
       report:   'Erstelle einen professionellen Geschäftsbericht mit Executive Summary, wichtigsten Erkenntnissen und empfohlenen nächsten Schritten.',
-      reply:    '',
+      reply:    'Schreibe professionelle und freundliche Antworten auf die vorliegenden Nachrichten oder E-Mails.',
       document: 'Erstelle ein professionelles, gut strukturiertes Dokument mit klaren Überschriften und Abschnitten.'
     },
     en: {
       email:    'Sort my emails by urgency (URGENT, IMPORTANT, LOW, SPAM), write a short summary and draft replies for the urgent ones.',
       report:   'Create a professional business report with an executive summary, key findings, and recommended next steps.',
-      reply:    '',
+      reply:    'Write professional and friendly replies to the provided messages or emails.',
       document: 'Create a professional, well-structured document with clear headings and sections.'
     }
   };
-  const td = document.getElementById('task-description');
-  td.value = descriptions[currentLang]?.[type] || descriptions['de'][type];
-  td.style.display = (type === 'reply') ? 'none' : 'block';
-  td.required = (type !== 'reply');
+  document.getElementById('task-description').value = descriptions[currentLang]?.[type] || descriptions['de'][type];
   document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
   if (btn) btn.classList.add('active');
   document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
-  const ecs3 = document.getElementById('email-count-selector');
-  if (ecs3) ecs3.style.display = (type === 'email') ? 'block' : 'none';
-  if (type === 'email') setEmailCount(emailCount);
-  const ewr = document.getElementById('email-write-form');
-  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
   showStep('step-form');
 }
 
@@ -1253,34 +999,22 @@ function preselectPDF() {
 // =====================
 // PDF UPLOAD
 // =====================
-function isImageFile(f) {
-  return f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/i.test(f.name);
-}
-
 function handlePDFUpload(files) {
-  const allowed = Array.from(files).filter(f =>
-    f.type === 'application/pdf' || f.name.endsWith('.pdf') || isImageFile(f)
-  );
-  allowed.forEach(f => {
-    const duplicate = uploadedPDFs.some(existing => existing.name === f.name && existing.size === f.size);
-    if (!duplicate && uploadedPDFs.length < 10) uploadedPDFs.push(f);
-  });
+  const allowed = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  allowed.forEach(f => { if (uploadedPDFs.length < 10) uploadedPDFs.push(f); });
   renderPDFList();
 
+  // Auto-suggest PDF analysis if description is still empty or generic
   if (uploadedPDFs.length > 0) {
     const td = document.getElementById('task-description');
     const empty = !td.value.trim();
     const generic = td.value.includes('Sortiere') || td.value.includes('Sort my');
-    const hasImages = uploadedPDFs.some(isImageFile);
-    const hasPDFs   = uploadedPDFs.some(f => !isImageFile(f));
     if (empty || generic) {
+      const fakeEvent = { target: document.querySelector('.task-shortcut') };
+      // Directly set the analysis description without needing the event object
       const desc = currentLang === 'de'
-        ? hasImages && !hasPDFs
-          ? 'Analysiere die hochgeladenen Bilder vollständig. Beschreibe was du siehst, extrahiere alle wichtigen Informationen, Texte und Details.'
-          : 'Analysiere die hochgeladenen Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
-        : hasImages && !hasPDFs
-          ? 'Fully analyse the uploaded images. Describe what you see, extract all important information, text and details.'
-          : 'Fully analyse the uploaded files and create a professional report with the key findings, summary, and recommended actions.';
+        ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
+        : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
       td.value = desc;
       document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
       const pdfBtn = document.querySelector('.task-shortcut[onclick*="pdf"]');
@@ -1315,9 +1049,8 @@ function renderPDFList() {
   list.innerHTML = uploadedPDFs.map((f, i) => {
     const kb = (f.size / 1024).toFixed(0);
     const size = kb > 1024 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
-    const icon = isImageFile(f) ? '🖼️' : '📄';
     return `<div class="pdf-file-item">
-      <span class="pdf-file-name">${icon} ${f.name}<span class="pdf-file-size">${size}</span></span>
+      <span class="pdf-file-name">📄 ${f.name}<span class="pdf-file-size">${size}</span></span>
       <button type="button" class="pdf-file-remove" onclick="removePDF(${i})">×</button>
     </div>`;
   }).join('');
@@ -1376,10 +1109,9 @@ function getSavedPayment() {
   return s ? JSON.parse(s) : null;
 }
 
-function savePayment(type) {
+function savePayment(type, value) {
   if (!currentUser) return;
-  // Only save payment TYPE preference — never store IBAN or PayPal address
-  localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type }));
+  localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type, value }));
 }
 
 function confirmPayment() {
@@ -1387,7 +1119,7 @@ function confirmPayment() {
     if (selectedPaymentMethod === 'paypal') {
       const email = document.getElementById('paypal-email').value;
       if (!email) { alert(currentLang === 'de' ? 'Bitte PayPal E-Mail eingeben.' : 'Please enter PayPal email.'); return; }
-      if (document.getElementById('save-paypal').checked) savePayment('paypal');
+      if (document.getElementById('save-paypal').checked) savePayment('paypal', email);
 
       // Open PayPal payment to owner's account if configured
       const ownerPaypal = getOwnerPaypalUsername();
@@ -1397,7 +1129,7 @@ function confirmPayment() {
     } else if (selectedPaymentMethod === 'bank') {
       const iban = document.getElementById('bank-iban').value;
       if (!iban) { alert(currentLang === 'de' ? 'Bitte IBAN eingeben.' : 'Please enter IBAN.'); return; }
-      if (document.getElementById('save-bank').checked) savePayment('bank');
+      if (document.getElementById('save-bank').checked) savePayment('bank', iban);
     }
   }
   const desc = document.getElementById('task-description').value;
@@ -1406,16 +1138,15 @@ function confirmPayment() {
   saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
   
   // Email tasks → Gmail connect step (no local agent needed)
-  const resolvedType = currentShortcutType || detectTaskType(desc);
-  if (resolvedType === 'email') {
+  if (detectTaskType(desc) === 'email') {
     window.skippedSetup = true;
     document.getElementById('gmail-step-icon').textContent = getCharacterEmoji();
     showStep('step-gmail');
     return;
   }
 
-  // Document/report/reply creation → skip setup & apps, go straight to AI generation
-  const taskType = resolvedType;
+  // Document/report creation → skip setup & apps, go straight to AI generation
+  const taskType = detectTaskType(desc);
   if (taskType === 'document' || taskType === 'report' || taskType === 'reply') {
     window.skippedSetup = true;
     startTask();
@@ -1599,34 +1330,6 @@ function clearAppSelection(key) {
   document.querySelectorAll(`#app-opts-${key} .task-shortcut`).forEach(b => b.classList.remove('active'));
 }
 
-let emailCount = 200;
-function setEmailTone(tone, btn) {
-  document.getElementById('ew-tone').value = tone;
-  document.querySelectorAll('#email-write-form button[type="button"]').forEach(b => {
-    b.style.border = '1.5px solid rgba(255,255,255,0.1)';
-    b.style.background = 'rgba(255,255,255,0.04)';
-  });
-  btn.style.border = '1.5px solid var(--accent)';
-  btn.style.background = 'rgba(37,99,235,0.15)';
-}
-
-function setEmailCount(count) {
-  emailCount = count;
-  [200, 500, 1000].forEach(n => {
-    const btn = document.getElementById('ecount-' + n);
-    if (!btn) return;
-    btn.style.border = n === count ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.1)';
-    btn.style.background = n === count ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.04)';
-  });
-  const td = document.getElementById('task-description');
-  if (td) {
-    const de = currentLang === 'de';
-    td.value = de
-      ? `Sortiere meine E-Mails (bis zu ${count} E-Mails) nach Dringlichkeit in die Kategorien DRINGEND, WICHTIG, NIEDRIG und SPAM. Schreibe eine Zusammenfassung und verfasse Entwürfe für dringende Antworten.`
-      : `Sort my emails (up to ${count} emails) by urgency into URGENT, IMPORTANT, LOW and SPAM. Write a summary and draft replies for urgent ones.`;
-  }
-}
-
 function setDepth(level) {
   window.selectedAnalysisLength = level;
   ['short','medium','long'].forEach(l => {
@@ -1694,36 +1397,11 @@ async function startTask() {
             ? [[10,`${name} analysiert die Aufgabe...`],[25,`${name} wählt den besten Ansatz...`],[45,`${name} arbeitet an deiner Aufgabe...`],[65,`${name} verarbeitet die Ergebnisse...`],[85,`${name} bereitet dein Ergebnis vor...`],[100,'Fertig! Deine Ergebnisse sind bereit.']]
             : [[10,`${name} is analysing the task...`],[25,`${name} is choosing the best approach...`],[45,`${name} is working on your task...`],[65,`${name} is processing the results...`],[85,`${name} is preparing your results...`],[100,'Done! Your results are ready.']]);
 
-  let taskDesc = document.getElementById('task-description').value;
+  const taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
-
-  // For email writing form, build prompt from structured fields
-  if (currentShortcutType === 'reply') {
-    const to      = document.getElementById('ew-to')?.value.trim() || '';
-    const subject = document.getElementById('ew-subject')?.value.trim() || '';
-    const points  = document.getElementById('ew-points')?.value.trim() || '';
-    const tone    = document.getElementById('ew-tone')?.value || 'professionell';
-    const de = currentLang === 'de';
-    // Validate required fields (#4)
-    if (!to || !subject) {
-      ['ew-to','ew-subject'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && !el.value.trim()) el.style.border = '1.5px solid #ef4444';
-      });
-      alert(de ? 'Bitte "An wen" und "Betreff" ausfüllen.' : 'Please fill in "To" and "Subject".');
-      showStep('step-form');
-      return;
-    }
-    document.getElementById('ew-to').style.border = '';
-    document.getElementById('ew-subject').style.border = '';
-    taskDesc = de
-      ? `Schreibe eine ${tone}e E-Mail an: ${to}.\nBetreff: ${subject}.\nFolgendes muss enthalten sein: ${points}.\nSchreibe eine vollständige E-Mail mit Anrede, Hauptteil und Grußformel. Lass 2-3 Stellen mit [ERGÄNZEN] offen, wo der Absender noch persönliche Details einfügen soll.`
-      : `Write a ${tone} email to: ${to}.\nSubject: ${subject}.\nMust include: ${points}.\nWrite a complete email with greeting, body, and sign-off. Leave 2-3 spots marked [ADD] where the sender should fill in personal details.`;
-  }
-
   // Always use real AI for document/report/reply creation (no PDF required)
-  const taskKind = currentShortcutType || detectTaskType(taskDesc);
+  const taskKind = detectTaskType(taskDesc);
   const useRealAI = uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply';
 
   if (useRealAI) {
@@ -1746,24 +1424,8 @@ async function startTask() {
   }
 
   setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
-  lastCompletedTaskType = currentShortcutType || detectTaskType(taskDesc);
-  updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
   document.getElementById('result-content').textContent = currentResult;
-
-  // Demo mode banner (#6)
-  const isDemo = !useRealAI;
-  let demoBanner = document.getElementById('demo-mode-banner');
-  if (!demoBanner) {
-    demoBanner = document.createElement('div');
-    demoBanner.id = 'demo-mode-banner';
-    demoBanner.style.cssText = 'background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:10px;padding:10px 14px;font-size:13px;color:#f59e0b;margin-bottom:12px;text-align:center;';
-    document.getElementById('result-content').before(demoBanner);
-  }
-  demoBanner.style.display = isDemo ? 'block' : 'none';
-  demoBanner.textContent = currentLang === 'de'
-    ? '⚠️ Demo-Ergebnis — lade ein Dokument hoch für eine echte KI-Analyse'
-    : '⚠️ Demo result — upload a document for real AI analysis';
 }
 
 function setProgress(pct, msg) {
@@ -1856,9 +1518,8 @@ function parseResultBlocks(text) {
     // KPI lines inside KENNZAHLEN / KEY METRICS section: "Label: Value" with numbers/% /€/$
     // Detect if we're inside a KPI section
     const prevSection = blocks.slice().reverse().find(b => b.type === 'section');
-    const inKpiSection = prevSection && /kennzahl|metric|key.*figure|auf einen blick|at a glance/i.test(prevSection.text);
-    // Match all dash/minus variants including U+2212 (mathematical minus) before numeric values
-    if (inKpiSection && /^[^:]+:\s*[^\w\s]{0,3}\d/.test(t)) {
+    const inKpiSection = prevSection && /kennzahl|metric|glance|blick/i.test(prevSection.text);
+    if (inKpiSection && /^[^:]+:\s*[+\-]?[\d€$£%,.]+/.test(t)) {
       const colonIdx = t.indexOf(':');
       blocks.push({ type: 'kpi', label: t.slice(0, colonIdx).trim(), value: t.slice(colonIdx + 1).trim() });
       return;
@@ -1875,24 +1536,30 @@ function parseResultBlocks(text) {
       blocks.push({ type: 'risk', level: 'low', text: stripLeadingSymbol(t) }); return;
     }
 
-    // Labeled bullet  * **Label:** text  or  - **Label:** text
-    const lblM = t.match(/^[*\-]\s+\*\*([^*:]+):\*\*\s*(.*)/);
-    if (lblM) {
-      const label = lblM[1].trim();
-      const text  = lblM[2].trim();
-      if (/^(Erkenntnis|Insight|Hinweis|Tipp|Note|Tip)/i.test(label)) {
-        blocks.push({ type: 'insight', label, text }); return;
-      }
-      blocks.push({ type: 'labeled_bullet', label, text }); return;
-    }
-
     // Numbered items  1. 2. etc.
     const numM = t.match(/^(\d+)\.\s+(.+)/);
     if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); return; }
 
-    // Arrow / dash / star bullets  →  -  •  *
+    // Labeled bullet: * **Label:** text  or  - **Label:** text
+    const lblM = t.match(/^[*\-•]\s+\*\*([^*]+)\*\*[:\s]+(.+)/);
+    if (lblM) {
+      const lbl = lblM[1].trim().replace(/:$/, '');
+      const txt = lblM[2].trim();
+      if (/erkenntnis|insight|fazit|conclusion|zusammenfassung|summary/i.test(lbl)) {
+        blocks.push({ type: 'insight', label: lbl, text: txt }); return;
+      }
+      blocks.push({ type: 'labeled_bullet', label: lbl, text: txt }); return;
+    }
+
+    // Plain bullet starting with * **text** (no colon-separated body)
+    const starBold = t.match(/^[*\-•]\s+\*\*([^*]+)\*\*\s*$/);
+    if (starBold) {
+      blocks.push({ type: 'section', text: starBold[1].trim() }); return;
+    }
+
+    // Arrow / dash bullets  →  -  •
     if (/^(→|•|\-\s|\*\s)/.test(t)) {
-      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); return;
+      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').replace(/\*\*/g, '').trim() }); return;
     }
 
     // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
@@ -1968,15 +1635,12 @@ function downloadPDF(length) {
   function drawRunningHeader() {
     doc.setFillColor(...navy);
     doc.rect(0, 0, pageW, 10, 'F');
-    // Accent bottom line on header
-    doc.setFillColor(...accent);
-    doc.rect(0, 10, pageW, 0.5, 'F');
     doc.setTextColor(...silver);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
-    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align: 'right' });
-    // Defensive reset
+    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align:'right' });
+    // Always reset text state after header so body content starts clean
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(...steel);
@@ -1991,28 +1655,27 @@ function downloadPDF(length) {
   }
 
   function sectionHead(label) {
-    guard(16);
-    y += 5;
-    // Full-width dark navy band
+    guard(18);
+    y += 6;
+    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
+    // Dark navy full-width background
     doc.setFillColor(...navy);
-    doc.rect(0, y, pageW, 11, 'F');
+    doc.rect(mL, y, cW, 12, 'F');
     // Bold accent left bar
     doc.setFillColor(...accent);
-    doc.rect(0, y, 5, 11, 'F');
-    // Subtle right accent glow
+    doc.rect(mL, y, 4, 12, 'F');
+    // Subtle right glow stripe
     doc.setFillColor(37, 99, 235);
-    doc.rect(pageW - 2, y, 2, 11, 'F');
-    // White uppercase label
-    const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
+    doc.rect(mL + cW - 1, y, 1, 12, 'F');
+    // Label
     doc.setTextColor(...white);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text(clean.toUpperCase(), mL, y + 7.4);
-    y += 15;
-    // Defensive reset
+    doc.setFontSize(10.5);
+    doc.text(clean, mL + 10, y + 8.2);
+    y += 17;
+    doc.setTextColor(...steel);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    doc.setTextColor(...steel);
   }
 
   function body(text, opts = {}) {
@@ -2215,8 +1878,6 @@ function downloadPDF(length) {
   // ── PARSE blocks early (needed for TOC) ──
   const blocks = parseResultBlocks(currentResult || '');
   let nCounter = 0;
-  let kpiCol = 0;
-  function closeKpiRow() { if (kpiCol % 2 === 1) { y += 15; kpiCol++; } }
 
   // ── TABLE OF CONTENTS PAGE (#7) — for medium and long ──
   if (length !== 'short') {
@@ -2234,38 +1895,22 @@ function downloadPDF(length) {
     doc.text(currentLang === 'de' ? 'INHALTSVERZEICHNIS' : 'TABLE OF CONTENTS', mL + 7, ty2 + 5.5);
     ty2 += 14;
 
-    // Filter: exclude cited detail headings (sub-sub-sections like "Bruttoinlandsprodukt (laut Seite 17):")
-    const sectionNames = blocks
-      .filter(b => b.type === 'section')
-      .map(b => b.text)
-      .filter(name => !/(laut seite|per page|according to page)/i.test(name));
-    let tocNum = 0;
-    sectionNames.forEach(name => {
+    const sectionNames = blocks.filter(b => b.type === 'section').map(b => b.text);
+    sectionNames.forEach((name, idx) => {
       const clean = name.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
       if (!clean) return;
-      // Detect indentation level
-      const isLevel2 = /^\d+\.\d+/.test(clean);
-      const isLevel1 = !isLevel2 && /^\d+\./.test(clean);
-      const isTop   = !isLevel1 && !isLevel2 && clean === clean.toUpperCase() && clean.length > 3;
-      const indent  = isLevel2 ? 8 : (isLevel1 ? 4 : 0);
-      const fSize   = isLevel2 ? 8.5 : 9.5;
-      const fStyle  = isTop ? 'bold' : 'normal';
-      const tColor  = isLevel2 ? mid : steel;
-      tocNum++;
-      const displayName = clean.replace(/^\d+\.\d*\s*/, '');
-      if (ty2 > pageH - mBot - 10) { doc.addPage(); drawRunningHeader(); ty2 = mTop + 14; }
-      doc.setFont('helvetica', fStyle);
-      doc.setFontSize(fSize);
-      doc.setTextColor(...tColor);
-      doc.text(`${tocNum}.  ${displayName}`, mL + 4 + indent, ty2);
+      doc.setFont('helvetica', idx === 0 ? 'bold' : 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...steel);
+      doc.text(`${idx + 1}.  ${clean}`, mL + 4, ty2);
       // Dotted leader line
       doc.setDrawColor(...ice);
       doc.setLineWidth(0.3);
-      const textEnd = mL + 4 + indent + doc.getTextWidth(`${tocNum}.  ${displayName}`) + 3;
+      const textEnd = mL + 4 + doc.getTextWidth(`${idx + 1}.  ${clean}`) + 3;
       for (let dx = textEnd; dx < pageW - mR - 14; dx += 3) {
         doc.line(dx, ty2 - 1, dx + 1.5, ty2 - 1);
       }
-      ty2 += isLevel2 ? 7 : 8;
+      ty2 += 8;
     });
   }
 
@@ -2277,9 +1922,7 @@ function downloadPDF(length) {
   // Helper: safely strip all non-printable / non-latin characters for jsPDF
   function safe(s) {
     return s
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // strip **bold** markdown
-      .replace(/\*([^*]+)\*/g, '$1')     // strip *italic* markdown
-      .replace(/`([^`]+)`/g, '$1')       // strip `code` markdown
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // strip **bold** markers, keep text
       .replace(/\u2014|\u2013/g, ' - ')
       .replace(/\u2018|\u2019/g, "'")
       .replace(/\u201C|\u201D/g, '"')
@@ -2296,8 +1939,7 @@ function downloadPDF(length) {
         break;
 
       case 'section': {
-        closeKpiRow();
-        kpiCol = 0;
+        if (nCounter % 2 === 1) y += 15; // close incomplete KPI row before heading
         nCounter = 0;
         const t = safe(b.text);
         if (t) sectionHead(t);
@@ -2305,28 +1947,24 @@ function downloadPDF(length) {
       }
 
       case 'body': {
-        closeKpiRow();
         const t = safe(b.text);
         if (t) body(t);
         break;
       }
 
       case 'meta': {
-        closeKpiRow();
         const t = safe(b.text);
         if (t) body(t, { color: silver, size: 8.5 });
         break;
       }
 
       case 'bullet': {
-        closeKpiRow();
         const t = safe(b.text);
         if (t) bullet(t);
         break;
       }
 
       case 'numbered': {
-        closeKpiRow();
         nCounter++;
         const t = safe(b.text);
         if (t) numberedItem(nCounter, t);
@@ -2338,7 +1976,7 @@ function downloadPDF(length) {
         const val = safe(b.value);
         if (!lbl || !val) break;
         const tileW = (cW - 4) / 2;
-        const isLeft = kpiCol % 2 === 0;
+        const isLeft = nCounter % 2 === 0;
         const col = isLeft ? mL : mL + tileW + 4;
         if (isLeft) guard(14); // only check page break at start of new row
         // tile background (drawn at current y, height 12)
@@ -2357,79 +1995,73 @@ function downloadPDF(length) {
         doc.setFontSize(9.5);
         doc.setTextColor(...navy);
         doc.text(val, col + 6, y + 10);
-        kpiCol++;
-        if (kpiCol % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
+        nCounter++;
+        if (nCounter % 2 === 0) y += 15; // advance y only after a complete row (2 tiles)
         break;
       }
 
       case 'labeled_bullet': {
-        closeKpiRow();
-        const lbl = safe(b.label || '');
-        const txt = safe(b.text || '');
+        const lbl = safe(b.label);
+        const txt = safe(b.text);
         if (!lbl) break;
-        guard(8);
+        const fullText = txt ? lbl + ': ' + txt : lbl;
+        const lines = doc.splitTextToSize(txt || '', cW - 14);
+        guard(lines.length * 5.4 + 6);
         // Accent square dot
         doc.setFillColor(...accent);
         doc.rect(mL + 2, y - 3, 2.5, 2.5, 'F');
-        // Bold blue label
+        // Bold label in accent colour
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
         doc.setTextColor(...accent);
         const lblW = doc.getTextWidth(lbl + ':') + 2;
         doc.text(lbl + ':', mL + 7, y);
-        if (txt) {
-          const remaining = cW - 7 - lblW - 2;
-          const txtLines = doc.splitTextToSize(txt, remaining);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...steel);
-          if (txtLines.length === 1 && doc.getTextWidth(txt) <= remaining) {
-            doc.text(txt, mL + 7 + lblW + 2, y);
-            y += 5.5;
-          } else {
-            y += 5.5;
-            txtLines.forEach(ln => { guard(6); doc.text(ln, mL + 12, y); y += 5.2; });
-          }
-        } else {
-          y += 5.5;
-        }
+        // Text on same line if it fits, else next line
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
         doc.setTextColor(...steel);
-        y += 0.5;
+        if (txt) {
+          const firstLine = lines[0] || '';
+          if (lblW + doc.getTextWidth(firstLine) < cW - 7) {
+            doc.text(firstLine, mL + 7 + lblW, y);
+            y += 5.4;
+            lines.slice(1).forEach(ln => { doc.text(ln, mL + 7 + lblW, y); y += 5.4; });
+          } else {
+            y += 5.4;
+            lines.forEach(ln => { doc.text(ln, mL + 10, y); y += 5.4; });
+          }
+        } else { y += 5.4; }
+        y += 2;
         break;
       }
 
       case 'insight': {
-        closeKpiRow();
-        const lbl = safe(b.label || '');
-        const txt = safe(b.text || '');
-        if (!txt && !lbl) break;
-        const insLines = doc.splitTextToSize(txt || lbl, cW - 16);
-        const boxH = 8 + insLines.length * 5.2 + 4;
+        const txt = safe(b.text);
+        const lbl = safe(b.label || 'Erkenntnis').toUpperCase();
+        if (!txt) break;
+        const lines = doc.splitTextToSize(txt, cW - 16);
+        const boxH = lines.length * 5.4 + 16;
         guard(boxH + 4);
         y += 2;
+        // Green tinted box
         doc.setFillColor(236, 253, 245);
         doc.roundedRect(mL, y, cW, boxH, 3, 3, 'F');
-        doc.setFillColor(...green);
+        doc.setFillColor(22, 163, 74);
         doc.roundedRect(mL, y, 4, boxH, 1, 1, 'F');
+        // Label
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
-        doc.setTextColor(...green);
-        doc.text((lbl || 'ERKENNTNIS').toUpperCase(), mL + 8, y + 5.5);
+        doc.setTextColor(22, 163, 74);
+        doc.text(lbl, mL + 8, y + 7);
+        // Text
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.5);
-        doc.setTextColor(6, 78, 59);
-        let iy = y + 11;
-        insLines.forEach(ln => { doc.text(ln, mL + 8, iy); iy += 5.2; });
+        doc.setTextColor(20, 83, 45);
+        lines.forEach((ln, i) => doc.text(ln, mL + 8, y + 13 + i * 5.4));
         y += boxH + 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...steel);
         break;
       }
 
       case 'risk': {
-        closeKpiRow();
         const t = safe(b.text);
         if (!t) break;
         const colors = { critical: red, important: amber, low: green };
@@ -2458,7 +2090,7 @@ function downloadPDF(length) {
   });
 
   // Close any incomplete KPI row at end of content
-  closeKpiRow();
+  if (nCounter % 2 === 1) y += 15;
 
   // ── FINAL PAGE FOOTER ──
   sep(4);
@@ -2605,27 +2237,18 @@ function downloadHTMLReport() {
   URL.revokeObjectURL(url);
 }
 
-function confirmDeleteData() {
-  const modal = document.getElementById('delete-confirm-modal');
-  if (modal) modal.style.display = 'flex';
-}
-
 async function deleteData() {
   showStep('step-deleting');
-  const emailChecked    = document.getElementById('perm-email')?.checked || gmailWasUsed;
+  const emailChecked    = document.getElementById('perm-email')?.checked;
   const filesChecked    = document.getElementById('perm-files')?.checked;
   const browserChecked  = document.getElementById('perm-browser')?.checked;
   const calendarChecked = document.getElementById('perm-calendar')?.checked;
   const agentInstalled  = !window.skippedSetup;
 
-  // Clear Gmail token and flag
-  gmailAccessToken = null;
-  gmailWasUsed = false;
-
   const de = currentLang === 'de';
   const items = [
     { icon: '🗑', text: de ? 'Aufgabendaten werden gelöscht...' : 'Deleting task data...' },
-    ...(emailChecked    ? [{ icon: '📧', text: de ? 'Gmail-Zugang wird gelöscht...'   : 'Removing Gmail access...' }]    : []),
+    ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff wird entzogen...'   : 'Revoking email access...' }]    : []),
     ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff wird entzogen...'     : 'Revoking file access...' }]     : []),
     ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff wird entzogen...' : 'Revoking browser access...' }]  : []),
     ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff wird entzogen...' : 'Revoking calendar access...' }] : []),
@@ -2650,7 +2273,7 @@ async function deleteData() {
   if (checklist) {
     const doneItems = [
       { icon: '🗑', text: de ? 'Alle Aufgabendaten gelöscht' : 'All task data deleted' },
-      ...(emailChecked    ? [{ icon: '📧', text: de ? 'Gmail-Zugang aus den Daten gelöscht'   : 'Gmail access removed from data' }]    : []),
+      ...(emailChecked    ? [{ icon: '📧', text: de ? 'E-Mail-Zugriff entzogen'   : 'Email access revoked' }]    : []),
       ...(filesChecked    ? [{ icon: '📁', text: de ? 'Dateizugriff entzogen'     : 'File access revoked' }]     : []),
       ...(browserChecked  ? [{ icon: '🌐', text: de ? 'Browser-Zugriff entzogen' : 'Browser access revoked' }]  : []),
       ...(calendarChecked ? [{ icon: '📅', text: de ? 'Kalender-Zugriff entzogen' : 'Calendar access revoked' }] : []),
@@ -2671,9 +2294,6 @@ function resetForm() {
   uploadedPDFs = [];
   window.selectedApps = {};
   selectedPaymentMethod = null; currentEstimate = null;
-  gmailAccessToken = null;
-  gmailWasUsed = false;
-  currentShortcutType = null;
   showStep('step-form');
 }
 
@@ -3007,7 +2627,7 @@ Alle hochgeladenen Daten wurden nach der Analyse sicher geloscht.`
     if (isEmail || isReply) return (
 `📧 E-MAIL POSTFACH — VOLLSTÄNDIG SORTIERT
 Zugriff: Microsoft Outlook — Posteingang
-Gefundene E-Mails: ${emailCount} | Verarbeitet: ${emailCount} | Übersprungen: 0
+Gefundene E-Mails: 22 | Verarbeitet: 22 | Übersprungen: 0
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔴  DRINGEND — Sofort bearbeiten (3)
@@ -3318,7 +2938,7 @@ All uploaded files were securely deleted after analysis.`
     if (isEmail || isReply) return (
 `📧 EMAIL INBOX — FULLY SORTED
 Access: Microsoft Outlook — Inbox
-Emails found: ${emailCount} | Processed: ${emailCount} | Skipped: 0
+Emails found: 22 | Processed: 22 | Skipped: 0
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔴  URGENT — Act immediately (3)
@@ -3496,11 +3116,7 @@ async function extractPDFText(file) {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
         const totalPages = pdf.numPages;
-        const PAGE_HARD_LIMIT = 150;
-        const maxPages = Math.min(totalPages, PAGE_HARD_LIMIT);
-        if (totalPages > PAGE_HARD_LIMIT) {
-          console.warn(`PDF hat ${totalPages} Seiten — nur erste ${PAGE_HARD_LIMIT} werden verarbeitet`);
-        }
+        const maxPages = Math.min(totalPages, 300);
 
         // Extract each page with table-aware reconstruction (#9)
         async function extractPage(i) {
@@ -3995,7 +3611,7 @@ async function renderPDFPagesToImages(file, maxPages = 12) {
     canvas.height = Math.round(viewport.height);
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     // JPEG 70% ≈ 100–150 KB per page → 12 pages ≈ 1.5 MB total (well under Vercel's 4.5 MB limit)
-    images.push(canvas.toDataURL('image/jpeg', 0.55).split(',')[1]);
+    images.push(canvas.toDataURL('image/jpeg', 0.70).split(',')[1]);
   }
 
   return { images, totalPages, renderedPages: pagesToRender };
@@ -4006,7 +3622,7 @@ async function renderPDFPagesToImages(file, maxPages = 12) {
 // =====================
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
-  const taskKind = currentShortcutType || detectTaskType(taskDesc);
+  const taskKind = detectTaskType(taskDesc);
   const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
   const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
   window.currentDocType = docType;
@@ -4016,58 +3632,29 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
   let totalPages  = 0;
 
   if (uploadedPDFs.length > 0) {
-    const imageFiles = uploadedPDFs.filter(isImageFile);
-    const pdfFiles   = uploadedPDFs.filter(f => !isImageFile(f));
-
-    // ── Step 1: images uploaded directly → read as base64 for Gemini Vision
-    if (imageFiles.length > 0) {
-      setProgress(10, currentLang === 'de'
-        ? 'Bilder werden geladen...'
-        : 'Loading images...');
-      for (const imgFile of imageFiles.slice(0, 10)) {
-        try {
-          const b64 = await new Promise((res, rej) => {
-            const r = new FileReader();
-            r.onload = e => res(e.target.result.split(',')[1]);
-            r.onerror = rej;
-            r.readAsDataURL(imgFile);
-          });
-          pageImages.push(b64);
-          totalPages++;
-        } catch (err) {
-          console.warn('Image read failed:', err);
-        }
-      }
+    // ── Step 1: render visible pages as images (Gemini sees layout, tables, charts)
+    setProgress(10, currentLang === 'de'
+      ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
+      : 'Rendering PDF pages for visual analysis...');
+    try {
+      const rendered = await renderPDFPagesToImages(uploadedPDFs[0], 12);
+      pageImages  = rendered.images;
+      totalPages  = rendered.totalPages;
+    } catch (err) {
+      console.warn('Visual rendering failed, falling back to text:', err);
     }
 
-    // ── Step 2: render PDF pages as images (Gemini sees layout, tables, charts)
-    if (pdfFiles.length > 0) {
-      setProgress(15, currentLang === 'de'
-        ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
-        : 'Rendering PDF pages for visual analysis...');
-      try {
-        const rendered = await renderPDFPagesToImages(pdfFiles[0], 15);
-        pageImages  = [...pageImages, ...rendered.images];
-        totalPages  += rendered.totalPages;
-      } catch (err) {
-        console.warn('Visual rendering failed, falling back to text:', err);
-      }
-    }
-
-    // ── Step 3: text extraction from PDFs (context for long docs)
+    // ── Step 2: text extraction for pages beyond the image limit (context for long docs)
     setProgress(25, currentLang === 'de'
       ? 'Text wird extrahiert (für lange Dokumente)...'
       : 'Extracting text (for long documents)...');
-    for (const file of pdfFiles) {
+    for (const file of uploadedPDFs) {
       try {
         const text = await extractPDFText(file);
         docText += text + '\n\n';
       } catch (err) {
         docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
       }
-    }
-    if (imageFiles.length > 0 && pdfFiles.length === 0) {
-      docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
     }
 
     // If all pages were rendered visually, the text extraction is supplementary —
@@ -4085,53 +3672,16 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  const apiKey = getGeminiKey();
-  let result;
+  const response = await fetch('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, images: pageImages })
+  });
 
-  if (apiKey) {
-    // Direct browser → Gemini call: no server timeout, full token budget
-    const MODELS = pageImages.length > 0
-      ? ['gemini-2.5-flash', 'gemini-flash-latest']
-      : ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite'];
-
-    const parts = pageImages.length > 0
-      ? [...pageImages.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })), { text: prompt }]
-      : [{ text: prompt }];
-
-    const body = JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: { maxOutputTokens: 65536, temperature: 0.3, topP: 0.9, topK: 40 },
-    });
-
-    let lastErr;
-    for (const model of MODELS) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-        );
-        const data = await res.json();
-        if (!res.ok || data.error) { lastErr = data.error?.message || res.status; continue; }
-        result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (result) break;
-        lastErr = 'Leere Antwort';
-      } catch (err) { lastErr = err.message; }
-    }
-    if (!result) throw new Error(lastErr || 'Keine Antwort von der KI');
-  } else {
-    // Fallback: serverless function (requires GEMINI_API_KEY on Vercel)
-    const response = await fetchWithTimeout('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, images: pageImages })
-    }, 58000);
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    if (!data.result) throw new Error('Keine Antwort von der KI erhalten');
-    result = data.result;
-  }
-
-  return result;
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  if (!data.result) throw new Error('Keine Antwort von der KI erhalten');
+  return data.result;
 }
 
 // =====================
