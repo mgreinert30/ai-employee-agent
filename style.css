@@ -667,7 +667,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 /* =====================
    FORM SECTION
    ===================== */
-.form-section { max-width: 860px; margin: 0 auto 90px; padding: 0 24px; }
+.form-section { max-width: 1040px; margin: 0 auto 90px; padding: 0 32px; }
 .form-section h2 { font-size: 30px; font-weight: 900; margin-bottom: 6px; text-align: center; letter-spacing: -0.5px; }
 .form-section-sub { font-size: 15px; color: var(--gray); text-align: center; margin-bottom: 28px; }
 form { display: flex; flex-direction: column; gap: 14px; }
