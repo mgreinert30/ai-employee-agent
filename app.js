@@ -2006,8 +2006,8 @@ function downloadPDF(length) {
   }
 
   function sectionHead(label) {
-    guard(16);
-    y += 5;
+    guard(24);
+    y += 6;
     // Full-width dark navy band
     doc.setFillColor(...navy);
     doc.rect(0, y, pageW, 11, 'F');
@@ -2036,8 +2036,8 @@ function downloadPDF(length) {
     doc.setFontSize(size);
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(text, cW - indent);
-    lines.forEach(ln => { guard(6); doc.text(ln, mL + indent, y); y += 5.2; });
-    y += 0.5;
+    lines.forEach(ln => { guard(9); doc.text(ln, mL + indent, y); y += 5.2; });
+    y += 1;
   }
 
   function bullet(text, level = 0) {
@@ -2316,64 +2316,75 @@ function downloadPDF(length) {
         const colW = cW / cols;
         const cellPad = 2.5;
         const headerH = 7;
+        const pageUsable = pageH - mTop - 14 - mBot;
 
-        // Check page space
-        if (y + headerH + 6 > pageH - mBot) { doc.addPage(); drawRunningHeader(); y = mTop + 14; }
-
-        // Header row
-        doc.setFillColor(...accent);
-        doc.rect(mL, y, cW, headerH, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...white);
-        b.headers.forEach((h, ci) => {
-          const cellX = mL + ci * colW;
-          const wrapped = doc.splitTextToSize(h, colW - cellPad * 2);
-          doc.text(wrapped[0] || '', cellX + cellPad, y + 4.8);
-        });
-        y += headerH;
-
-        // Data rows
-        b.rows.forEach((row, ri) => {
-          // Calculate row height based on tallest cell
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7.5);
+        // Pre-calculate all row heights
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        const rowHeights = b.rows.map(row => {
           let rowH = 6;
-          row.forEach((cell, ci) => {
-            const lines = doc.splitTextToSize(cell || '', colW - cellPad * 2);
-            rowH = Math.max(rowH, lines.length * 4.2 + 3);
+          row.forEach(cell => {
+            const ls = doc.splitTextToSize(cell || '', colW - cellPad * 2);
+            rowH = Math.max(rowH, ls.length * 4.2 + 3);
           });
-
-          if (y + rowH > pageH - mBot) { doc.addPage(); drawRunningHeader(); y = mTop + 14; }
-
-          // Alternating row background
-          if (ri % 2 === 0) { doc.setFillColor(...ice); doc.rect(mL, y, cW, rowH, 'F'); }
-
-          // Cell borders
-          doc.setDrawColor(...silver);
-          doc.setLineWidth(0.2);
-          for (let ci = 0; ci <= cols; ci++) {
-            doc.line(mL + ci * colW, y, mL + ci * colW, y + rowH);
-          }
-          doc.line(mL, y + rowH, mL + cW, y + rowH);
-
-          // Cell text
-          doc.setTextColor(...steel);
-          row.forEach((cell, ci) => {
-            const cellX = mL + ci * colW;
-            const wrapped = doc.splitTextToSize(cell || '', colW - cellPad * 2);
-            wrapped.forEach((line, li) => {
-              doc.text(line, cellX + cellPad, y + 4 + li * 4.2);
-            });
-          });
-          y += rowH;
+          return rowH;
         });
+        const totalTableH = headerH + rowHeights.reduce((s, h) => s + h, 0) + 6;
 
-        // Bottom border
-        doc.setDrawColor(...accent);
-        doc.setLineWidth(0.4);
-        doc.line(mL, y, mL + cW, y);
-        y += 5;
+        // If entire table fits on remaining page — keep it. Otherwise new page.
+        // If table is bigger than a full page, still start fresh on new page.
+        if (y + totalTableH > pageH - mBot) {
+          doc.addPage(); drawRunningHeader(); y = mTop + 14;
+        }
+
+        const drawTable = (startRow) => {
+          // Header row
+          doc.setFillColor(...accent);
+          doc.rect(mL, y, cW, headerH, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(...white);
+          b.headers.forEach((h, ci) => {
+            doc.text(doc.splitTextToSize(h, colW - cellPad * 2)[0] || '', mL + ci * colW + cellPad, y + 4.8);
+          });
+          y += headerH;
+
+          // Data rows
+          for (let ri = startRow; ri < b.rows.length; ri++) {
+            const row = b.rows[ri];
+            const rowH = rowHeights[ri];
+
+            // If this row doesn't fit and table is larger than a page — split here with header repeat
+            if (y + rowH > pageH - mBot && totalTableH > pageUsable) {
+              doc.addPage(); drawRunningHeader(); y = mTop + 14;
+              drawTable(ri); // recurse with header repeat
+              return;
+            }
+
+            if (ri % 2 === 0) { doc.setFillColor(...ice); doc.rect(mL, y, cW, rowH, 'F'); }
+
+            doc.setDrawColor(...silver);
+            doc.setLineWidth(0.2);
+            for (let ci = 0; ci <= cols; ci++) doc.line(mL + ci * colW, y, mL + ci * colW, y + rowH);
+            doc.line(mL, y + rowH, mL + cW, y + rowH);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...steel);
+            row.forEach((cell, ci) => {
+              const wrapped = doc.splitTextToSize(cell || '', colW - cellPad * 2);
+              wrapped.forEach((line, li) => doc.text(line, mL + ci * colW + cellPad, y + 4 + li * 4.2));
+            });
+            y += rowH;
+          }
+
+          doc.setDrawColor(...accent);
+          doc.setLineWidth(0.4);
+          doc.line(mL, y, mL + cW, y);
+          y += 5;
+        };
+
+        drawTable(0);
         break;
       }
 
