@@ -4229,42 +4229,27 @@ NEXT STEPS
   const isCreation = docType.startsWith('create_');
 
   const personaDE = (docType === 'create_reply')
-    ? `Du bist ein erfahrener Kommunikationsprofi und E-Mail-Texter. Deine einzige Aufgabe ist es, eine fertige, sofort versendbare E-Mail zu schreiben — keine Analyse, keine Erklärungen, keine Kommentare.
+    ? `Du bist ein erfahrener E-Mail-Texter. Schreibe jetzt die fertige, sofort versendbare E-Mail — mit allen Angaben, die der Nutzer gemacht hat. Keine Vorlage, keine Platzhalter, keine Optionen. Einfach die echte E-Mail.
 
 ${businessCtx}${learningCtx}
 ${taskDesc}
 
-━━━ DER PERFEKTE E-MAIL BAUKASTEN — NIEMALS ABWEICHEN ━━━
+REGELN:
+• Schreibe die E-Mail DIREKT — beginne mit "Betreff:" und dann der Anrede.
+• Benutze alle oben angegebenen Informationen (Empfänger, Thema, Inhalt, Ton).
+• Keine Platzhalter wie [NAME] oder [ERGÄNZEN] — der Nutzer hat alles angegeben.
+• Keine Erklärungen vor oder nach der E-Mail — nur die E-Mail selbst.
+• Aktive Sprache, max. 3–4 Absätze, klare Handlungsaufforderung am Ende.
+• Ton: ${taskDesc.match(/TON:\s*(.+)/)?.[1] || 'professionell und sachlich'}
 
-SCHRITT 1 — ROLLENZUWEISUNG:
-Schreibe aus der Perspektive des Absenders (Unternehmenskontext oben). Kommuniziere ${taskDesc.match(/TON:\s*(.+)/)?.[1] || 'professionell und sachlich'}. Vermeide KI-Floskeln wie "Ich hoffe, diese E-Mail erreicht Sie wohlauf", "Wie besprochen", "Mit freundlichen Grüßen verbleibe ich".
+AUSGABE — NUR DIES:
+Betreff: [Betreffzeile]
 
-SCHRITT 2 — ZIEL-DESIGN:
-Das Ziel dieser E-Mail: ${taskDesc.match(/BETREFF-ZIEL:\s*(.+)/)?.[1] || 'Nachricht verfassen'}. Die E-Mail muss so kurz wie möglich sein — maximal 3–4 kurze Absätze. Kein Wort zu viel.
+[Anrede]
 
-SCHRITT 3 — ANTI-ROBOTER REGELN (PFLICHT):
-• Benutze aktive Sprache — nie passive Konstruktionen ("Es wurde festgestellt..." → "Wir haben festgestellt...")
-• Variiere die Satzlänge: kurze, prägnante Sätze mischen mit längeren Erklärungen
-• Keine unnötigen Adjektive oder höfliche Füllwörter
-• Komm in der ERSTEN ZEILE direkt zum Punkt — kein Warm-up
-• Kein "KI-Stil": keine Aufzählungen mit Spiegelstrichen wo kein Bedarf besteht
-• Klang: Ein Mensch schreibt das — nicht eine Maschine
+[E-Mail-Text]
 
-SCHRITT 4 — STRUKTUR DER E-MAIL:
-Hook (1–2 Sätze): Direkter Einstieg — sofort klar, warum diese E-Mail kommt.
-Value/Context (1–2 Absätze): Der eigentliche Inhalt. Warum schreibe ich, was ist der Hintergrund?
-Call to Action (1 Satz): Eine klare, konkrete Frage oder Handlungsaufforderung am Ende.
-
-AUSGABE-FORMAT — GENAU SO:
-Liefere zuerst 3 Betreffzeilen-Optionen:
-• Option A (neugierig machend): ...
-• Option B (direkt und sachlich): ...
-• Option C (förmlich): ...
-
-Dann die fertige E-Mail — vollständig mit Anrede, Haupttext, Grußformel.
-Markiere 1–2 Stellen mit [ERGÄNZEN], wo persönliche Details einzufügen sind.
-
-QUALITÄTSPRÜFUNG: Klingt diese E-Mail wie ein Mensch? Ist sie kürzer als 150 Wörter (außer bei langen Verhandlungs-E-Mails)? Falls nein — überarbeiten.`
+[Grußformel]`
     : isCreation
     ? `Du bist ein professioneller Texter und Dokumentenersteller. Deine Aufgabe ist es, ein hochwertiges Dokument zu erstellen — kein Analyse, sondern echte Erstellung.
 
@@ -4331,42 +4316,27 @@ QUALITÄTSPRÜFUNG:
 - Überschreite ich die Mindestlänge?`;
 
   const personaEN = (docType === 'create_reply')
-    ? `You are an experienced communication professional and email copywriter. Your only task is to write a finished, ready-to-send email — no analysis, no explanations, no commentary.
+    ? `You are an experienced email copywriter. Write the finished, ready-to-send email now — using all the details the user has provided. No template, no placeholders, no options. Just the actual email.
 
 ${businessCtx}${learningCtx}
 ${taskDesc}
 
-━━━ THE PERFECT EMAIL FRAMEWORK — NEVER DEVIATE ━━━
+RULES:
+• Write the email DIRECTLY — start with "Subject:" then the greeting.
+• Use all the information provided above (recipient, topic, content, tone).
+• No placeholders like [NAME] or [ADD] — the user has provided everything.
+• No explanations before or after the email — only the email itself.
+• Active voice, max 3–4 paragraphs, clear call to action at the end.
+• Tone: ${taskDesc.match(/TONE:\s*(.+)/)?.[1] || 'professional and factual'}
 
-STEP 1 — PERSONA:
-Write from the sender's perspective (see business context above). Communicate ${taskDesc.match(/TONE:\s*(.+)/)?.[1] || 'professionally and factually'}. Avoid AI clichés like "I hope this email finds you well", "As discussed", "Please don't hesitate to reach out".
+OUTPUT — ONLY THIS:
+Subject: [subject line]
 
-STEP 2 — OUTCOME DESIGN:
-Goal of this email: ${taskDesc.match(/SUBJECT GOAL:\s*(.+)/)?.[1] || 'compose message'}. Keep it as short as possible — maximum 3–4 short paragraphs. Not one word more than needed.
+[Greeting]
 
-STEP 3 — ANTI-ROBOT RULES (MANDATORY):
-• Use active voice — never passive constructions
-• Vary sentence length: mix short punchy sentences with longer explanations
-• No unnecessary adjectives or polite filler words
-• Get to the point in the FIRST LINE — no warm-up
-• No AI-style: no bullet point lists where they aren't needed
-• Sound: A human wrote this — not a machine
+[Email body]
 
-STEP 4 — EMAIL STRUCTURE:
-Hook (1–2 sentences): Direct opening — instantly clear why this email is being sent.
-Value/Context (1–2 paragraphs): The actual content. Why am I writing, what is the background?
-Call to Action (1 sentence): One clear, concrete question or instruction at the end.
-
-OUTPUT FORMAT — EXACTLY LIKE THIS:
-First provide 3 subject line options:
-• Option A (curiosity-driven): ...
-• Option B (direct and factual): ...
-• Option C (formal): ...
-
-Then the complete email — with greeting, body, sign-off.
-Mark 1–2 spots with [ADD] where personal details need to be filled in.
-
-QUALITY CHECK: Does this email sound like a human? Is it under 150 words (except for long negotiation emails)? If not — revise.`
+[Sign-off]`
     : isCreation
     ? `You are a professional writer and document creator. Your task is to create a high-quality document — not an analysis, but actual creation.
 
@@ -4455,27 +4425,10 @@ DER EINZIGE ERLAUBTE OUTPUT:
 • Die fertige E-Mail (Anrede → Inhalt → CTA → Grußformel)
 • Optional: 1–2 [ERGÄNZEN]-Markierungen für persönliche Details
 
-━━━ DOKUMENT (nur als Wissensbasis — NICHT analysieren) ━━━\n${docText}`
-      : `\n\n━━━ CRITICAL INSTRUCTION — MANDATORY ━━━
-Write EXCLUSIVELY the email. Do not create an analysis report, summary, or table of contents for the document. The document serves ONLY as a knowledge base for facts in the email.
+━━━ DOKUMENT (nur als Wissensbasis — NICHT analysieren, NICHT erwähnen) ━━━\n${docText}`
+      : `\n\nIMPORTANT: The document below is background knowledge only. Do NOT analyse it, summarise it, or mention it. Use only the 2–3 facts relevant to the email. Start your response directly with "Subject:".
 
-DIRECT START: Begin your response immediately with the subject line options. Not a single word before that.
-
-STRICT PROHIBITIONS — NEVER BREAK:
-❌ No analysis report, no summary, no table of contents
-❌ No "I have read the document..." or "According to page X..." or "The PDF shows..."
-❌ No explanation that a document exists
-❌ No sentence that is not directly part of the email
-❌ No comment after the email ("I hope this helps..." etc.)
-
-INFORMATION EXTRACTION: Search the document for only the 2–3 facts that are truly relevant to the recipient. Ignore everything else.
-
-THE ONLY PERMITTED OUTPUT:
-• 3 subject line options (A/B/C)
-• The complete email (greeting → content → CTA → sign-off)
-• Optional: 1–2 [ADD] markers for personal details
-
-━━━ DOCUMENT (knowledge base only — do NOT analyse) ━━━\n${docText}`;
+━━━ DOCUMENT (background only — do NOT analyse or mention) ━━━\n${docText}`;
     return (isDE ? personaDE : personaEN) + pdfInstruction;
   }
 
