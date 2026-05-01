@@ -4154,6 +4154,12 @@ KERNREGELN — NIEMALS BRECHEN:
 8. TABELLEN: Vergleiche, Zahlenreihen und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
 9. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
 10. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
+11. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
+    • EXECUTIVE DASHBOARD: Die 3 kritischsten Erkenntnisse auf einen Blick.
+    • FAKTEN-CHECK: Tabelle mit ALLEN wichtigen Zahlen, Daten und harten Zusagen.
+    • KLEINGEDRUCKT-ANALYSE: Alle Einschränkungen, Risiken oder Bedingungen die den Erfolg gefährden.
+    • ANOMALIE-BERICHT: Alles was ungewöhnlich, widersprüchlich oder neu im Vergleich zu Standard-Dokumenten ist.
+    • HANDLUNGSEMPFEHLUNG: Was sollte der Leser als nächstes konkret tun?
 
 ${depth}
 
@@ -4199,6 +4205,12 @@ CORE RULES — NEVER BREAK:
 8. TABLES: Comparisons, data series and pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
 9. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
 10. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
+11. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
+    • EXECUTIVE DASHBOARD: The 3 most critical findings at a glance.
+    • FACT CHECK: Table with ALL important numbers, dates and hard commitments.
+    • FINE PRINT ANALYSIS: All limitations, risks or conditions that could jeopardise success.
+    • ANOMALY REPORT: Everything unusual, contradictory or new compared to standard documents of this type.
+    • RECOMMENDED ACTION: Based on the content — what should the reader do next, concretely?
 
 ${depth}
 
