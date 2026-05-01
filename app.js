@@ -4176,6 +4176,19 @@ KERNREGELN — NIEMALS BRECHEN:
     • KLEINGEDRUCKT-ANALYSE: Alle Einschränkungen, Risiken oder Bedingungen die den Erfolg gefährden.
     • ANOMALIE-BERICHT: Alles was ungewöhnlich, widersprüchlich oder neu im Vergleich zu Standard-Dokumenten ist.
     • HANDLUNGSEMPFEHLUNG: Was sollte der Leser als nächstes konkret tun?
+12. ANOMALIE-FOKUS — suche aktiv nach diesen Warnsignalen und benenne sie explizit:
+    • Dramatische Änderungen: Zahlen oder Kennwerte die sich um mehr als 20% verändert haben.
+    • Widersprüche: Aussagen die sich innerhalb des Dokuments widersprechen.
+    • Ungewöhnliche Formulierungen: Abschwächungen, Hedge-Sätze oder unklare Zusagen im Vergleich zu Vorjahren.
+    • Fehlende Informationen: Was wird NICHT erwähnt, obwohl es bei diesem Dokumenttyp standard wäre?
+    • Timing-Anomalien: Fristen, Daten oder Deadlines die auffällig kurz oder unüblich sind.
+    • Für jeden Anomalie-Fund: Bewertung 🔴 Kritisch / 🟡 Auffällig / 🟢 Beobachten.
+13. TIEFEN-ANALYSE in 5 Dimensionen — wende diese auf jedes Dokument an:
+    • DIE EXPLIZITE BOTSCHAFT ("Was"-Faktor): Was behauptet das Dokument offiziell? Welche strategische Richtung wird kommuniziert?
+    • DIE KRITISCHE LÜCKE ("Blinder Fleck"): Was fehlt zwischen den Zeilen? Was wird heruntergespielt oder bewusst weggelassen?
+    • DIE DATEN-LOGIK ("Realitäts-Check"): Sind die Zahlen kohärent? Wetten die Zahlen auf eine Zukunft die nicht eintreten muss?
+    • OPERATIVE EFFIZIENZ: Wird hier wirklich optimiert oder nur schöngerechnet? Wie entwickeln sich Margen und Kosten pro Einheit?
+    • INNOVATIONS-ARCHITEKTUR: Wird nur optimiert oder neu erfunden? Welche Investments deuten auf langfristige strukturelle Veränderungen hin?
 
 ${depth}
 
@@ -4227,6 +4240,19 @@ CORE RULES — NEVER BREAK:
     • FINE PRINT ANALYSIS: All limitations, risks or conditions that could jeopardise success.
     • ANOMALY REPORT: Everything unusual, contradictory or new compared to standard documents of this type.
     • RECOMMENDED ACTION: Based on the content — what should the reader do next, concretely?
+12. ANOMALY FOCUS — actively search for these warning signals and name them explicitly:
+    • Dramatic changes: Numbers or metrics that changed by more than 20%.
+    • Contradictions: Statements that contradict each other within the document.
+    • Unusual language: Hedging, softened commitments or vague promises compared to previous periods.
+    • Missing information: What is NOT mentioned that would be standard for this document type?
+    • Timing anomalies: Deadlines or dates that are unusually short or atypical.
+    • For each anomaly found: Rating 🔴 Critical / 🟡 Notable / 🟢 Watch.
+13. DEEP ANALYSIS in 5 dimensions — apply these to every document:
+    • THE EXPLICIT MESSAGE ("What" factor): What does the document officially claim? What strategic direction is communicated?
+    • THE CRITICAL GAP ("Blind Spot"): What is missing between the lines? What is downplayed or deliberately omitted?
+    • DATA LOGIC ("Reality Check"): Are the numbers coherent? Do the figures bet on a future that may not materialise?
+    • OPERATIONAL EFFICIENCY: Is this genuine optimisation or just cosmetic accounting? How are margins and unit costs trending?
+    • INNOVATION ARCHITECTURE: Optimisation only, or genuine reinvention? Which investments signal long-term structural change?
 
 ${depth}
 
