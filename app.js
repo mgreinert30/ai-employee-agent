@@ -4517,8 +4517,9 @@ async function renderPDFPagesToImages(file, maxPages = 12) {
 async function runRealAI(taskDesc, businessDetails, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
   const taskKind = currentShortcutType || detectTaskType(taskDesc);
-  const isCreationTask = (taskKind === 'document' || taskKind === 'report' || taskKind === 'reply') && uploadedPDFs.length === 0;
-  const docType = isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc);
+  // reply always = email creation, even with PDF (PDF = context only, never triggers analysis mode)
+  const isCreationTask = taskKind === 'reply' || ((taskKind === 'document' || taskKind === 'report') && uploadedPDFs.length === 0);
+  const docType = taskKind === 'reply' ? 'create_reply' : (isCreationTask ? ('create_' + taskKind) : detectDocType(fn, taskDesc));
   window.currentDocType = docType;
 
   let docText = '';
