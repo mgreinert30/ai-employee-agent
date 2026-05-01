@@ -17,7 +17,7 @@ function setLang(lang) {
   localStorage.setItem('lang', lang);
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-de]').forEach(el => {
-    el.textContent = el.getAttribute(`data-${lang}`);
+    el.innerHTML = el.getAttribute(`data-${lang}`);
   });
   const ph = {
     de: { 'business-details': 'z.B. Wir sind ein kleines Beratungsunternehmen...', 'task-description': 'z.B. Sortiere meine E-Mails nach Dringlichkeit...', 'login-email': 'max@firma.de', 'signup-email': 'max@firma.de', 'signup-name': 'Max Mustermann', 'paypal-email': 'deine@paypal.com', 'bank-name': 'Max Mustermann', 'bank-iban': 'DE89 3704 0044 0532 0130 00', 'review-text': 'z.B. Sehr schnell und präzise! Würde ich weiterempfehlen.', 'review-name': 'Max M.' },
