@@ -793,7 +793,7 @@ textarea { resize: vertical; }
 .result-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .result-icon { font-size: 32px; }
 .result-header h3 { font-size: 24px; font-weight: 800; }
-.result-content { background: var(--lighter); border: 1px solid var(--light); border-radius: 10px; padding: 22px; font-size: 14px; line-height: 1.9; white-space: pre-wrap; max-height: 320px; overflow-y: auto; margin-bottom: 26px; }
+.result-content { background: var(--lighter); border: 1px solid var(--light); border-radius: 10px; padding: 22px; font-size: 14px; line-height: 1.9; white-space: pre-wrap; max-height: 560px; overflow-y: auto; margin-bottom: 26px; }
 .result-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* DELETED / REVOKE */
