@@ -2156,7 +2156,7 @@ function downloadPDF(length) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text(clean.toUpperCase(), mL, y + 7.4);
-    y += 15;
+    y += 20;
     // Defensive reset
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
