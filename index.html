@@ -121,6 +121,17 @@
           <p id="gemini-key-status" style="margin-top:8px;font-size:13px;display:none;"></p>
         </div>
 
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);margin-top:16px;">
+          <h4 style="color:#60a5fa;margin-bottom:6px;">📨 Microsoft App-ID (Outlook)</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">
+            Trage hier deine Microsoft Azure App-ID ein, damit Nutzer ihr Outlook-Postfach verbinden können.<br>
+            <a href="https://portal.azure.com" target="_blank" style="color:#60a5fa;">→ App registrieren im Azure Portal</a>
+          </p>
+          <input type="text" id="owner-ms-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;margin-bottom:10px;box-sizing:border-box;"/>
+          <button onclick="saveMicrosoftClientId()" class="btn-primary" style="width:100%;">Microsoft App-ID speichern</button>
+          <p id="ms-client-id-status" style="margin-top:8px;font-size:13px;display:none;"></p>
+        </div>
+
         <div class="settings-section">
           <h4 data-de="💳 PayPal verknüpfen" data-en="💳 Link PayPal">💳 PayPal verknüpfen</h4>
           <p data-de="Gib deinen PayPal.me Nutzernamen ein. Kundenzahlungen werden direkt an dein PayPal weitergeleitet." data-en="Enter your PayPal.me username. Customer payments will be sent directly to your PayPal.">
@@ -943,18 +954,40 @@
       </div>
     </div>
 
-    <!-- STEP 4c: GMAIL CONNECT -->
+    <!-- STEP 4c: EMAIL PROVIDER SELECTION (Gmail + Outlook) -->
     <div id="step-gmail" style="display:none;">
       <div class="setup-box">
         <div class="setup-header">
-          <span class="setup-icon" id="gmail-step-icon">📧</span>
+          <span class="setup-icon" id="gmail-step-icon">📬</span>
           <div>
-            <h3 data-de="Gmail verbinden" data-en="Connect Gmail">Gmail verbinden</h3>
-            <p data-de="Melde dich einmalig mit deinem Google-Konto an — die KI liest deine E-Mails, sortiert sie und löscht danach alles." data-en="Sign in once with your Google account — the AI reads your emails, sorts them, then deletes everything.">Melde dich einmalig mit deinem Google-Konto an — die KI liest deine E-Mails, sortiert sie und löscht danach alles.</p>
+            <h3 data-de="E-Mail-Anbieter wählen" data-en="Choose email provider">E-Mail-Anbieter wählen</h3>
+            <p data-de="Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. Alle Daten werden danach verworfen." data-en="Connect your mailbox — the AI reads, sorts and analyses your emails. All data is discarded afterwards.">Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. Alle Daten werden danach verworfen.</p>
           </div>
         </div>
-        <button onclick="connectGmail()" class="btn-primary full-width" id="gmail-connect-btn" data-de="🔗 Mit Google verbinden" data-en="🔗 Connect with Google">🔗 Mit Google verbinden</button>
-        <p id="gmail-status" style="display:none;text-align:center;margin-top:12px;font-size:14px;color:var(--gray);"></p>
+
+        <!-- Provider cards -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;">
+
+          <!-- Gmail card -->
+          <div style="border:1.5px solid rgba(255,255,255,0.12);border-radius:12px;padding:18px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+            <span style="font-size:32px;">📧</span>
+            <div style="font-size:14px;font-weight:600;color:white;">Gmail</div>
+            <div style="font-size:12px;color:var(--gray);" data-de="Mit Google verbinden" data-en="Connect with Google">Mit Google verbinden</div>
+            <button onclick="connectGmail()" class="btn-primary" id="gmail-connect-btn" style="width:100%;margin-top:4px;font-size:13px;" data-de="🔗 Mit Google verbinden" data-en="🔗 Connect with Google">🔗 Mit Google verbinden</button>
+            <p id="gmail-status" style="display:none;font-size:12px;color:var(--gray);margin:0;"></p>
+          </div>
+
+          <!-- Outlook card -->
+          <div style="border:1.5px solid rgba(255,255,255,0.12);border-radius:12px;padding:18px;background:rgba(255,255,255,0.04);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+            <span style="font-size:32px;">📨</span>
+            <div style="font-size:14px;font-weight:600;color:white;">Outlook</div>
+            <div style="font-size:12px;color:var(--gray);" data-de="Mit Microsoft verbinden" data-en="Connect with Microsoft">Mit Microsoft verbinden</div>
+            <button onclick="connectOutlook()" class="btn-primary" id="outlook-connect-btn" style="width:100%;margin-top:4px;font-size:13px;" data-de="📨 Mit Microsoft verbinden" data-en="📨 Connect with Microsoft">📨 Mit Microsoft verbinden</button>
+            <p id="outlook-status" style="display:none;font-size:12px;color:#ef4444;margin:0;"></p>
+          </div>
+
+        </div>
+
         <div class="setup-note" style="margin-top:20px;">
           <span>🔒</span>
           <p data-de="Nur Lese-Zugriff auf deine E-Mails. Kein Schreiben, kein Löschen. Alle Daten werden nach der Analyse sofort verworfen." data-en="Read-only access to your emails. No writing, no deleting. All data is discarded after analysis.">Nur Lese-Zugriff. Alle Daten werden nach der Analyse sofort verworfen.</p>
@@ -1189,6 +1222,7 @@
     </div>
   </div>
 
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
   <script src="app.js"></script>
 </body>
 </html>

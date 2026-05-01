@@ -1061,6 +1061,139 @@ ${emailList}`;
 }
 
 // =====================
+// MICROSOFT / OUTLOOK INTEGRATION
+// =====================
+
+function getMicrosoftClientId() {
+  return localStorage.getItem('ms_client_id') || '';
+}
+
+function saveMicrosoftClientId() {
+  const id = document.getElementById('owner-ms-client-id').value.trim();
+  if (!id || id.length < 10) return;
+  localStorage.setItem('ms_client_id', id);
+  const el = document.getElementById('ms-client-id-status');
+  el.style.display = 'block';
+  el.style.color = '#4ade80';
+  el.textContent = '✓ Microsoft App ID gespeichert!';
+  document.getElementById('owner-ms-client-id').value = '';
+}
+
+let outlookAccessToken = null;
+
+async function connectOutlook() {
+  const clientId = getMicrosoftClientId();
+  if (!clientId) {
+    alert(currentLang === 'de'
+      ? 'Bitte zuerst die Microsoft App-ID im Owner Panel eintragen.'
+      : 'Please enter your Microsoft App ID in Owner Panel first.');
+    return;
+  }
+
+  const btn = document.getElementById('outlook-connect-btn');
+  btn.disabled = true;
+  btn.textContent = currentLang === 'de' ? '⏳ Verbinde...' : '⏳ Connecting...';
+
+  try {
+    const msalApp = new msal.PublicClientApplication({
+      auth: {
+        clientId,
+        authority: 'https://login.microsoftonline.com/common',
+        redirectUri: window.location.origin
+      },
+      cache: { cacheLocation: 'sessionStorage' }
+    });
+    await msalApp.initialize();
+
+    const response = await msalApp.loginPopup({
+      scopes: ['Mail.Read', 'Mail.ReadWrite']
+    });
+
+    const tokenResponse = await msalApp.acquireTokenSilent({
+      scopes: ['Mail.Read', 'Mail.ReadWrite'],
+      account: response.account
+    });
+
+    outlookAccessToken = tokenResponse.accessToken;
+    btn.textContent = currentLang === 'de' ? '✓ Verbunden — Analyse startet...' : '✓ Connected — Starting...';
+    await startOutlookTask();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = currentLang === 'de' ? '📨 Mit Microsoft verbinden' : '📨 Connect with Microsoft';
+    const status = document.getElementById('outlook-status');
+    status.style.display = 'block';
+    status.textContent = 'Fehler: ' + err.message;
+  }
+}
+
+async function fetchOutlookEmails() {
+  const res = await fetch(
+    'https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$select=id,subject,from,receivedDateTime,isRead&$filter=isRead eq false&$orderby=receivedDateTime desc',
+    { headers: { Authorization: `Bearer ${outlookAccessToken}` } }
+  );
+  if (!res.ok) throw new Error('Outlook API error: ' + res.status);
+  const data = await res.json();
+  return (data.value || []).map(m => ({
+    id: m.id,
+    subject: m.subject || '(kein Betreff)',
+    from: m.from?.emailAddress?.address || '',
+    date: m.receivedDateTime?.slice(0, 10) || ''
+  }));
+}
+
+async function startOutlookTask() {
+  showStep('step-progress');
+  document.querySelector('.agent-icon').textContent = getCharacterEmoji();
+  const de = currentLang === 'de';
+  const name = getCharacterName();
+
+  setProgress(10, de ? `${name} verbindet sich mit Outlook...` : `${name} connecting to Outlook...`);
+
+  let emails = [];
+  try {
+    emails = await fetchOutlookEmails();
+  } catch (err) {
+    currentResult = (de ? 'Fehler beim Lesen der Outlook-E-Mails: ' : 'Error reading Outlook emails: ') + err.message;
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').textContent = currentResult;
+    return;
+  }
+
+  if (!emails.length) {
+    currentResult = de ? 'Keine ungelesenen E-Mails im Posteingang gefunden.' : 'No unread emails found in inbox.';
+    setProgress(100, de ? 'Fertig.' : 'Done.');
+    showStep('step-result');
+    document.getElementById('result-content').innerHTML = `<p>${currentResult}</p>`;
+    return;
+  }
+
+  setProgress(40, de ? `${name} analysiert ${emails.length} Outlook-E-Mails...` : `${name} analysing ${emails.length} Outlook emails...`);
+
+  const emailList = emails.map((e, i) => `${i+1}. Von: ${e.from} | Betreff: ${e.subject} | Datum: ${e.date}`).join('\n');
+  const prompt = de
+    ? `Analysiere folgende ${emails.length} Outlook-E-Mails. Kategorisiere sie nach: Dringend, Wichtig, Newsletter, Spam, Sonstiges. Gib für jede E-Mail eine konkrete Empfehlung.\n\nE-Mails:\n${emailList}`
+    : `Analyse these ${emails.length} Outlook emails. Categorise them as: Urgent, Important, Newsletter, Spam, Other. Give a concrete recommendation for each.\n\nEmails:\n${emailList}`;
+
+  startProgressAnimation(40, 95, 30000, de ? 'KI kategorisiert Outlook-E-Mails...' : 'AI categorising Outlook emails...');
+
+  try {
+    const res = await fetchWithTimeout('/api/analyse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result;
+  } catch (err) {
+    currentResult = (de ? 'Fehler bei der KI-Analyse: ' : 'AI analysis error: ') + err.message;
+  }
+
+  stopProgressAnimation();
+  setProgress(100, de ? 'Fertig!' : 'Done!');
+  showStep('step-result');
+  document.getElementById('result-content').innerHTML = marked.parse ? marked.parse(currentResult) : currentResult;
+  outlookAccessToken = null;
+}
+
+// =====================
 // PRICING
 // Max €5 per task. Fair, transparent, length-based.
 // Compared to ChatGPT Plus (~€20/month ÷ ~30 uses = €0.67/use for general access)
