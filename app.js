@@ -4151,8 +4151,10 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
     result = data.result;
   }
 
+  const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
+  startProgressAnimation(currentPct, 100, 600, currentLang === 'de' ? 'Fertig!' : 'Done!');
+  await new Promise(r => setTimeout(r, 650));
   stopProgressAnimation();
-  setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
   return result;
 }
 
