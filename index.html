@@ -854,11 +854,17 @@
         </div>
 
         <!-- PDF UPLOAD -->
+        <!-- Context hint — changes per service type -->
+        <div id="upload-context-hint" class="upload-context-hint" style="display:none;">
+          <span class="upload-hint-icon">📎</span>
+          <span id="upload-hint-text"></span>
+        </div>
+
         <div class="pdf-upload-area" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
           <input type="file" id="pdf-file-input" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
           <div class="pdf-upload-icon">☁️</div>
           <div class="pdf-upload-text">
-            <strong data-de="PDFs oder Bilder hier ablegen oder klicken" data-en="Drop PDFs or images here or click">PDFs oder Bilder hier ablegen oder klicken</strong><br>
+            <strong id="upload-main-label" data-de="PDFs oder Bilder hier ablegen oder klicken" data-en="Drop PDFs or images here or click">PDFs oder Bilder hier ablegen oder klicken</strong><br>
             <span data-de="PDF, JPG, PNG, WEBP — bis zu 10 Dateien (max. 50 MB pro Datei)" data-en="PDF, JPG, PNG, WEBP — up to 10 files (max. 50 MB per file)">PDF, JPG, PNG, WEBP — bis zu 10 Dateien (max. 50 MB pro Datei)</span>
           </div>
           <div class="pdf-file-list" id="pdf-file-list"></div>

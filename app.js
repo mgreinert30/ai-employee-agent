@@ -1285,6 +1285,40 @@ function syncServiceBtn(type) {
   if (s) s.textContent = dd.short;
   if (m) m.textContent = dd.medium;
   if (l) l.textContent = dd.long;
+
+  // Upload context hint
+  const hint = document.getElementById('upload-context-hint');
+  const hintText = document.getElementById('upload-hint-text');
+  const uploadLabel = document.getElementById('upload-main-label');
+  const de = currentLang === 'de';
+  const hints = {
+    de: {
+      reply:    'Optional: Lade ein Dokument hoch, damit die KI genau versteht, worum es geht — z.B. ein Vertrag, eine Rechnung oder ein Angebot. Die KI liest es als Hintergrundinformation. Das Dokument wird <strong>nicht</strong> in die E-Mail eingefügt.',
+      pdf:      null,
+      email:    null,
+      report:   'Optional: Lade Dokumente hoch, die als Grundlage für den Bericht dienen sollen (z.B. Rohdaten, Notizen, Vorberichte).',
+      document: 'Optional: Lade eine Vorlage oder ein Referenzdokument hoch, an dem sich die KI orientieren soll.'
+    },
+    en: {
+      reply:    'Optional: Upload a document so the AI understands the exact context — e.g. a contract, invoice, or quote. The AI reads it as background info only. The document will <strong>not</strong> be attached to the email.',
+      pdf:      null,
+      email:    null,
+      report:   'Optional: Upload documents to use as the basis for the report (e.g. raw data, notes, previous reports).',
+      document: 'Optional: Upload a template or reference document for the AI to follow.'
+    }
+  };
+  const msg = (hints[de ? 'de' : 'en'] || hints.de)[type];
+  if (hint && hintText) {
+    if (msg) { hintText.innerHTML = msg; hint.style.display = 'flex'; }
+    else { hint.style.display = 'none'; }
+  }
+  if (uploadLabel) {
+    uploadLabel.setAttribute('data-de', type === 'reply' ? 'Dokument hochladen (optional — nur als KI-Kontext)' : 'PDFs oder Bilder hier ablegen oder klicken');
+    uploadLabel.setAttribute('data-en', type === 'reply' ? 'Upload document (optional — AI context only)' : 'Drop PDFs or images here or click');
+    uploadLabel.innerHTML = de
+      ? uploadLabel.getAttribute('data-de')
+      : uploadLabel.getAttribute('data-en');
+  }
 }
 
 function toggleServiceDropdown() {
