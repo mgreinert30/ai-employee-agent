@@ -1818,111 +1818,105 @@ function closeLengthSelector() {
 function parseResultBlocks(text) {
   const blocks = [];
   const lines  = text.split('\n');
-  let afterDivider = false;  // next non-empty line after ━━━ is a section title
+  let afterDivider = false;
+  const isTableRow = s => /^\|.+\|/.test(s);
+  const isSepRow   = s => /^\|[\s\-:|]+\|/.test(s);
 
-  lines.forEach(raw => {
-    const t = raw.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const t   = raw.trim();
 
-    if (!t) { afterDivider = false; blocks.push({ type: 'gap' }); return; }
+    if (!t) { afterDivider = false; blocks.push({ type: 'gap' }); continue; }
 
     // ━━━ divider → flag that next line is a section title
-    if (/^━{3,}/.test(t)) { 
-      // Check if this is likely a bottom divider closing a section title
+    if (/^━{3,}/.test(t)) {
       let lastType = null;
       for (let j = blocks.length - 1; j >= 0; j--) {
-        if (blocks[j].type !== 'gap') {
-          lastType = blocks[j].type;
-          break;
-        }
+        if (blocks[j].type !== 'gap') { lastType = blocks[j].type; break; }
       }
-      if (lastType === 'section') {
-        afterDivider = false; // It's a bottom divider, don't treat next line as section
-      } else {
-        afterDivider = true; // It's a top divider
-      }
-      return; 
+      afterDivider = lastType !== 'section';
+      continue;
     }
 
     // Section title (line immediately after a top ━━━)
     if (afterDivider) {
       afterDivider = false;
-      // Strip leading emojis/symbols
       const title = t.replace(/^[\u{0080}-\u{FFFF}\u{10000}-\u{10FFFF}]+\s*/gu, '')
                      .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '').trim();
       blocks.push({ type: 'section', text: title || t.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim() });
-      return;
+      continue;
     }
 
     afterDivider = false;
 
-    // Markdown headings: ###, ##, # — AI sometimes outputs these instead of ━━━ dividers
+    // Markdown table — collect all consecutive pipe rows
+    if (isTableRow(t)) {
+      const rows = [];
+      while (i < lines.length && (isTableRow(lines[i].trim()) || isSepRow(lines[i].trim()))) {
+        const row = lines[i].trim();
+        if (!isSepRow(row)) {
+          rows.push(row.replace(/^\||\|$/g, '').split('|').map(c => c.trim().replace(/\*\*/g, '')));
+        }
+        i++;
+      }
+      i--; // step back — outer loop will increment
+      if (rows.length >= 1) blocks.push({ type: 'table', headers: rows[0], rows: rows.slice(1) });
+      continue;
+    }
+
+    // Markdown headings
     const mdHeading = t.match(/^#{1,6}\s+(.+)/);
     if (mdHeading) {
-      const hText = mdHeading[1]
-        .replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '')
-        .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '')
-        .trim();
+      const hText = mdHeading[1].replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '').replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '').trim();
       blocks.push({ type: 'section', text: hText || mdHeading[1] });
-      return;
+      continue;
     }
 
-    // **Bold line** on its own → treat as section heading
+    // **Bold line** on its own → section heading
     const boldLine = t.match(/^\*\*([^*]{3,})\*\*[:\s]*$/);
-    if (boldLine) {
-      blocks.push({ type: 'section', text: boldLine[1].trim() });
-      return;
-    }
+    if (boldLine) { blocks.push({ type: 'section', text: boldLine[1].trim() }); continue; }
 
-    // KPI lines inside KENNZAHLEN / KEY METRICS section: "Label: Value" with numbers/% /€/$
-    // Detect if we're inside a KPI section
+    // KPI lines inside KENNZAHLEN section
     const prevSection = blocks.slice().reverse().find(b => b.type === 'section');
     const inKpiSection = prevSection && /kennzahl|metric|key.*figure|auf einen blick|at a glance/i.test(prevSection.text);
-    // Match all dash/minus variants including U+2212 (mathematical minus) before numeric values
     if (inKpiSection && /^[^:]+:\s*[^\w\s]{0,3}\d/.test(t)) {
       const colonIdx = t.indexOf(':');
       blocks.push({ type: 'kpi', label: t.slice(0, colonIdx).trim(), value: t.slice(colonIdx + 1).trim() });
-      return;
+      continue;
     }
 
-    // Risk bullets  🔴 🟡 🟢
+    // Risk bullets 🔴 🟡 🟢
     if (/^[\uD83D][\uDD34]/.test(t) || t.startsWith('\uD83D\uDD34') || /^\u{1F534}/u.test(t)) {
-      blocks.push({ type: 'risk', level: 'critical', text: stripLeadingSymbol(t) }); return;
+      blocks.push({ type: 'risk', level: 'critical', text: stripLeadingSymbol(t) }); continue;
     }
-    if (/^\u{1F7E1}/u.test(t)) {
-      blocks.push({ type: 'risk', level: 'important', text: stripLeadingSymbol(t) }); return;
-    }
-    if (/^\u{1F7E2}/u.test(t)) {
-      blocks.push({ type: 'risk', level: 'low', text: stripLeadingSymbol(t) }); return;
-    }
+    if (/^\u{1F7E1}/u.test(t)) { blocks.push({ type: 'risk', level: 'important', text: stripLeadingSymbol(t) }); continue; }
+    if (/^\u{1F7E2}/u.test(t)) { blocks.push({ type: 'risk', level: 'low',      text: stripLeadingSymbol(t) }); continue; }
 
-    // Labeled bullet  * **Label:** text  or  - **Label:** text
+    // Labeled bullet
     const lblM = t.match(/^[*\-]\s+\*\*([^*:]+):\*\*\s*(.*)/);
     if (lblM) {
-      const label = lblM[1].trim();
-      const text  = lblM[2].trim();
-      if (/^(Erkenntnis|Insight|Hinweis|Tipp|Note|Tip)/i.test(label)) {
-        blocks.push({ type: 'insight', label, text }); return;
-      }
-      blocks.push({ type: 'labeled_bullet', label, text }); return;
+      const label = lblM[1].trim(), text = lblM[2].trim();
+      if (/^(Erkenntnis|Insight|Hinweis|Tipp|Note|Tip)/i.test(label)) { blocks.push({ type: 'insight', label, text }); continue; }
+      blocks.push({ type: 'labeled_bullet', label, text }); continue;
     }
 
-    // Numbered items  1. 2. etc.
+    // Numbered items
     const numM = t.match(/^(\d+)\.\s+(.+)/);
-    if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); return; }
+    if (numM) { blocks.push({ type: 'numbered', n: parseInt(numM[1]), text: numM[2] }); continue; }
 
-    // Arrow / dash / star bullets  →  -  •  *
+    // Arrow / dash / star bullets
     if (/^(→|•|\-\s|\*\s)/.test(t)) {
-      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); return;
+      blocks.push({ type: 'bullet', text: t.replace(/^(→|•|\-\s+|\*\s+)/, '').trim() }); continue;
     }
 
-    // Small-print meta lines (Datei:, File:, Gelesen:, Read:, Referenz:, Reference:)
+    // Meta lines
     if (/^(Datei|File|Gelesen|Read|Referenz|Reference|Erstellt|Created|Status|Analysiert|Analysed by):/.test(t)) {
-      blocks.push({ type: 'meta', text: t }); return;
+      blocks.push({ type: 'meta', text: t }); continue;
     }
 
-    // Everything else: body paragraph
+    // Body
     blocks.push({ type: 'body', text: t });
-  });
+  }
 
   return blocks;
 }
@@ -2314,6 +2308,73 @@ function downloadPDF(length) {
       case 'gap':
         y += 2;
         break;
+
+      case 'table': {
+        closeKpiRow();
+        const cols = b.headers.length || 1;
+        const colW = cW / cols;
+        const cellPad = 2.5;
+        const headerH = 7;
+
+        // Check page space
+        if (y + headerH + 6 > pageH - mBot) { doc.addPage(); drawRunningHeader(); y = mTop + 14; }
+
+        // Header row
+        doc.setFillColor(...accent);
+        doc.rect(mL, y, cW, headerH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...white);
+        b.headers.forEach((h, ci) => {
+          const cellX = mL + ci * colW;
+          const wrapped = doc.splitTextToSize(h, colW - cellPad * 2);
+          doc.text(wrapped[0] || '', cellX + cellPad, y + 4.8);
+        });
+        y += headerH;
+
+        // Data rows
+        b.rows.forEach((row, ri) => {
+          // Calculate row height based on tallest cell
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          let rowH = 6;
+          row.forEach((cell, ci) => {
+            const lines = doc.splitTextToSize(cell || '', colW - cellPad * 2);
+            rowH = Math.max(rowH, lines.length * 4.2 + 3);
+          });
+
+          if (y + rowH > pageH - mBot) { doc.addPage(); drawRunningHeader(); y = mTop + 14; }
+
+          // Alternating row background
+          if (ri % 2 === 0) { doc.setFillColor(...ice); doc.rect(mL, y, cW, rowH, 'F'); }
+
+          // Cell borders
+          doc.setDrawColor(...silver);
+          doc.setLineWidth(0.2);
+          for (let ci = 0; ci <= cols; ci++) {
+            doc.line(mL + ci * colW, y, mL + ci * colW, y + rowH);
+          }
+          doc.line(mL, y + rowH, mL + cW, y + rowH);
+
+          // Cell text
+          doc.setTextColor(...steel);
+          row.forEach((cell, ci) => {
+            const cellX = mL + ci * colW;
+            const wrapped = doc.splitTextToSize(cell || '', colW - cellPad * 2);
+            wrapped.forEach((line, li) => {
+              doc.text(line, cellX + cellPad, y + 4 + li * 4.2);
+            });
+          });
+          y += rowH;
+        });
+
+        // Bottom border
+        doc.setDrawColor(...accent);
+        doc.setLineWidth(0.4);
+        doc.line(mL, y, mL + cW, y);
+        y += 5;
+        break;
+      }
 
       case 'section': {
         closeKpiRow();
@@ -3937,6 +3998,10 @@ KERNREGELN — NIEMALS BRECHEN:
 4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
 5. JEDER SATZ trägt Information — keine Füllsätze.
 6. ANTWORTE AUF DEUTSCH.
+7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
+8. TABELLEN: Vergleiche, Zahlenreihen und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
+9. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
+10. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
 
 ${depth}
 
@@ -3978,6 +4043,10 @@ CORE RULES — NEVER BREAK:
 4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
 5. EVERY SENTENCE carries information — no padding.
 6. RESPOND IN ENGLISH.
+7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important] | 2. [second] | 3. [third]"
+8. TABLES: Comparisons, data series and pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
+9. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
+10. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
 
 ${depth}
 
