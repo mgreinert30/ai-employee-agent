@@ -4436,26 +4436,46 @@ QUALITY CHECK:
   // For email writing with an attached document: special PDF-as-context block
   if (docType === 'create_reply' && hasDoc) {
     const pdfInstruction = isDE
-      ? `\n\n━━━ ROLLEN-ANWEISUNG FÜR DAS BEIGEFÜGTE DOKUMENT ━━━
-Das folgende Dokument ist ausschließlich deine Datenquelle — NICHT dein Schreibauftrag.
+      ? `\n\n━━━ KRITISCHE ANWEISUNG — ZWINGEND EINHALTEN ━━━
+Schreibe AUSSCHLIESSLICH die E-Mail. Erstelle keinen Analysebericht, keine Zusammenfassung und kein Inhaltsverzeichnis zum Dokument. Das Dokument dient NUR als Wissensbasis für die Fakten in der Mail.
 
-STRIKTE VERBOTE:
-• Keine Analyse vorab: Erstelle keine Zusammenfassung, keine Einleitung und keine Erklärung des Dokuments, bevor die E-Mail kommt.
-• Keine Meta-Kommentare: Sage nicht "Ich habe das PDF gelesen und hier ist...". Fange direkt mit der Betreffzeile an.
-• Informations-Filter: Nutze aus dem Dokument nur die 2–3 Fakten, die für den Empfänger der Mail wirklich wichtig sind. Ignoriere den Rest.
-• Längen-Limit: Die gesamte Antwort darf nicht mehr als 150 Wörter umfassen (außer der Betreff-Optionen).
+DIREKTSTART: Beginne deine Antwort sofort mit den Betreffzeilen-Optionen. Kein einziges Wort davor.
 
-━━━ QUELLDOKUMENT (nur als Kontext) ━━━\n${docText}`
-      : `\n\n━━━ ROLE INSTRUCTION FOR THE ATTACHED DOCUMENT ━━━
-The following document is exclusively your data source — NOT your writing assignment.
+STRIKTE VERBOTE — NIEMALS BRECHEN:
+❌ Kein Analysebericht, keine Zusammenfassung, kein Inhaltsverzeichnis
+❌ Kein "Ich habe das Dokument gelesen..." oder "Laut Seite X..." oder "Das PDF zeigt..."
+❌ Keine Erklärung, dass ein Dokument vorhanden ist
+❌ Kein Satz, der nicht direkt Teil der E-Mail ist
+❌ Kein Kommentar nach der E-Mail ("Ich hoffe, das hilft..." etc.)
 
-STRICT PROHIBITIONS:
-• No upfront analysis: Do not create a summary, introduction, or explanation of the document before the email.
-• No meta-comments: Do not say "I have read the PDF and here is...". Start directly with the subject line.
-• Information filter: Use only the 2–3 facts from the document that truly matter to the recipient. Ignore the rest.
-• Length limit: The entire response must not exceed 150 words (excluding the subject line options).
+INFORMATIONS-EXTRAKTION: Suche im Dokument nur nach den 2–3 Fakten, die für den Empfänger der Mail wirklich relevant sind. Ignoriere alles andere.
 
-━━━ SOURCE DOCUMENT (context only) ━━━\n${docText}`;
+DER EINZIGE ERLAUBTE OUTPUT:
+• 3 Betreff-Optionen (A/B/C)
+• Die fertige E-Mail (Anrede → Inhalt → CTA → Grußformel)
+• Optional: 1–2 [ERGÄNZEN]-Markierungen für persönliche Details
+
+━━━ DOKUMENT (nur als Wissensbasis — NICHT analysieren) ━━━\n${docText}`
+      : `\n\n━━━ CRITICAL INSTRUCTION — MANDATORY ━━━
+Write EXCLUSIVELY the email. Do not create an analysis report, summary, or table of contents for the document. The document serves ONLY as a knowledge base for facts in the email.
+
+DIRECT START: Begin your response immediately with the subject line options. Not a single word before that.
+
+STRICT PROHIBITIONS — NEVER BREAK:
+❌ No analysis report, no summary, no table of contents
+❌ No "I have read the document..." or "According to page X..." or "The PDF shows..."
+❌ No explanation that a document exists
+❌ No sentence that is not directly part of the email
+❌ No comment after the email ("I hope this helps..." etc.)
+
+INFORMATION EXTRACTION: Search the document for only the 2–3 facts that are truly relevant to the recipient. Ignore everything else.
+
+THE ONLY PERMITTED OUTPUT:
+• 3 subject line options (A/B/C)
+• The complete email (greeting → content → CTA → sign-off)
+• Optional: 1–2 [ADD] markers for personal details
+
+━━━ DOCUMENT (knowledge base only — do NOT analyse) ━━━\n${docText}`;
     return (isDE ? personaDE : personaEN) + pdfInstruction;
   }
 
