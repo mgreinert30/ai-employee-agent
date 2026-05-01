@@ -1769,7 +1769,27 @@ async function startTask() {
 function setProgress(pct, msg) {
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-percent').textContent = pct + '%';
-  document.getElementById('progress-message').textContent = msg;
+  if (msg) document.getElementById('progress-message').textContent = msg;
+}
+
+let _progressTimer = null;
+function startProgressAnimation(fromPct, targetPct, durationMs, msg) {
+  if (_progressTimer) clearInterval(_progressTimer);
+  const start = Date.now();
+  const range = targetPct - fromPct;
+  if (msg) document.getElementById('progress-message').textContent = msg;
+  _progressTimer = setInterval(() => {
+    const elapsed = Date.now() - start;
+    const t = Math.min(elapsed / durationMs, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const pct = Math.round(fromPct + range * eased);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-percent').textContent = pct + '%';
+    if (t >= 1) clearInterval(_progressTimer);
+  }, 80);
+}
+function stopProgressAnimation() {
+  if (_progressTimer) { clearInterval(_progressTimer); _progressTimer = null; }
 }
 
 // =====================
@@ -4083,7 +4103,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
 
-  setProgress(60, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
+  startProgressAnimation(60, 95, 50000, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
   const apiKey = getGeminiKey();
   let result;
@@ -4117,7 +4137,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
         lastErr = 'Leere Antwort';
       } catch (err) { lastErr = err.message; }
     }
-    if (!result) throw new Error(lastErr || 'Keine Antwort von der KI');
+    if (!result) { stopProgressAnimation(); throw new Error(lastErr || 'Keine Antwort von der KI'); }
   } else {
     // Fallback: serverless function (requires GEMINI_API_KEY on Vercel)
     const response = await fetchWithTimeout('/api/analyse', {
@@ -4126,11 +4146,13 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
       body: JSON.stringify({ prompt, images: pageImages })
     }, 58000);
     const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    if (!data.result) throw new Error('Keine Antwort von der KI erhalten');
+    if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
+    if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
     result = data.result;
   }
 
+  stopProgressAnimation();
+  setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
   return result;
 }
 
