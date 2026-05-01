@@ -705,93 +705,150 @@
   <!-- TASK FORM -->
   <section class="form-section" id="task-form">
     <h2 data-de="Deine Aufgabe" data-en="Your Task">Deine Aufgabe</h2>
+    <p class="form-section-sub" data-de="Beschreibe deine Aufgabe und erhalte eine professionelle Analyse mit KI." data-en="Describe your task and receive a professional AI analysis.">Beschreibe deine Aufgabe und erhalte eine professionelle Analyse mit KI.</p>
 
     <!-- STEP 1: FORM -->
     <div id="step-form">
+      <!-- Hidden shortcuts kept for JS compatibility -->
+      <div class="task-shortcuts" style="display:none;">
+        <button type="button" class="task-shortcut" onclick="selectShortcut('pdf')">📄 PDF analysieren</button>
+        <button type="button" class="task-shortcut" onclick="selectShortcut('email')">📧 E-Mails sortieren</button>
+        <button type="button" class="task-shortcut" onclick="selectShortcut('report')">📊 Bericht erstellen</button>
+        <button type="button" class="task-shortcut" onclick="selectShortcut('reply')">✉️ E-Mail schreiben</button>
+        <button type="button" class="task-shortcut" onclick="selectShortcut('document')">📝 Dokument erstellen</button>
+      </div>
       <form onsubmit="submitTask(event)">
-        <label data-de="Beschreibe dein Unternehmen (optional)" data-en="Describe your business (optional)">Beschreibe dein Unternehmen (optional)</label>
-        <textarea id="business-details" rows="2" placeholder="z.B. Wir sind ein kleines Beratungsunternehmen..."></textarea>
-        <label data-de="Was soll dein KI-Mitarbeiter erledigen?" data-en="What should your AI employee do?">Was soll dein KI-Mitarbeiter erledigen?</label>
-        <div class="task-shortcuts">
-          <button type="button" class="task-shortcut" onclick="selectShortcut('pdf')" data-de="📄 PDF analysieren" data-en="📄 Analyse PDF">📄 PDF analysieren</button>
-          <button type="button" class="task-shortcut" onclick="selectShortcut('email')" data-de="📧 E-Mails sortieren" data-en="📧 Sort emails">📧 E-Mails sortieren</button>
-          <button type="button" class="task-shortcut" onclick="selectShortcut('report')" data-de="📊 Bericht erstellen" data-en="📊 Create report">📊 Bericht erstellen</button>
-          <button type="button" class="task-shortcut" onclick="selectShortcut('reply')" data-de="✉️ E-Mail schreiben" data-en="✉️ Write email">✉️ E-Mail schreiben</button>
-          <button type="button" class="task-shortcut" onclick="selectShortcut('document')" data-de="📝 Dokument erstellen" data-en="📝 Create document">📝 Dokument erstellen</button>
-        </div>
-        <label style="margin-top:10px;display:block;" data-de="Beschreibe genau was du haben möchtest (Vorlage oben auswählen oder selbst schreiben)" data-en="Describe exactly what you want (select a template above or write your own)">Beschreibe genau was du haben möchtest <span style="font-weight:400;color:var(--gray);">(Vorlage oben auswählen oder selbst anpassen)</span></label>
-        <textarea id="task-description" rows="4" required placeholder="z.B. Analysiere das PDF und erstelle einen Bericht über die wichtigsten Punkte..."></textarea>
 
-        <!-- ANALYSIS DEPTH SELECTOR (Moved to Step 1) -->
-        <div id="depth-selector" style="margin-top:15px; margin-bottom:20px; display:block;">
-          <p style="font-size:13px;color:var(--gray);margin-bottom:10px;text-align:center;" data-de="Wie ausführlich soll die KI analysieren/schreiben?" data-en="How detailed should the AI analyse/write?">Wie ausführlich soll die KI analysieren/schreiben?</p>
-          <div style="display:flex;gap:10px;">
-            <button type="button" class="depth-btn" id="depth-short" onclick="setDepth('short')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">⚡</div>
-              <strong data-de="Kurz" data-en="Short">Kurz</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~1 Min" data-en="~1 min">~1 Min</div>
-            </button>
-            <button type="button" class="depth-btn active-depth" id="depth-medium" onclick="setDepth('medium')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">📋</div>
-              <strong data-de="Mittel" data-en="Medium">Mittel</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~2 Min" data-en="~2 min">~2 Min</div>
-            </button>
-            <button type="button" class="depth-btn" id="depth-long" onclick="setDepth('long')" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">🔬</div>
-              <strong data-de="Lang" data-en="Long">Lang</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~4 Min" data-en="~4 min">~4 Min</div>
-            </button>
-          </div>
-        </div>
-        <!-- EMAIL COUNT SELECTOR (shown only for E-Mails sortieren) -->
-        <div id="email-count-selector" style="margin-top:15px;margin-bottom:20px;display:none;">
-          <p style="font-size:13px;color:var(--gray);margin-bottom:10px;text-align:center;" data-de="Wie viele E-Mails sollen sortiert werden?" data-en="How many emails should be sorted?">Wie viele E-Mails sollen sortiert werden?</p>
-          <div style="display:flex;gap:10px;">
-            <button type="button" class="depth-btn active-depth" id="ecount-200" onclick="setEmailCount(200)" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">📬</div>
-              <div style="font-size:11px;color:var(--gray);" data-de="bis zu" data-en="up to">bis zu</div>
-              <strong>200</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~2 Min · €0.99" data-en="~2 min · €0.99">~2 Min · €0.99</div>
-            </button>
-            <button type="button" class="depth-btn" id="ecount-500" onclick="setEmailCount(500)" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">📮</div>
-              <div style="font-size:11px;color:var(--gray);" data-de="bis zu" data-en="up to">bis zu</div>
-              <strong>500</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~4 Min · €1.99" data-en="~4 min · €1.99">~4 Min · €1.99</div>
-            </button>
-            <button type="button" class="depth-btn" id="ecount-1000" onclick="setEmailCount(1000)" style="flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:13px;transition:all 0.2s;">
-              <div style="font-size:18px;margin-bottom:4px;">📦</div>
-              <div style="font-size:11px;color:var(--gray);" data-de="bis zu" data-en="up to">bis zu</div>
-              <strong>1000</strong>
-              <div style="font-size:11px;color:var(--gray);margin-top:2px;" data-de="~6 Min · €2.99" data-en="~6 min · €2.99">~6 Min · €2.99</div>
-            </button>
+        <!-- Card 1: Business context -->
+        <div class="form-step-card">
+          <div class="form-step-badge">1</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Unternehmen <span class='form-label-opt'>(optional)</span>" data-en="Business <span class='form-label-opt'>(optional)</span>">Unternehmen <span class="form-label-opt">(optional)</span></div>
+            <p class="form-step-hint" data-de="Gib dein Unternehmen oder den Kontext der Analyse an." data-en="Describe your business or the context of the analysis.">Gib dein Unternehmen oder den Kontext der Analyse an.</p>
+            <textarea id="business-details" rows="2" maxlength="500" oninput="updateCharCount('business-details','biz-char-count',500)" placeholder="z.B. Wir sind ein kleines Beratungsunternehmen..."></textarea>
+            <div class="form-char-count"><span id="biz-char-count">0</span>/500</div>
           </div>
         </div>
 
-        <!-- EMAIL WRITE FORM (shown only for Antworten schreiben) -->
-        <div id="email-write-form" style="display:none;margin-top:15px;margin-bottom:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px;">
-          <p style="font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text);" data-de="✉️ E-Mail Details" data-en="✉️ Email Details">✉️ E-Mail Details</p>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div>
-              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="An wen geht die E-Mail?" data-en="Who is the email to?">An wen geht die E-Mail?</label>
-              <input type="text" id="ew-to" placeholder="z.B. Herr Müller, Kundendienst, mein Chef..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;" />
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="Thema / Betreff" data-en="Topic / Subject">Thema / Betreff</label>
-              <input type="text" id="ew-subject" placeholder="z.B. Rechnungsanfrage, Terminabsage, Bewerbung..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;" />
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:4px;" data-de="Was muss enthalten sein? (Stichpunkte)" data-en="What must be included? (key points)">Was muss enthalten sein?</label>
-              <textarea id="ew-points" rows="3" placeholder="z.B. Datum des Problems, Rechnungsnummer 4521, Bitte um Rückruf..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text);font-size:14px;box-sizing:border-box;resize:vertical;"></textarea>
-            </div>
-            <div>
-              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Ton der E-Mail" data-en="Email tone">Ton der E-Mail</label>
-              <div style="display:flex;gap:8px;">
-                <button type="button" onclick="setEmailTone('professionell', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid var(--accent);background:rgba(37,99,235,0.15);color:var(--text);cursor:pointer;font-size:12px;">🤝 Professionell</button>
-                <button type="button" onclick="setEmailTone('freundlich', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:12px;">😊 Freundlich</button>
-                <button type="button" onclick="setEmailTone('formal', this)" style="flex:1;padding:8px 6px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:12px;">🎩 Formal</button>
+        <!-- Card 2: Service selector -->
+        <div class="form-step-card">
+          <div class="form-step-badge">2</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Was soll dein KI-Mitarbeiter erledigen?" data-en="What should your AI employee do?">Was soll dein KI-Mitarbeiter erledigen?</div>
+            <p class="form-step-hint" data-de="Wähle aus oder beschreibe kurz deine Aufgabe." data-en="Choose a service or briefly describe your task.">Wähle aus oder beschreibe kurz deine Aufgabe.</p>
+            <div style="position:relative;">
+              <button type="button" class="form-service-btn" id="form-service-btn" onclick="toggleServiceDropdown()">
+                <span id="form-service-icon">📄</span>
+                <span id="form-service-name" data-de="PDF analysieren" data-en="Analyse PDF">PDF analysieren</span>
+                <span class="form-service-chevron">▾</span>
+              </button>
+              <div class="form-service-dropdown" id="form-service-dropdown" style="display:none;">
+                <button type="button" onclick="selectShortcut('pdf');closeServiceDropdown();" data-de="📄 PDF analysieren" data-en="📄 Analyse PDF">📄 PDF analysieren</button>
+                <button type="button" onclick="selectShortcut('email');closeServiceDropdown();" data-de="📧 E-Mails sortieren" data-en="📧 Sort emails">📧 E-Mails sortieren</button>
+                <button type="button" onclick="selectShortcut('report');closeServiceDropdown();" data-de="📊 Bericht erstellen" data-en="📊 Create report">📊 Bericht erstellen</button>
+                <button type="button" onclick="selectShortcut('reply');closeServiceDropdown();" data-de="✉️ E-Mail schreiben" data-en="✉️ Write email">✉️ E-Mail schreiben</button>
+                <button type="button" onclick="selectShortcut('document');closeServiceDropdown();" data-de="📝 Dokument erstellen" data-en="📝 Create document">📝 Dokument erstellen</button>
               </div>
-              <input type="hidden" id="ew-tone" value="professionell" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Task description (hidden for reply) -->
+        <div class="form-step-card" id="desc-step-card">
+          <div class="form-step-badge">3</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Beschreibe genau, was du haben möchtest" data-en="Describe exactly what you want">Beschreibe genau, was du haben möchtest</div>
+            <p class="form-step-hint form-step-hint-accent" data-de="Je genauer deine Beschreibung, desto besser das Ergebnis." data-en="The more detailed your description, the better the result.">Je genauer deine Beschreibung, desto besser das Ergebnis.</p>
+            <textarea id="task-description" rows="4" required maxlength="2000" oninput="updateCharCount('task-description','task-char-count',2000)" placeholder="z.B. Analysiere das PDF und erstelle einen Bericht über die wichtigsten Punkte..."></textarea>
+            <div class="form-char-count"><span id="task-char-count">0</span>/2000</div>
+          </div>
+        </div>
+
+        <!-- Card 3 (reply only): Email write form -->
+        <div class="form-step-card" id="email-write-form" style="display:none;">
+          <div class="form-step-badge">3</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="✉️ E-Mail Details" data-en="✉️ Email Details">✉️ E-Mail Details</div>
+            <div class="ew-fields">
+              <div class="ew-field">
+                <label data-de="An wen geht die E-Mail?" data-en="Who is the email to?">An wen geht die E-Mail?</label>
+                <input type="text" id="ew-to" placeholder="z.B. Herr Müller, Kundendienst, mein Chef..." />
+              </div>
+              <div class="ew-field">
+                <label data-de="Thema / Betreff" data-en="Topic / Subject">Thema / Betreff</label>
+                <input type="text" id="ew-subject" placeholder="z.B. Rechnungsanfrage, Terminabsage, Bewerbung..." />
+              </div>
+              <div class="ew-field">
+                <label data-de="Was muss enthalten sein?" data-en="What must be included?">Was muss enthalten sein?</label>
+                <textarea id="ew-points" rows="3" placeholder="z.B. Datum des Problems, Rechnungsnummer 4521, Bitte um Rückruf..."></textarea>
+              </div>
+              <div class="ew-field">
+                <label data-de="Ton der E-Mail" data-en="Email tone">Ton der E-Mail</label>
+                <div class="ew-tone-row">
+                  <button type="button" class="ew-tone-btn active-tone" onclick="setEmailTone('professionell', this)">🤝 Professionell</button>
+                  <button type="button" class="ew-tone-btn" onclick="setEmailTone('freundlich', this)">😊 Freundlich</button>
+                  <button type="button" class="ew-tone-btn" onclick="setEmailTone('formal', this)">🎩 Formal</button>
+                </div>
+                <input type="hidden" id="ew-tone" value="professionell" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Depth selector -->
+        <div class="form-step-card" id="depth-selector">
+          <div class="form-step-badge">4</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Wie ausführlich soll die KI analysieren/schreiben?" data-en="How detailed should the AI analyse/write?">Wie ausführlich soll die KI analysieren/schreiben?</div>
+            <p class="form-step-hint" data-de="Wähle den gewünschten Detailierungsgrad." data-en="Choose the desired level of detail.">Wähle den gewünschten Detailierungsgrad.</p>
+            <div class="depth-cards-row">
+              <button type="button" class="depth-card-opt" id="depth-short" onclick="setDepth('short')">
+                <div class="dco-icon">⚡</div>
+                <strong data-de="Kurz" data-en="Short">Kurz</strong>
+                <div class="dco-time" data-de="~1 Min" data-en="~1 min">~1 Min</div>
+                <div class="dco-desc" id="dco-short-desc" data-de="Kernaussagen &amp; wichtige Punkte" data-en="Key findings &amp; important points">Kernaussagen &amp; wichtige Punkte</div>
+              </button>
+              <button type="button" class="depth-card-opt active-depth" id="depth-medium" onclick="setDepth('medium')">
+                <div class="dco-icon">📋</div>
+                <strong data-de="Mittel" data-en="Medium">Mittel</strong>
+                <div class="dco-time" data-de="~2 Min" data-en="~2 min">~2 Min</div>
+                <div class="dco-desc" id="dco-medium-desc" data-de="Ausgewogene Analyse mit Details" data-en="Balanced analysis with details">Ausgewogene Analyse mit Details</div>
+              </button>
+              <button type="button" class="depth-card-opt" id="depth-long" onclick="setDepth('long')">
+                <div class="dco-icon">🔍</div>
+                <strong data-de="Lang" data-en="Long">Lang</strong>
+                <div class="dco-time" data-de="~4 Min" data-en="~4 min">~4 Min</div>
+                <div class="dco-desc" id="dco-long-desc" data-de="Umfassende Analyse mit tiefen Einblicken" data-en="Comprehensive analysis with deep insights">Umfassende Analyse mit tiefen Einblicken</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 (email only): Email count selector -->
+        <div class="form-step-card" id="email-count-selector" style="display:none;">
+          <div class="form-step-badge">4</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Wie viele E-Mails sollen sortiert werden?" data-en="How many emails should be sorted?">Wie viele E-Mails sollen sortiert werden?</div>
+            <p class="form-step-hint" data-de="Wähle die Anzahl der E-Mails." data-en="Choose the number of emails.">Wähle die Anzahl der E-Mails.</p>
+            <div class="depth-cards-row">
+              <button type="button" class="depth-card-opt active-depth" id="ecount-200" onclick="setEmailCount(200)">
+                <div class="dco-icon">📬</div>
+                <strong>200</strong>
+                <div class="dco-time" data-de="~2 Min" data-en="~2 min">~2 Min</div>
+                <div class="dco-desc" data-de="€0.99" data-en="€0.99">€0.99</div>
+              </button>
+              <button type="button" class="depth-card-opt" id="ecount-500" onclick="setEmailCount(500)">
+                <div class="dco-icon">📮</div>
+                <strong>500</strong>
+                <div class="dco-time" data-de="~4 Min" data-en="~4 min">~4 Min</div>
+                <div class="dco-desc" data-de="€1.99" data-en="€1.99">€1.99</div>
+              </button>
+              <button type="button" class="depth-card-opt" id="ecount-1000" onclick="setEmailCount(1000)">
+                <div class="dco-icon">📦</div>
+                <strong>1000</strong>
+                <div class="dco-time" data-de="~6 Min" data-en="~6 min">~6 Min</div>
+                <div class="dco-desc" data-de="€2.99" data-en="€2.99">€2.99</div>
+              </button>
             </div>
           </div>
         </div>
@@ -799,15 +856,41 @@
         <!-- PDF UPLOAD -->
         <div class="pdf-upload-area" id="pdf-drop-zone" onclick="document.getElementById('pdf-file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
           <input type="file" id="pdf-file-input" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;" onchange="handlePDFUpload(this.files)" />
-          <div class="pdf-upload-icon">📄</div>
+          <div class="pdf-upload-icon">☁️</div>
           <div class="pdf-upload-text">
             <strong data-de="PDFs oder Bilder hier ablegen oder klicken" data-en="Drop PDFs or images here or click">PDFs oder Bilder hier ablegen oder klicken</strong><br>
-            <span data-de="PDF, JPG, PNG, WEBP — bis zu 10 Dateien — werden nach Abschluss gelöscht" data-en="PDF, JPG, PNG, WEBP — up to 10 files — deleted after completion">PDF, JPG, PNG, WEBP — bis zu 10 Dateien — werden nach Abschluss gelöscht</span>
+            <span data-de="PDF, JPG, PNG, WEBP — bis zu 10 Dateien (max. 50 MB pro Datei)" data-en="PDF, JPG, PNG, WEBP — up to 10 files (max. 50 MB per file)">PDF, JPG, PNG, WEBP — bis zu 10 Dateien (max. 50 MB pro Datei)</span>
           </div>
           <div class="pdf-file-list" id="pdf-file-list"></div>
         </div>
 
-        <button type="submit" class="btn-primary" data-de="Preis berechnen →" data-en="Calculate price →">Preis berechnen →</button>
+        <!-- Trust signals -->
+        <div class="form-trust-row">
+          <div class="form-trust-item">
+            <div class="form-trust-icon">🛡️</div>
+            <div>
+              <strong data-de="Sicher &amp; vertraulich" data-en="Safe &amp; confidential">Sicher &amp; vertraulich</strong>
+              <p data-de="Verschlüsselte Übertragung, keine Speicherung deiner Daten." data-en="Encrypted transfer, no storage of your data.">Verschlüsselte Übertragung, keine Speicherung deiner Daten.</p>
+            </div>
+          </div>
+          <div class="form-trust-item">
+            <div class="form-trust-icon">🎯</div>
+            <div>
+              <strong data-de="Präzise Ergebnisse" data-en="Precise results">Präzise Ergebnisse</strong>
+              <p data-de="Modernste KI-Technologie für zuverlässige Analysen." data-en="State-of-the-art AI technology for reliable analyses.">Modernste KI-Technologie für zuverlässige Analysen.</p>
+            </div>
+          </div>
+          <div class="form-trust-item">
+            <div class="form-trust-icon">⚡</div>
+            <div>
+              <strong data-de="Schnell &amp; effizient" data-en="Fast &amp; efficient">Schnell &amp; effizient</strong>
+              <p data-de="Erhalte deine Ergebnisse in wenigen Minuten." data-en="Get your results in just a few minutes.">Erhalte deine Ergebnisse in wenigen Minuten.</p>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-form-cta" data-de="Preis berechnen &amp; starten →" data-en="Calculate price &amp; start →">Preis berechnen &amp; starten →</button>
+        <p class="form-cta-note" data-de="🔒 Keine Zahlung erforderlich im nächsten Schritt" data-en="🔒 No payment required in the next step">🔒 Keine Zahlung erforderlich im nächsten Schritt</p>
       </form>
     </div>
 

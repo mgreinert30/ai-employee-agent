@@ -1253,6 +1253,57 @@ let uploadedPDFs = [];
 // =====================
 // TASK SHORTCUTS
 // =====================
+// ── Service selector button helpers ──────────────────────────────
+const SERVICE_META = {
+  icons:  { pdf: '📄', email: '📧', report: '📊', reply: '✉️', document: '📝' },
+  labels: {
+    de: { pdf: 'PDF analysieren', email: 'E-Mails sortieren', report: 'Bericht erstellen', reply: 'E-Mail schreiben', document: 'Dokument erstellen' },
+    en: { pdf: 'Analyse PDF',     email: 'Sort Emails',       report: 'Create Report',    reply: 'Write Email',        document: 'Create Document' }
+  },
+  depthDescs: {
+    de: {
+      analyse: { short: 'Kernaussagen & wichtige Punkte', medium: 'Ausgewogene Analyse mit Details', long: 'Umfassende Analyse mit tiefen Einblicken' },
+      create:  { short: 'Kompaktes, präzises Ergebnis',   medium: 'Ausgewogenes, vollständiges Dokument', long: 'Ausführliches, tiefes Ergebnis' }
+    },
+    en: {
+      analyse: { short: 'Key findings & important points', medium: 'Balanced analysis with details', long: 'Comprehensive analysis with deep insights' },
+      create:  { short: 'Compact, precise result',         medium: 'Balanced, complete document',      long: 'Extensive, in-depth result' }
+    }
+  }
+};
+
+function syncServiceBtn(type) {
+  const iconEl = document.getElementById('form-service-icon');
+  const nameEl = document.getElementById('form-service-name');
+  if (iconEl) iconEl.textContent = SERVICE_META.icons[type] || '🛠️';
+  if (nameEl) nameEl.textContent = (SERVICE_META.labels[currentLang] || SERVICE_META.labels.de)[type] || type;
+  const mode = (type === 'document' || type === 'reply' || type === 'report') ? 'create' : 'analyse';
+  const dd = (SERVICE_META.depthDescs[currentLang] || SERVICE_META.depthDescs.de)[mode];
+  const s = document.getElementById('dco-short-desc');
+  const m = document.getElementById('dco-medium-desc');
+  const l = document.getElementById('dco-long-desc');
+  if (s) s.textContent = dd.short;
+  if (m) m.textContent = dd.medium;
+  if (l) l.textContent = dd.long;
+}
+
+function toggleServiceDropdown() {
+  const dd = document.getElementById('form-service-dropdown');
+  if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+function closeServiceDropdown() {
+  const dd = document.getElementById('form-service-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#form-service-btn') && !e.target.closest('#form-service-dropdown')) {
+    closeServiceDropdown();
+  }
+});
+
 function selectShortcut(type) {
   currentShortcutType = type;
   const descriptions = {
@@ -1273,17 +1324,19 @@ function selectShortcut(type) {
   };
   const desc = descriptions[currentLang][type] || descriptions['de'][type];
   document.getElementById('task-description').value = desc;
-  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  updateCharCount('task-description', 'task-char-count', 2000);
+  syncServiceBtn(type);
   if (type === 'pdf') document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
-  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'flex';
   const ecs = document.getElementById('email-count-selector');
-  if (ecs) ecs.style.display = (type === 'email') ? 'block' : 'none';
+  if (ecs) ecs.style.display = (type === 'email') ? 'flex' : 'none';
   if (type === 'email') setEmailCount(emailCount);
   const ewr = document.getElementById('email-write-form');
-  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
+  if (ewr) ewr.style.display = (type === 'reply') ? 'flex' : 'none';
+  const dc = document.getElementById('desc-step-card');
+  if (dc) dc.style.display = (type === 'reply') ? 'none' : 'flex';
   const td = document.getElementById('task-description');
-  if (td) { td.style.display = (type === 'reply') ? 'none' : 'block'; td.required = (type !== 'reply'); }
+  if (td) { td.required = (type !== 'reply'); }
 }
 
 // =====================
@@ -1355,32 +1408,42 @@ function pickService(type) {
   };
   const td = document.getElementById('task-description');
   td.value = descriptions[currentLang]?.[type] || descriptions['de'][type];
-  td.style.display = (type === 'reply') ? 'none' : 'block';
+  updateCharCount('task-description', 'task-char-count', 2000);
   td.required = (type !== 'reply');
-  document.querySelectorAll('.task-shortcut').forEach(b => b.classList.remove('active'));
-  const btn = document.querySelector(`.task-shortcut[onclick*="${type}"]`);
-  if (btn) btn.classList.add('active');
-  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'block';
+  syncServiceBtn(type);
+  document.getElementById('depth-selector').style.display = (type === 'email') ? 'none' : 'flex';
   const ecs3 = document.getElementById('email-count-selector');
-  if (ecs3) ecs3.style.display = (type === 'email') ? 'block' : 'none';
+  if (ecs3) ecs3.style.display = (type === 'email') ? 'flex' : 'none';
   if (type === 'email') setEmailCount(emailCount);
   const ewr = document.getElementById('email-write-form');
-  if (ewr) ewr.style.display = (type === 'reply') ? 'block' : 'none';
+  if (ewr) ewr.style.display = (type === 'reply') ? 'flex' : 'none';
+  const dc = document.getElementById('desc-step-card');
+  if (dc) dc.style.display = (type === 'reply') ? 'none' : 'flex';
   showStep('step-form');
 }
 
 function preselectPDF() {
+  currentShortcutType = 'pdf';
   const desc = currentLang === 'de'
     ? 'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.'
     : 'Fully analyse the uploaded PDF files and create a professional report with the key findings, summary, and recommended actions.';
   document.getElementById('task-description').value = desc;
-  document.querySelectorAll('.task-shortcut').forEach(b => {
-    const isPDF = b.getAttribute('onclick')?.includes("'pdf'");
-    b.style.display = isPDF ? 'inline-block' : 'none';
-    b.classList.toggle('active', isPDF);
-  });
+  updateCharCount('task-description', 'task-char-count', 2000);
+  syncServiceBtn('pdf');
   document.getElementById('pdf-drop-zone').style.borderColor = 'var(--electric)';
-  document.getElementById('depth-selector').style.display = 'block';
+  document.getElementById('depth-selector').style.display = 'flex';
+  const ecs = document.getElementById('email-count-selector');
+  if (ecs) ecs.style.display = 'none';
+  const ewr = document.getElementById('email-write-form');
+  if (ewr) ewr.style.display = 'none';
+  const dc = document.getElementById('desc-step-card');
+  if (dc) dc.style.display = 'flex';
+}
+
+function updateCharCount(textareaId, counterId, max) {
+  const ta = document.getElementById(textareaId);
+  const counter = document.getElementById(counterId);
+  if (ta && counter) counter.textContent = ta.value.length;
 }
 
 // =====================
@@ -1735,12 +1798,8 @@ function clearAppSelection(key) {
 let emailCount = 200;
 function setEmailTone(tone, btn) {
   document.getElementById('ew-tone').value = tone;
-  document.querySelectorAll('#email-write-form button[type="button"]').forEach(b => {
-    b.style.border = '1.5px solid rgba(255,255,255,0.1)';
-    b.style.background = 'rgba(255,255,255,0.04)';
-  });
-  btn.style.border = '1.5px solid var(--accent)';
-  btn.style.background = 'rgba(37,99,235,0.15)';
+  document.querySelectorAll('.ew-tone-btn').forEach(b => b.classList.remove('active-tone'));
+  btn.classList.add('active-tone');
 }
 
 function setEmailCount(count) {
@@ -1748,8 +1807,7 @@ function setEmailCount(count) {
   [200, 500, 1000].forEach(n => {
     const btn = document.getElementById('ecount-' + n);
     if (!btn) return;
-    btn.style.border = n === count ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.1)';
-    btn.style.background = n === count ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.04)';
+    btn.classList.toggle('active-depth', n === count);
   });
   const td = document.getElementById('task-description');
   if (td) {
@@ -1764,14 +1822,7 @@ function setDepth(level) {
   window.selectedAnalysisLength = level;
   ['short','medium','long'].forEach(l => {
     const btn = document.getElementById(`depth-${l}`);
-    if (!btn) return;
-    if (l === level) {
-      btn.style.border = '1.5px solid var(--accent)';
-      btn.style.background = 'rgba(37,99,235,0.15)';
-    } else {
-      btn.style.border = '1.5px solid rgba(255,255,255,0.1)';
-      btn.style.background = 'rgba(255,255,255,0.04)';
-    }
+    if (btn) btn.classList.toggle('active-depth', l === level);
   });
 }
 
