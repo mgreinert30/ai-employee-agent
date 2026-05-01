@@ -4431,7 +4431,35 @@ QUALITY CHECK:
 - Does every important claim have a page reference (see page X)?
 - Am I meeting the minimum length?`;
 
-  const docSection = (!isCreation && docText && docText.length > 50)
+  const hasDoc = docText && docText.length > 50;
+
+  // For email writing with an attached document: special PDF-as-context block
+  if (docType === 'create_reply' && hasDoc) {
+    const pdfInstruction = isDE
+      ? `\n\n━━━ ROLLEN-ANWEISUNG FÜR DAS BEIGEFÜGTE DOKUMENT ━━━
+Das folgende Dokument ist ausschließlich deine Datenquelle — NICHT dein Schreibauftrag.
+
+STRIKTE VERBOTE:
+• Keine Analyse vorab: Erstelle keine Zusammenfassung, keine Einleitung und keine Erklärung des Dokuments, bevor die E-Mail kommt.
+• Keine Meta-Kommentare: Sage nicht "Ich habe das PDF gelesen und hier ist...". Fange direkt mit der Betreffzeile an.
+• Informations-Filter: Nutze aus dem Dokument nur die 2–3 Fakten, die für den Empfänger der Mail wirklich wichtig sind. Ignoriere den Rest.
+• Längen-Limit: Die gesamte Antwort darf nicht mehr als 150 Wörter umfassen (außer der Betreff-Optionen).
+
+━━━ QUELLDOKUMENT (nur als Kontext) ━━━\n${docText}`
+      : `\n\n━━━ ROLE INSTRUCTION FOR THE ATTACHED DOCUMENT ━━━
+The following document is exclusively your data source — NOT your writing assignment.
+
+STRICT PROHIBITIONS:
+• No upfront analysis: Do not create a summary, introduction, or explanation of the document before the email.
+• No meta-comments: Do not say "I have read the PDF and here is...". Start directly with the subject line.
+• Information filter: Use only the 2–3 facts from the document that truly matter to the recipient. Ignore the rest.
+• Length limit: The entire response must not exceed 150 words (excluding the subject line options).
+
+━━━ SOURCE DOCUMENT (context only) ━━━\n${docText}`;
+    return (isDE ? personaDE : personaEN) + pdfInstruction;
+  }
+
+  const docSection = (!isCreation && hasDoc)
     ? `\n\n━━━ QUELLDOKUMENT ━━━\n${docText}`
     : '';
   return (isDE ? personaDE : personaEN) + docSection;
