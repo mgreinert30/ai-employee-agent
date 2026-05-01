@@ -2253,7 +2253,8 @@ function downloadPDF(length) {
     const sectionNames = blocks
       .filter(b => b.type === 'section')
       .map(b => b.text)
-      .filter(name => !/(laut seite|per page|according to page)/i.test(name));
+      .filter(name => !/(laut seite|per page|according to page)/i.test(name))
+      .filter(name => !/^tl;?dr|dringlichkeit|urgency:/i.test(name.trim()));
     let tocNum = 0;
     sectionNames.forEach(name => {
       const clean = name.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
@@ -2267,11 +2268,17 @@ function downloadPDF(length) {
       const fStyle  = isTop ? 'bold' : 'normal';
       const tColor  = isLevel2 ? mid : steel;
       tocNum++;
-      const displayName = clean.replace(/^\d+\.\d*\s*/, '');
+      let displayName = clean.replace(/^\d+\.\d*\s*/, '');
       if (ty2 > pageH - mBot - 10) { doc.addPage(); drawRunningHeader(); ty2 = mTop + 14; }
       doc.setFont('helvetica', fStyle);
       doc.setFontSize(fSize);
       doc.setTextColor(...tColor);
+      // Truncate if too long to fit before the page number area
+      const maxTocW = pageW - mL - mR - 20 - indent;
+      while (displayName.length > 4 && doc.getTextWidth(`${tocNum}.  ${displayName}`) > maxTocW) {
+        displayName = displayName.slice(0, -1);
+      }
+      if (doc.getTextWidth(`${tocNum}.  ${displayName}`) > maxTocW) displayName = displayName.slice(0, -3) + '…';
       doc.text(`${tocNum}.  ${displayName}`, mL + 4 + indent, ty2);
       // Dotted leader line
       doc.setDrawColor(...ice);
