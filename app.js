@@ -2453,26 +2453,43 @@ function downloadPDF(length) {
       case 'table': {
         closeKpiRow();
         const cols = b.headers.length || 1;
-        const colW = cW / cols;
         const cellPad = 2.5;
         const headerH = 7;
         const pageUsable = pageH - mTop - 14 - mBot;
 
-        // Pre-calculate all row heights
+        // Clean all cell content through safe() to strip emojis and unsupported chars
+        const cleanHeaders = b.headers.map(h => safe(h || ''));
+        const cleanRows = b.rows.map(row => row.map(c => safe(c || '')));
+
+        // Proportional column widths: last column gets 40% if 3+ cols, else equal
+        let colWidths;
+        if (cols === 1) {
+          colWidths = [cW];
+        } else if (cols === 2) {
+          colWidths = [cW * 0.45, cW * 0.55];
+        } else if (cols === 3) {
+          colWidths = [cW * 0.28, cW * 0.22, cW * 0.50];
+        } else {
+          // 4+ cols: first col 25%, last col 35%, rest split equally
+          const middle = (cW * 0.40) / (cols - 2);
+          colWidths = [cW * 0.25, ...Array(cols - 2).fill(middle), cW * 0.35];
+        }
+        const colXpos = [mL];
+        for (let i = 1; i < cols; i++) colXpos.push(colXpos[i-1] + colWidths[i-1]);
+
+        // Pre-calculate row heights using cleaned text
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        const rowHeights = b.rows.map(row => {
+        const rowHeights = cleanRows.map(row => {
           let rowH = 6;
-          row.forEach(cell => {
-            const ls = doc.splitTextToSize(cell || '', colW - cellPad * 2);
-            rowH = Math.max(rowH, ls.length * 4.2 + 3);
+          row.forEach((cell, ci) => {
+            const ls = doc.splitTextToSize(cell, colWidths[ci] - cellPad * 2);
+            rowH = Math.max(rowH, ls.length * 4.5 + 3);
           });
           return rowH;
         });
         const totalTableH = headerH + rowHeights.reduce((s, h) => s + h, 0) + 6;
 
-        // If entire table fits on remaining page — keep it. Otherwise new page.
-        // If table is bigger than a full page, still start fresh on new page.
         if (y + totalTableH > pageH - mBot) {
           doc.addPage(); drawRunningHeader(); y = mTop + 14;
         }
@@ -2484,20 +2501,18 @@ function downloadPDF(length) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(8);
           doc.setTextColor(...white);
-          b.headers.forEach((h, ci) => {
-            doc.text(doc.splitTextToSize(h, colW - cellPad * 2)[0] || '', mL + ci * colW + cellPad, y + 4.8);
+          cleanHeaders.forEach((h, ci) => {
+            doc.text(doc.splitTextToSize(h, colWidths[ci] - cellPad * 2)[0] || '', colXpos[ci] + cellPad, y + 4.8);
           });
           y += headerH;
 
-          // Data rows
-          for (let ri = startRow; ri < b.rows.length; ri++) {
-            const row = b.rows[ri];
+          for (let ri = startRow; ri < cleanRows.length; ri++) {
+            const row = cleanRows[ri];
             const rowH = rowHeights[ri];
 
-            // If this row doesn't fit and table is larger than a page — split here with header repeat
             if (y + rowH > pageH - mBot && totalTableH > pageUsable) {
               doc.addPage(); drawRunningHeader(); y = mTop + 14;
-              drawTable(ri); // recurse with header repeat
+              drawTable(ri);
               return;
             }
 
@@ -2505,15 +2520,16 @@ function downloadPDF(length) {
 
             doc.setDrawColor(...silver);
             doc.setLineWidth(0.2);
-            for (let ci = 0; ci <= cols; ci++) doc.line(mL + ci * colW, y, mL + ci * colW, y + rowH);
+            colXpos.forEach(x => doc.line(x, y, x, y + rowH));
+            doc.line(mL + cW, y, mL + cW, y + rowH);
             doc.line(mL, y + rowH, mL + cW, y + rowH);
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7.5);
             doc.setTextColor(...steel);
             row.forEach((cell, ci) => {
-              const wrapped = doc.splitTextToSize(cell || '', colW - cellPad * 2);
-              wrapped.forEach((line, li) => doc.text(line, mL + ci * colW + cellPad, y + 4 + li * 4.2));
+              const wrapped = doc.splitTextToSize(cell, colWidths[ci] - cellPad * 2);
+              wrapped.forEach((line, li) => doc.text(line, colXpos[ci] + cellPad, y + 4.5 + li * 4.5));
             });
             y += rowH;
           }
