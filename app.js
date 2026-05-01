@@ -1826,7 +1826,7 @@ function parseResultBlocks(text) {
     const raw = lines[i];
     const t   = raw.trim();
 
-    if (!t) { afterDivider = false; blocks.push({ type: 'gap' }); continue; }
+    if (!t) { afterDivider = false; if (blocks.length === 0 || blocks[blocks.length-1].type !== 'gap') blocks.push({ type: 'gap' }); continue; }
 
     // ━━━ divider → flag that next line is a section title
     if (/^━{3,}/.test(t)) {
@@ -1842,8 +1842,9 @@ function parseResultBlocks(text) {
     if (afterDivider) {
       afterDivider = false;
       const title = t.replace(/^[\u{0080}-\u{FFFF}\u{10000}-\u{10FFFF}]+\s*/gu, '')
-                     .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '').trim();
-      blocks.push({ type: 'section', text: title || t.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim() });
+                     .replace(/^[^a-zA-Z0-9\u00C0-\u024F]+/, '')
+                     .replace(/\*+$/, '').trim();
+      blocks.push({ type: 'section', text: title || t.replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').replace(/\*+/g,'').trim() });
       continue;
     }
 
