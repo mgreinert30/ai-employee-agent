@@ -1143,7 +1143,51 @@
     <p data-de="© 2026 AI Employee Agent · Alle Daten werden nach Abschluss gelöscht · DSGVO-konform" data-en="© 2026 AI Employee Agent · All data deleted after completion · GDPR compliant">
       © 2026 AI Employee Agent · Alle Daten werden nach Abschluss gelöscht · DSGVO-konform
     </p>
+    <p style="margin-top:8px;">
+      <a href="#" onclick="document.getElementById('modal-impressum').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Impressum" data-en="Imprint">Impressum</a>
+      <a href="#" onclick="document.getElementById('modal-datenschutz').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;" data-de="Datenschutz" data-en="Privacy Policy">Datenschutz</a>
+    </p>
   </footer>
+
+  <!-- IMPRESSUM MODAL -->
+  <div id="modal-impressum" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div style="background:#1e293b;border-radius:16px;padding:36px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;position:relative;">
+      <button onclick="document.getElementById('modal-impressum').classList.add('hidden')" style="position:absolute;top:14px;right:18px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button>
+      <h2 style="color:white;margin-bottom:20px;font-size:20px;">Impressum</h2>
+      <div style="color:#94a3b8;font-size:14px;line-height:1.7;">
+        <p><strong style="color:white;">Angaben gemäß § 5 TMG</strong></p>
+        <p style="margin-top:12px;">Mark Greinert<br>AI Employee Agent<br>Deutschland</p>
+        <p style="margin-top:16px;"><strong style="color:white;">Kontakt</strong></p>
+        <p>E-Mail: m.greinert30@gmail.com</p>
+        <p style="margin-top:16px;"><strong style="color:white;">Haftungsausschluss</strong></p>
+        <p>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte verantwortlich.</p>
+        <p style="margin-top:16px;"><strong style="color:white;">Urheberrecht</strong></p>
+        <p>Die durch den Betreiber erstellten Inhalte und Werke unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung oder Verbreitung außerhalb der Grenzen des Urheberrechts bedarf der schriftlichen Zustimmung.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATENSCHUTZ MODAL -->
+  <div id="modal-datenschutz" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div style="background:#1e293b;border-radius:16px;padding:36px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;position:relative;">
+      <button onclick="document.getElementById('modal-datenschutz').classList.add('hidden')" style="position:absolute;top:14px;right:18px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button>
+      <h2 style="color:white;margin-bottom:20px;font-size:20px;">Datenschutzerklärung</h2>
+      <div style="color:#94a3b8;font-size:14px;line-height:1.7;">
+        <p><strong style="color:white;">1. Verantwortlicher</strong></p>
+        <p style="margin-top:8px;">Mark Greinert, m.greinert30@gmail.com</p>
+        <p style="margin-top:16px;"><strong style="color:white;">2. Erhobene Daten</strong></p>
+        <p>Diese Website verarbeitet ausschließlich Daten, die Sie aktiv eingeben (Aufgabenbeschreibung, hochgeladene Dokumente). Es werden keine Cookies zu Trackingzwecken gesetzt. Keine Weitergabe an Dritte.</p>
+        <p style="margin-top:16px;"><strong style="color:white;">3. Hochgeladene Dokumente</strong></p>
+        <p>Hochgeladene PDFs und Dateien werden ausschließlich zur KI-Analyse verwendet und nach Abschluss der Sitzung automatisch gelöscht. Es findet keine dauerhafte Speicherung statt.</p>
+        <p style="margin-top:16px;"><strong style="color:white;">4. KI-Verarbeitung</strong></p>
+        <p>Die Analyse erfolgt über die Google Gemini API. Dabei gelten die Datenschutzbestimmungen von Google. Wir empfehlen, keine sensiblen personenbezogenen Daten hochzuladen.</p>
+        <p style="margin-top:16px;"><strong style="color:white;">5. Ihre Rechte</strong></p>
+        <p>Sie haben das Recht auf Auskunft, Berichtigung und Löschung Ihrer Daten gemäß DSGVO. Kontakt: m.greinert30@gmail.com</p>
+        <p style="margin-top:16px;"><strong style="color:white;">6. Hosting</strong></p>
+        <p>Diese Website wird über Vercel Inc. gehostet. Es gelten die Datenschutzbestimmungen von Vercel (vercel.com/legal/privacy-policy).</p>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
