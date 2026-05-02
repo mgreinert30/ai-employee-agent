@@ -1192,13 +1192,13 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 
 /* SERVICE QUALITY HINT — hero banner at top of form */
 .service-quality-hint-hero {
-  background: linear-gradient(135deg, rgba(37,99,235,0.35), rgba(37,99,235,0.2));
-  border: 1.5px solid rgba(37,99,235,0.5);
+  background: linear-gradient(135deg, rgba(37,99,235,0.13), rgba(37,99,235,0.06));
+  border: 1.5px solid rgba(37,99,235,0.3);
   border-radius: 14px;
   padding: 18px 24px;
   font-size: 16px;
-  font-weight: 600;
-  color: #ffffff;
+  font-weight: 700;
+  color: #1e40af;
   line-height: 1.55;
   margin-bottom: 28px;
   text-align: center;
