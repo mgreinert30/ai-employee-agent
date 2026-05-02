@@ -136,6 +136,12 @@ function handleSignup(e) {
   showLoggedIn();
 }
 
+function acceptCookies() {
+  localStorage.setItem('cookies_accepted', '1');
+  document.getElementById('cookie-overlay').style.display = 'none';
+  loadAuth();
+}
+
 function showGuest() {
   document.getElementById('btn-header-login').style.display  = 'inline-block';
   document.getElementById('btn-header-signup').style.display = 'inline-block';
@@ -4757,7 +4763,13 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
   const hasResetToken = checkResetToken();
-  if (!hasResetToken) loadAuth();
+  if (!hasResetToken) {
+    if (!localStorage.getItem('cookies_accepted')) {
+      document.getElementById('cookie-overlay').style.display = 'flex';
+    } else {
+      loadAuth();
+    }
+  }
   renderTestimonials();
   initCharacterSelection();
   checkDueTasks();

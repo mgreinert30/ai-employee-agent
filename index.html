@@ -12,6 +12,27 @@
 </head>
 <body>
 
+  <!-- COOKIE CONSENT BANNER -->
+  <div id="cookie-overlay" class="cookie-overlay" style="display:none;">
+    <div class="cookie-box">
+      <div class="cookie-logo">AI<span>Employee</span></div>
+      <h2 class="cookie-title">Datenschutz & Cookies</h2>
+      <p class="cookie-text">
+        Wir verwenden ausschließlich technisch notwendige Cookies — für die sichere Anmeldung und die Speicherung deiner Einstellungen. Es gibt keine Tracking-Cookies, keine Werbung und keine Weitergabe deiner Daten an Dritte.
+      </p>
+      <p class="cookie-text" style="margin-top:8px;">
+        Deine Daten werden lokal in deinem Browser gespeichert. Für KI-Analysen wird dein Text temporär an die Google Gemini API übertragen und danach nicht gespeichert.
+      </p>
+      <div class="cookie-actions">
+        <button onclick="acceptCookies()" class="cookie-btn-accept">Verstanden & weiter →</button>
+      </div>
+      <p class="cookie-links">
+        <a href="#" onclick="openDatenschutz();return false;">Datenschutzerklärung</a> &nbsp;·&nbsp;
+        <a href="#" onclick="openImpressum();return false;">Impressum</a>
+      </p>
+    </div>
+  </div>
+
   <!-- DUE TASK BANNER (#3 Proaktivität + #7 Zeitplan) -->
   <div id="due-task-banner" class="due-banner" style="display:none;">
     <span class="due-banner-icon">⏰</span>
@@ -201,7 +222,7 @@
   </div>
 
   <!-- USER LOGIN / SIGNUP MODAL -->
-  <div id="auth-overlay" class="overlay">
+  <div id="auth-overlay" class="overlay hidden">
     <div class="modal">
       <div class="modal-logo">AI<span>Employee</span></div>
       <div id="auth-reason" class="auth-reason" style="display:none;"></div>
