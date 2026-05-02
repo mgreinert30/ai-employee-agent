@@ -3949,14 +3949,18 @@ async function handleResetPassword() {
 function checkResetToken() {
   const params = new URLSearchParams(window.location.search);
   const token  = params.get('reset');
-  if (!token) return;
+  if (!token) return false;
   window._resetToken = token;
-  // Show auth modal in reset mode
-  showAuthModal(null);
+
+  // Force-show auth modal regardless of login state on this device
+  const overlay = document.getElementById('auth-modal');
+  if (overlay) { overlay.style.display = 'flex'; overlay.classList.remove('hidden'); }
   document.getElementById('form-login').style.display   = 'none';
   document.getElementById('forgot-panel').style.display = 'none';
+  document.getElementById('form-signup').style.display  = 'none';
   const rp = document.getElementById('reset-panel');
-  rp.style.display = 'flex';
+  if (rp) rp.style.display = 'flex';
+
   // Decode email from token payload for display (no server call yet)
   try {
     const payload = token.split('.')[0];
@@ -3965,6 +3969,8 @@ function checkResetToken() {
     const lbl     = document.getElementById('reset-email-label');
     if (lbl) lbl.textContent = email;
   } catch (_) {}
+
+  return true; // signals DOMContentLoaded to skip loadAuth()
 }
 
 // =====================
@@ -4715,8 +4721,8 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
-  checkResetToken();
-  loadAuth();
+  const hasResetToken = checkResetToken();
+  if (!hasResetToken) loadAuth();
   renderTestimonials();
   initCharacterSelection();
   checkDueTasks();
