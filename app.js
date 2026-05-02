@@ -789,10 +789,10 @@ function hideReview(id) {
 // =====================
 let selectedCharacter = localStorage.getItem('ai_character') || 'male';
 
-function selectCharacter(type) {
-  if (!currentUser) { requireLogin(() => selectCharacter(type)); return; }
+function selectCharacter(type, fromInit = false) {
+  if (!currentUser && !fromInit) { requireLogin(() => selectCharacter(type)); return; }
   selectedCharacter = type;
-  localStorage.setItem('ai_character', type);
+  if (currentUser) localStorage.setItem('ai_character', type);
 
   document.getElementById('char-male').classList.toggle('selected', type === 'male');
   document.getElementById('char-female').classList.toggle('selected', type === 'female');
@@ -810,7 +810,7 @@ function getCharacterEmoji() { return selectedCharacter === 'female' ? '👩‍�
 function getCharacterName() { return selectedCharacter === 'female' ? 'Emma' : 'Alex'; }
 
 function initCharacterSelection() {
-  selectCharacter(selectedCharacter);
+  selectCharacter(selectedCharacter, true); // fromInit — skip login gate
 }
 
 // =====================
@@ -1607,7 +1607,12 @@ function renderPDFList() {
 
 function submitTask(e) {
   e.preventDefault();
-  if (!currentUser) { requireLogin(() => submitTask(e)); return; }
+  if (!currentUser) {
+    requireLogin(() => {
+      document.querySelector('#step-form form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    });
+    return;
+  }
   updateActivity();
   currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
   showStep('step-price');
