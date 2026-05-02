@@ -2394,10 +2394,10 @@ function downloadPDF(length) {
   doc.setFillColor(...accent);
   doc.rect(0, 0, 6, pageH, 'F');
 
-  // Top-right decoration — three concentric faint rings
-  const cx = pageW - 2, cy = 0; // anchor to top-right corner
+  // Top-right decoration — three concentric faint rings (uses brand accent color)
+  const cx = pageW - 2, cy = 0;
   [[55, 0.08], [38, 0.12], [22, 0.18]].forEach(([r, alpha]) => {
-    doc.setDrawColor(37, 99, 235);
+    doc.setDrawColor(...accent);
     doc.setLineWidth(0.6);
     doc.setGState(doc.GState({ opacity: alpha }));
     doc.circle(cx, cy, r, 'S');
@@ -3884,6 +3884,26 @@ function isRealAIEnabled() {
 // =====================
 // BRAND COLORS
 // =====================
+function pickBrandColor(hex, btn) {
+  localStorage.setItem('brand_primary', hex);
+  // Update active swatch highlight
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active-swatch'));
+  if (btn) btn.classList.add('active-swatch');
+  // Sync custom color picker value
+  const custom = document.getElementById('brand-color-custom');
+  if (custom) custom.value = hex;
+}
+
+function initBrandColorSwatches() {
+  const saved = localStorage.getItem('brand_primary') || '#2563eb';
+  const custom = document.getElementById('brand-color-custom');
+  if (custom) custom.value = saved;
+  const swatches = document.querySelectorAll('.color-swatch[data-color]');
+  swatches.forEach(s => {
+    s.classList.toggle('active-swatch', s.dataset.color === saved);
+  });
+}
+
 function saveBrandColors() {
   const primary   = document.getElementById('brand-primary-color').value;
   const secondary = document.getElementById('brand-secondary-color').value;
@@ -4770,6 +4790,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
+  initBrandColorSwatches();
   const hasResetToken = checkResetToken();
   if (!hasResetToken) {
     const saved = localStorage.getItem('ai_agent_user');

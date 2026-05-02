@@ -1154,6 +1154,22 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .cookie-sep { color: #334155; }
 @media (max-width: 600px) { .cookie-header-bar, .cookie-option, .cookie-details-toggle, #cookie-details-panel, .cookie-footer-links { padding-left: 18px; padding-right: 18px; } }
 
+/* BRAND COLOR PICKER IN FORM */
+.brand-color-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.brand-color-label { font-size: 13px; color: var(--gray); white-space: nowrap; }
+.brand-color-swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid transparent;
+  cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+  padding: 0; flex-shrink: 0;
+}
+.color-swatch:hover { transform: scale(1.18); }
+.color-swatch.active-swatch { border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.4); transform: scale(1.15); }
+.color-swatch-custom {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.3);
+  cursor: pointer; padding: 0; background: none; overflow: hidden;
+}
+
 /* HEADER LOGIN/SIGNUP BUTTONS (guest state) */
 .btn-header-login {
   display: none;
