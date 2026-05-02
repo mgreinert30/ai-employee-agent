@@ -138,7 +138,6 @@ function handleSignup(e) {
 }
 
 function acceptCookies() {
-  localStorage.setItem('cookies_accepted', '1');
   document.getElementById('cookie-overlay').style.display = 'none';
   loadAuth();
 }
@@ -4773,10 +4772,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
   const hasResetToken = checkResetToken();
   if (!hasResetToken) {
-    if (!localStorage.getItem('cookies_accepted')) {
-      document.getElementById('cookie-overlay').style.display = 'flex';
+    const saved = localStorage.getItem('ai_agent_user');
+    if (saved) {
+      loadAuth(); // already logged in — skip cookie banner
     } else {
-      loadAuth();
+      document.getElementById('cookie-overlay').style.display = 'flex';
     }
   }
   renderTestimonials();
