@@ -2544,10 +2544,9 @@ function downloadPDF(length) {
   doc.setDrawColor(...accent);
   doc.setLineWidth(0.6);
   doc.circle(mL + 14, footY - 2, 6, 'S');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(...accent);
-  doc.text('\u26E8', mL + 14, footY); // shield-like char fallback
+  // Inner dot — avoids unsupported Unicode in Helvetica
+  doc.setFillColor(...accent);
+  doc.circle(mL + 14, footY - 2, 1.5, 'F');
   // "VERTRAULICH" label
   doc.setFontSize(9);
   doc.setTextColor(...accent);
