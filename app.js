@@ -275,6 +275,7 @@ function openOwnerDashboard() {
   document.getElementById('owner-dashboard-overlay').classList.remove('hidden');
   ownerTab('overview');
   loadOwnerPaypal();
+  loadBrandColorsIntoUI();
 }
 
 function closeOwnerDashboard() { document.getElementById('owner-dashboard-overlay').classList.add('hidden'); }
@@ -1319,6 +1320,28 @@ function syncServiceBtn(type) {
       ? uploadLabel.getAttribute('data-de')
       : uploadLabel.getAttribute('data-en');
   }
+
+  // KI quality hint
+  const qualityHint = document.getElementById('service-quality-hint');
+  if (qualityHint) {
+    const qualityTexts = {
+      de: {
+        pdf:      '🎓 Die KI ist auf professionelle Dokumentenanalysen spezialisiert — sie erkennt Strukturen, Kennzahlen und Handlungsfelder wie ein erfahrener Berater.',
+        email:    '🎓 Die KI analysiert und priorisiert E-Mails auf dem Niveau einer erfahrenen Assistenz — strukturiert, schnell und präzise.',
+        report:   '🎓 Die KI ist darauf trainiert, Geschäftsberichte auf Agentur-Niveau zu erstellen — mit Executive Summary, Kennzahlen und konkreten Empfehlungen.',
+        reply:    '🎓 Die KI schreibt professionelle Business-E-Mails, die sofort versendbar sind — klar, überzeugend und auf den Punkt.',
+        document: '🎓 Die KI erstellt strukturierte Geschäftsdokumente auf professionellem Niveau — bereit für den Einsatz im Unternehmen.',
+      },
+      en: {
+        pdf:      '🎓 The AI specialises in professional document analysis — identifying structures, KPIs and action points like an experienced consultant.',
+        email:    '🎓 The AI analyses and prioritises emails at the level of an experienced assistant — structured, fast and precise.',
+        report:   '🎓 The AI is trained to produce agency-level business reports — with executive summaries, KPIs and concrete recommendations.',
+        reply:    '🎓 The AI writes professional business emails ready to send immediately — clear, persuasive and to the point.',
+        document: '🎓 The AI creates structured business documents at a professional level — ready for use in your company.',
+      }
+    };
+    qualityHint.textContent = (qualityTexts[de ? 'de' : 'en'] || qualityTexts.de)[type] || '';
+  }
 }
 
 function toggleServiceDropdown() {
@@ -2168,10 +2191,11 @@ function downloadPDF(length) {
   const cW       = pageW - mL - mR;
   let y          = mTop;
 
-  // ── COLOUR PALETTE (corporate neutral) ──
-  const navy   = [15,  23,  42];   // #0f172a
+  // ── COLOUR PALETTE — use brand colors if set, otherwise corporate neutral ──
+  const brand  = getBrandColors();
+  const navy   = brand.navy;        // default #0f172a
   const steel  = [30,  41,  59];   // #1e293b
-  const accent = [37,  99, 235];   // #2563eb — subtle blue accent
+  const accent = brand.accent;      // default #2563eb
   const mid    = [71, 85, 105];    // #475569
   const silver = [148,163,184];    // #94a3b8
   const ice    = [241,245,249];    // #f1f5f9
@@ -2184,9 +2208,12 @@ function downloadPDF(length) {
   // When no PDF is uploaded use the task description as the cover title
   const taskDescEl = document.getElementById('task-description');
   const taskDescVal = (taskDescEl?.value || '').trim().slice(0, 70);
-  const fileBase   = fileName
+  const fileBase   = (fileName
     ? fileName.replace(/\.pdf$/i, '')
-    : (taskDescVal || (currentLang === 'de' ? 'KI-Analyse' : 'AI Analysis'));
+    : (taskDescVal || (currentLang === 'de' ? 'KI-Analyse' : 'AI Analysis')))
+    .replace(/Geschaeftsbericht/g, 'Geschäftsbericht')
+    .replace(/geschaeftsbericht/g, 'geschäftsbericht')
+    .replace(/Geschaefts/g, 'Geschäfts');
   const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
   const nowTime  = new Date().toLocaleTimeString(currentLang === 'de' ? 'de-DE' : 'en-GB', { hour:'2-digit', minute:'2-digit' });
   const refNr    = 'REF-' + Date.now().toString(36).toUpperCase().slice(-6);
@@ -2215,7 +2242,10 @@ function downloadPDF(length) {
     doc.setTextColor(...silver);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.text(currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL', mL, 6.5);
+    const headerLeft = brand.company
+      ? brand.company.toUpperCase()
+      : (currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL');
+    doc.text(headerLeft, mL, 6.5);
     doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align: 'right' });
     // Defensive reset
     doc.setFont('helvetica', 'normal');
@@ -3798,31 +3828,79 @@ The results are formatted for direct use in your day-to-day business operations.
   }
 }
 
-// =====================
-// GEMINI API KEY MANAGEMENT
-// =====================
-function saveGeminiKey() {
-  const key = document.getElementById('owner-gemini-key').value.trim();
-  const statusEl = document.getElementById('gemini-key-status');
-  if (!key || key.length < 20) {
-    statusEl.style.display = 'block';
-    statusEl.style.color = '#f87171';
-    statusEl.textContent = '✗ Ungültiger Key. Bitte den vollständigen API-Key einfügen.';
-    return;
-  }
-  localStorage.setItem('gemini_api_key', key);
-  statusEl.style.display = 'block';
-  statusEl.style.color = '#4ade80';
-  statusEl.textContent = '✓ API-Key gespeichert! KI-Modus aktiv — echte Analysen ab jetzt.';
-  document.getElementById('owner-gemini-key').value = '';
-}
-
-function getGeminiKey() {
-  return localStorage.getItem('gemini_api_key') || '';
-}
-
 function isRealAIEnabled() {
   return true; // API key stored on server (Vercel env var)
+}
+
+// =====================
+// BRAND COLORS
+// =====================
+function saveBrandColors() {
+  const primary   = document.getElementById('brand-primary-color').value;
+  const secondary = document.getElementById('brand-secondary-color').value;
+  const company   = document.getElementById('brand-company-name').value.trim();
+  localStorage.setItem('brand_primary',   primary);
+  localStorage.setItem('brand_secondary', secondary);
+  localStorage.setItem('brand_company',   company);
+  const st = document.getElementById('brand-colors-status');
+  st.style.display = 'block';
+  setTimeout(() => { st.style.display = 'none'; }, 2500);
+}
+
+function getBrandColors() {
+  const hex2rgb = h => {
+    const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+    return r ? [parseInt(r[1],16), parseInt(r[2],16), parseInt(r[3],16)] : null;
+  };
+  return {
+    accent:  hex2rgb(localStorage.getItem('brand_primary')   || '#2563eb') || [37, 99, 235],
+    navy:    hex2rgb(localStorage.getItem('brand_secondary')  || '#0f172a') || [15, 23, 42],
+    company: localStorage.getItem('brand_company') || '',
+  };
+}
+
+function loadBrandColorsIntoUI() {
+  const p = document.getElementById('brand-primary-color');
+  const s = document.getElementById('brand-secondary-color');
+  const c = document.getElementById('brand-company-name');
+  if (p) p.value = localStorage.getItem('brand_primary')   || '#2563eb';
+  if (s) s.value = localStorage.getItem('brand_secondary') || '#0f172a';
+  if (c) c.value = localStorage.getItem('brand_company')   || '';
+}
+
+// =====================
+// FORGOT PASSWORD
+// =====================
+function showForgotPassword(show = true) {
+  document.getElementById('form-login').style.display   = show ? 'none' : 'flex';
+  document.getElementById('forgot-panel').style.display = show ? 'flex' : 'none';
+  if (!show) document.getElementById('forgot-msg').textContent = '';
+}
+
+function handleForgotPassword() {
+  const email  = (document.getElementById('forgot-email').value || '').trim().toLowerCase();
+  const newPw  = (document.getElementById('forgot-new-pw').value || '').trim();
+  const msgEl  = document.getElementById('forgot-msg');
+
+  if (!email) { msgEl.style.color='#f87171'; msgEl.textContent = 'Bitte E-Mail eingeben.'; return; }
+  if (newPw.length < 8) { msgEl.style.color='#f87171'; msgEl.textContent = 'Passwort muss mindestens 8 Zeichen haben.'; return; }
+
+  if (email === OWNER_EMAIL) {
+    msgEl.style.color='#f87171';
+    msgEl.textContent = 'Owner-Passwort kann nicht hier zurückgesetzt werden. Bitte wende dich an den Administrator.';
+    return;
+  }
+
+  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+  const idx   = users.findIndex(u => u.email.toLowerCase() === email);
+  if (idx === -1) { msgEl.style.color='#f87171'; msgEl.textContent = 'E-Mail nicht gefunden.'; return; }
+
+  users[idx].password = newPw;
+  localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  msgEl.style.color = '#4ade80';
+  msgEl.textContent = '✓ Passwort geändert! Du kannst dich jetzt anmelden.';
+  document.getElementById('forgot-new-pw').value = '';
+  setTimeout(() => showForgotPassword(false), 2000);
 }
 
 // =====================

@@ -110,6 +110,25 @@
       <!-- SETTINGS TAB -->
       <div id="owner-tab-settings" class="owner-tab-content" style="display:none;">
 
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);margin-bottom:16px;">
+          <h4 style="color:#60a5fa;margin-bottom:10px;">🎨 Geschäftsfarben & Branding</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">Diese Farben werden im PDF-Bericht verwendet. Firmenname erscheint im Berichts-Header.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Primärfarbe (Akzent)</label>
+              <input type="color" id="brand-primary-color" value="#2563eb" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;" />
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Sekundärfarbe (Header)</label>
+              <input type="color" id="brand-secondary-color" value="#0f172a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;" />
+            </div>
+          </div>
+          <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Firmenname im Bericht</label>
+          <input type="text" id="brand-company-name" placeholder="z.B. Musterfirma GmbH" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;margin-bottom:10px;box-sizing:border-box;"/>
+          <button onclick="saveBrandColors()" class="btn-primary" style="width:100%;">Branding speichern</button>
+          <p id="brand-colors-status" style="margin-top:8px;font-size:13px;display:none;color:#4ade80;">✓ Gespeichert!</p>
+        </div>
+
         <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);">
           <h4 style="color:#4ade80;margin-bottom:6px;">🤖 KI-Status</h4>
           <p style="font-size:13px;color:var(--gray);margin-bottom:0;">
@@ -201,7 +220,19 @@
         </div>
         <button type="submit" class="btn-primary full-width" data-de="Anmelden" data-en="Log in">Anmelden</button>
         <p id="login-error" class="auth-error"></p>
+        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="showForgotPassword();return false;" class="forgot-link" data-de="Passwort vergessen?" data-en="Forgot password?">Passwort vergessen?</a></p>
       </form>
+      <!-- FORGOT PASSWORD PANEL -->
+      <div id="forgot-panel" style="display:none;flex-direction:column;gap:14px;">
+        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;" data-de="Gib deine E-Mail ein und setze ein neues Passwort." data-en="Enter your email and set a new password.">Gib deine E-Mail ein und setze ein neues Passwort.</p>
+        <label data-de="E-Mail" data-en="Email">E-Mail</label>
+        <input type="email" id="forgot-email" placeholder="max@firma.de" />
+        <label data-de="Neues Passwort" data-en="New password">Neues Passwort</label>
+        <input type="password" id="forgot-new-pw" placeholder="Min. 8 Zeichen" minlength="8" />
+        <button onclick="handleForgotPassword()" class="btn-primary full-width" data-de="Passwort zurücksetzen" data-en="Reset password">Passwort zurücksetzen</button>
+        <p id="forgot-msg" class="auth-error"></p>
+        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="showForgotPassword(false);return false;" class="forgot-link" data-de="← Zurück zum Login" data-en="← Back to login">← Zurück zum Login</a></p>
+      </div>
       <form id="form-signup" onsubmit="handleSignup(event)" style="display:none;flex-direction:column;gap:14px;">
         <label data-de="Dein Name" data-en="Your name">Dein Name</label>
         <input type="text" id="signup-name" required placeholder="Max Mustermann" />
@@ -891,6 +922,9 @@
           </div>
         </div>
 
+        <!-- KI quality hint — updated per service by syncServiceBtn() -->
+        <div id="service-quality-hint" class="service-quality-hint"></div>
+
         <button type="submit" class="btn-form-cta" data-de="Preis berechnen &amp; starten →" data-en="Calculate price &amp; start →">Preis berechnen &amp; starten →</button>
         <p class="form-cta-note" data-de="🔒 Keine Zahlung erforderlich im nächsten Schritt" data-en="🔒 No payment required in the next step">🔒 Keine Zahlung erforderlich im nächsten Schritt</p>
       </form>
@@ -1458,5 +1492,9 @@
 
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
   <script src="app.js"></script>
+  <!-- Mascot runner -->
+  <div class="mascot-runner" id="mascot-runner" aria-hidden="true">
+    <img src="alex.png" alt="" />
+  </div>
 </body>
 </html>
