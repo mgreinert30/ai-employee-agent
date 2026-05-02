@@ -55,10 +55,11 @@ function loadAuth() {
   const inactiveTooLong = Date.now() - lastActivity > SEVEN_DAYS_MS;
   const differentDevice = lastDevice && lastDevice !== getDeviceId();
   const newUpdate = lastVersion !== APP_VERSION;
-  if (newUpdate) showAuthModal('update');
-  else if (inactiveTooLong) showAuthModal('inactive');
-  else if (differentDevice) showAuthModal('device');
-  else {
+  if (newUpdate || inactiveTooLong || differentDevice) {
+    // Session expired/outdated — clear it, show landing page with Login button
+    localStorage.removeItem('ai_agent_user');
+    showGuest();
+  } else {
     currentUser = JSON.parse(saved);
     if (currentUser.email === OWNER_EMAIL) currentUser.isOwner = true;
     showLoggedIn();
