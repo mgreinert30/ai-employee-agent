@@ -143,6 +143,14 @@ function acceptCookies() {
   loadAuth();
 }
 
+function toggleCookieDetails() {
+  const panel = document.getElementById('cookie-details-panel');
+  const label = document.getElementById('cookie-details-label');
+  const open  = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  label.textContent   = open ? '▾ Details ausblenden' : '▸ Details zu den verwendeten Cookies anzeigen';
+}
+
 function showGuest() {
   document.getElementById('btn-header-login').style.display  = 'inline-block';
   document.getElementById('btn-header-signup').style.display = 'inline-block';

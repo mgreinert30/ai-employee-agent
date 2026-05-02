@@ -15,21 +15,57 @@
   <!-- COOKIE CONSENT BANNER -->
   <div id="cookie-overlay" class="cookie-overlay" style="display:none;">
     <div class="cookie-box">
-      <div class="cookie-logo">AI<span>Employee</span></div>
-      <h2 class="cookie-title">Datenschutz & Cookies</h2>
-      <p class="cookie-text">
-        Wir verwenden ausschließlich technisch notwendige Cookies — für die sichere Anmeldung und die Speicherung deiner Einstellungen. Es gibt keine Tracking-Cookies, keine Werbung und keine Weitergabe deiner Daten an Dritte.
-      </p>
-      <p class="cookie-text" style="margin-top:8px;">
-        Deine Daten werden lokal in deinem Browser gespeichert. Für KI-Analysen wird dein Text temporär an die Google Gemini API übertragen und danach nicht gespeichert.
-      </p>
-      <div class="cookie-actions">
-        <button onclick="acceptCookies()" class="cookie-btn-accept">Verstanden & weiter →</button>
+      <div class="cookie-header-bar">
+        <div class="cookie-logo">AI<span>Employee</span></div>
+        <h2 class="cookie-title">Datenschutz &amp; Nutzungserlebnis auf AIEmployee</h2>
       </div>
-      <p class="cookie-links">
-        <a href="#" onclick="openDatenschutz();return false;">Datenschutzerklärung</a> &nbsp;·&nbsp;
+
+      <!-- Main option -->
+      <div class="cookie-option cookie-option-main">
+        <div class="cookie-option-top">
+          <div class="cookie-option-label">Kostenlos mit technisch notwendigen Cookies nutzen</div>
+          <p class="cookie-option-desc">
+            Nutzen Sie AIEmployee kostenlos. Wir verwenden <strong>ausschließlich technisch notwendige Cookies</strong> — für die sichere Anmeldung, Einstellungen und den Sitzungsschutz. Es gibt <strong>kein Tracking, keine Werbung und keine Weitergabe an Dritte</strong>.
+          </p>
+          <p class="cookie-option-desc" style="margin-top:8px;">
+            Für KI-Analysen wird Ihr Text temporär an die <strong>Google Gemini API</strong> übertragen und nach der Verarbeitung nicht gespeichert. Details in unserer <a href="#" onclick="openDatenschutz();return false;" class="cookie-inline-link">Datenschutzerklärung</a>.
+          </p>
+        </div>
+        <button onclick="acceptCookies()" class="cookie-btn-accept">AKZEPTIEREN &amp; WEITER →</button>
+        <p class="cookie-revoke">Ihre Einwilligung ist jederzeit unter „Cookie-Einstellungen" am Seitenende widerrufbar.</p>
+      </div>
+
+      <!-- Details toggle -->
+      <div class="cookie-details-toggle" onclick="toggleCookieDetails()">
+        <span id="cookie-details-label">▸ Details zu den verwendeten Cookies anzeigen</span>
+      </div>
+      <div id="cookie-details-panel" style="display:none;">
+        <div class="cookie-detail-section">
+          <h4 class="cookie-detail-title">Technisch notwendige Cookies (§ 25 TDDDG)</h4>
+          <p class="cookie-detail-text">Diese Cookies sind für den Betrieb der Website unbedingt erforderlich und können nicht deaktiviert werden.</p>
+          <ul class="cookie-detail-list">
+            <li><strong>Sitzungs-Cookie (ai_agent_user)</strong> — Speichert Ihren Anmeldestatus lokal in Ihrem Browser. Keine Übertragung an Server.</li>
+            <li><strong>Einstellungen (ai_character, currentLang u.a.)</strong> — Speichert Ihre Spracheinstellung und KI-Mitarbeiter-Auswahl lokal.</li>
+            <li><strong>Aktivitäts-Cookie (ai_last_activity)</strong> — Erkennt inaktive Sitzungen für Ihre Sicherheit.</li>
+          </ul>
+        </div>
+        <div class="cookie-detail-section">
+          <h4 class="cookie-detail-title">KI-Verarbeitung — Google Gemini API</h4>
+          <p class="cookie-detail-text">Wenn Sie eine KI-Analyse starten, werden Ihre eingegebenen Texte und hochgeladene Dokumente temporär an die Google Gemini API (USA) übertragen. Google verarbeitet diese Daten ausschließlich zur Bereitstellung der KI-Antwort. Es findet keine dauerhafte Speicherung oder Profilbildung statt. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie Art. 49 Abs. 1 lit. a DSGVO für die Drittlandübermittlung.</p>
+        </div>
+        <div class="cookie-detail-section">
+          <h4 class="cookie-detail-title">Ihre Rechte</h4>
+          <p class="cookie-detail-text">Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Kontakt: <a href="mailto:doris_greinert@gmx.de" class="cookie-inline-link">doris_greinert@gmx.de</a></p>
+        </div>
+      </div>
+
+      <div class="cookie-footer-links">
+        <a href="#" onclick="openDatenschutz();return false;">Datenschutzerklärung</a>
+        <span class="cookie-sep">|</span>
         <a href="#" onclick="openImpressum();return false;">Impressum</a>
-      </p>
+        <span class="cookie-sep">|</span>
+        <a href="#" onclick="openDatenschutz();return false;">FAQ</a>
+      </div>
     </div>
   </div>
 
