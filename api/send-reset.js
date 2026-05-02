@@ -36,7 +36,7 @@ export default async function handler(req, res) {
   const link    = `${siteUrl}?reset=${encodeURIComponent(token)}`;
 
   const emailBody = {
-    from: 'AI Employee <noreply@aiemployee.de>',
+    from: 'AI Employee <onboarding@resend.dev>',
     to: [email],
     subject: 'Passwort zurücksetzen — AI Employee',
     html: `
