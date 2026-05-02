@@ -268,6 +268,8 @@
         <button onclick="toggleMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
         <button onclick="openAccount()" class="btn-ghost" id="btn-my-account" data-de="Mein Konto" data-en="My Account" style="display:none;">Mein Konto</button>
         <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
+        <button onclick="showAuthModal(null)" class="btn-header-login" id="btn-header-login" data-de="Anmelden" data-en="Log in">Anmelden</button>
+        <button onclick="showAuthModal(null);switchTab('signup')" class="btn-header-signup" id="btn-header-signup" data-de="Registrieren" data-en="Sign up">Registrieren</button>
       </div>
     </div>
     <p class="tagline" data-de="Dein KI-Mitarbeiter. 24/7. Kein Gehalt. Keine Pausen. Kein Vertrag." data-en="Your AI employee. 24/7. No salary. No breaks. No contract.">

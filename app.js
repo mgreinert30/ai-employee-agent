@@ -48,7 +48,7 @@ function updateActivity() {
 
 function loadAuth() {
   const saved = localStorage.getItem('ai_agent_user');
-  if (!saved) { showAuthModal(null); return; }
+  if (!saved) { showGuest(); return; }
   const lastActivity = parseInt(localStorage.getItem('ai_last_activity') || '0');
   const lastDevice = localStorage.getItem('ai_last_device');
   const lastVersion = localStorage.getItem('ai_app_version');
@@ -74,7 +74,14 @@ function showAuthModal(reason) {
   document.getElementById('auth-overlay').classList.remove('hidden');
 }
 
-function hideAuthModal() { document.getElementById('auth-overlay').classList.add('hidden'); }
+function hideAuthModal() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+  if (window._pendingAction) {
+    const fn = window._pendingAction;
+    window._pendingAction = null;
+    setTimeout(fn, 100);
+  }
+}
 
 function switchTab(tab) {
   document.getElementById('form-login').style.display = tab === 'login' ? 'flex' : 'none';
@@ -129,14 +136,33 @@ function handleSignup(e) {
   showLoggedIn();
 }
 
+function showGuest() {
+  document.getElementById('btn-header-login').style.display  = 'inline-block';
+  document.getElementById('btn-header-signup').style.display = 'inline-block';
+  document.getElementById('btn-logout').style.display        = 'none';
+  document.getElementById('btn-my-tasks').style.display      = 'none';
+  document.getElementById('btn-my-account').style.display    = 'none';
+  document.getElementById('btn-owner-panel').style.display   = 'none';
+  document.getElementById('header-username').textContent     = '';
+}
+
 function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
-  document.getElementById('btn-logout').style.display = 'inline-block';
-  document.getElementById('btn-my-tasks').style.display = 'inline-block';
+  document.getElementById('btn-logout').style.display        = 'inline-block';
+  document.getElementById('btn-my-tasks').style.display      = 'inline-block';
+  document.getElementById('btn-header-login').style.display  = 'none';
+  document.getElementById('btn-header-signup').style.display = 'none';
   const isVerifiedOwner = currentUser.email === OWNER_EMAIL;
-  document.getElementById('btn-owner-panel').style.display = isVerifiedOwner ? 'inline-block' : 'none';
-  document.getElementById('btn-my-account').style.display = isVerifiedOwner ? 'none' : 'inline-block';
+  document.getElementById('btn-owner-panel').style.display  = isVerifiedOwner ? 'inline-block' : 'none';
+  document.getElementById('btn-my-account').style.display   = isVerifiedOwner ? 'none' : 'inline-block';
   renderTestimonials();
+}
+
+function requireLogin(action) {
+  if (currentUser) { action(); return; }
+  showAuthModal(null);
+  // after login, run the pending action once
+  window._pendingAction = action;
 }
 
 function handleLogout() {
@@ -764,6 +790,7 @@ function hideReview(id) {
 let selectedCharacter = localStorage.getItem('ai_character') || 'male';
 
 function selectCharacter(type) {
+  if (!currentUser) { requireLogin(() => selectCharacter(type)); return; }
   selectedCharacter = type;
   localStorage.setItem('ai_character', type);
 
@@ -1362,6 +1389,7 @@ document.addEventListener('click', e => {
 });
 
 function selectShortcut(type) {
+  if (!currentUser) { requireLogin(() => selectShortcut(type)); return; }
   currentShortcutType = type;
   const descriptions = {
     de: {
@@ -1440,6 +1468,7 @@ function updateMiniCharButtons() {
 }
 
 function pickService(type) {
+  if (!currentUser) { requireLogin(() => pickService(type)); return; }
   currentShortcutType = type;
   document.getElementById('service-picker').style.display = 'none';
   const icons = { email: '📧', report: '📊', reply: '✉️', document: '📝' };
@@ -1578,6 +1607,7 @@ function renderPDFList() {
 
 function submitTask(e) {
   e.preventDefault();
+  if (!currentUser) { requireLogin(() => submitTask(e)); return; }
   updateActivity();
   currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
   showStep('step-price');

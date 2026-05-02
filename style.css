@@ -1086,6 +1086,37 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   display: none;
 }
 
+/* HEADER LOGIN/SIGNUP BUTTONS (guest state) */
+.btn-header-login {
+  display: none;
+  padding: 8px 18px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: transparent;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-header-login:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.45); }
+.btn-header-signup {
+  display: none;
+  padding: 8px 18px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: 0 2px 10px rgba(37,99,235,0.35);
+}
+.btn-header-signup:hover { background: #1d4ed8; }
+
 /* FORGOT PASSWORD */
 .forgot-link { color: var(--blue); font-size: 13px; text-decoration: none; opacity: 0.85; }
 .forgot-link:hover { opacity: 1; text-decoration: underline; }
