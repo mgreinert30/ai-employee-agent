@@ -3869,7 +3869,7 @@ function loadBrandColorsIntoUI() {
 }
 
 // =====================
-// FORGOT PASSWORD
+// FORGOT / RESET PASSWORD
 // =====================
 function showForgotPassword(show = true) {
   document.getElementById('form-login').style.display   = show ? 'none' : 'flex';
@@ -3877,30 +3877,94 @@ function showForgotPassword(show = true) {
   if (!show) document.getElementById('forgot-msg').textContent = '';
 }
 
-function handleForgotPassword() {
-  const email  = (document.getElementById('forgot-email').value || '').trim().toLowerCase();
-  const newPw  = (document.getElementById('forgot-new-pw').value || '').trim();
-  const msgEl  = document.getElementById('forgot-msg');
+async function handleForgotPassword() {
+  const email = (document.getElementById('forgot-email').value || '').trim().toLowerCase();
+  const msgEl = document.getElementById('forgot-msg');
+  if (!email) { msgEl.style.color='#f87171'; msgEl.textContent='Bitte E-Mail eingeben.'; return; }
 
-  if (!email) { msgEl.style.color='#f87171'; msgEl.textContent = 'Bitte E-Mail eingeben.'; return; }
-  if (newPw.length < 8) { msgEl.style.color='#f87171'; msgEl.textContent = 'Passwort muss mindestens 8 Zeichen haben.'; return; }
+  msgEl.style.color = '#94a3b8';
+  msgEl.textContent = 'Sende E-Mail…';
 
-  if (email === OWNER_EMAIL) {
-    msgEl.style.color='#f87171';
-    msgEl.textContent = 'Owner-Passwort kann nicht hier zurückgesetzt werden. Bitte wende dich an den Administrator.';
-    return;
+  try {
+    const res  = await fetch('/api/send-reset', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Fehler beim Senden');
+    msgEl.style.color = '#4ade80';
+    msgEl.textContent = '✓ E-Mail gesendet! Bitte prüfe deinen Posteingang.';
+  } catch (err) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = err.message;
   }
+}
 
-  const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
-  const idx   = users.findIndex(u => u.email.toLowerCase() === email);
-  if (idx === -1) { msgEl.style.color='#f87171'; msgEl.textContent = 'E-Mail nicht gefunden.'; return; }
+async function handleResetPassword() {
+  const token = window._resetToken;
+  const newPw = (document.getElementById('reset-new-pw').value || '').trim();
+  const msgEl = document.getElementById('reset-msg');
+  if (newPw.length < 8) { msgEl.style.color='#f87171'; msgEl.textContent='Min. 8 Zeichen.'; return; }
 
-  users[idx].password = newPw;
-  localStorage.setItem('ai_agent_users', JSON.stringify(users));
-  msgEl.style.color = '#4ade80';
-  msgEl.textContent = '✓ Passwort geändert! Du kannst dich jetzt anmelden.';
-  document.getElementById('forgot-new-pw').value = '';
-  setTimeout(() => showForgotPassword(false), 2000);
+  msgEl.style.color = '#94a3b8'; msgEl.textContent = 'Prüfe Token…';
+  try {
+    const res  = await fetch('/api/verify-reset', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error);
+
+    const email = data.email.toLowerCase();
+    if (email === OWNER_EMAIL) throw new Error('Owner-Passwort kann hier nicht geändert werden.');
+
+    const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+    const idx   = users.findIndex(u => u.email.toLowerCase() === email);
+    if (idx === -1) {
+      // User not in this device's localStorage yet — add them with new password
+      users.push({ name: email.split('@')[0], email, password: newPw });
+    } else {
+      users[idx].password = newPw;
+    }
+    localStorage.setItem('ai_agent_users', JSON.stringify(users));
+
+    msgEl.style.color = '#4ade80';
+    msgEl.textContent = '✓ Passwort gespeichert! Du wirst jetzt angemeldet…';
+
+    // Remove token from URL and auto-login
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => {
+      document.getElementById('reset-panel').style.display = 'none';
+      document.getElementById('form-login').style.display  = 'flex';
+      document.getElementById('login-email').value    = email;
+      document.getElementById('login-password').value = newPw;
+      document.getElementById('form-login').dispatchEvent(new Event('submit'));
+    }, 1500);
+  } catch (err) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = err.message;
+  }
+}
+
+function checkResetToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('reset');
+  if (!token) return;
+  window._resetToken = token;
+  // Show auth modal in reset mode
+  showAuthModal(null);
+  document.getElementById('form-login').style.display   = 'none';
+  document.getElementById('forgot-panel').style.display = 'none';
+  const rp = document.getElementById('reset-panel');
+  rp.style.display = 'flex';
+  // Decode email from token payload for display (no server call yet)
+  try {
+    const payload = token.split('.')[0];
+    const decoded = atob(payload.replace(/-/g,'+').replace(/_/g,'/'));
+    const email   = decoded.split('|')[0];
+    const lbl     = document.getElementById('reset-email-label');
+    if (lbl) lbl.textContent = email;
+  } catch (_) {}
 }
 
 // =====================
@@ -4651,6 +4715,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
+  checkResetToken();
   loadAuth();
   renderTestimonials();
   initCharacterSelection();

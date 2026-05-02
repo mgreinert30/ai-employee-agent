@@ -222,16 +222,22 @@
         <p id="login-error" class="auth-error"></p>
         <p style="text-align:center;margin-top:4px;"><a href="#" onclick="showForgotPassword();return false;" class="forgot-link" data-de="Passwort vergessen?" data-en="Forgot password?">Passwort vergessen?</a></p>
       </form>
-      <!-- FORGOT PASSWORD PANEL -->
+      <!-- FORGOT PASSWORD PANEL — step 1: enter email -->
       <div id="forgot-panel" style="display:none;flex-direction:column;gap:14px;">
-        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;" data-de="Gib deine E-Mail ein und setze ein neues Passwort." data-en="Enter your email and set a new password.">Gib deine E-Mail ein und setze ein neues Passwort.</p>
-        <label data-de="E-Mail" data-en="Email">E-Mail</label>
+        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;">Gib deine E-Mail ein. Wir schicken dir einen Link zum Zurücksetzen.</p>
+        <label>E-Mail</label>
         <input type="email" id="forgot-email" placeholder="max@firma.de" />
-        <label data-de="Neues Passwort" data-en="New password">Neues Passwort</label>
-        <input type="password" id="forgot-new-pw" placeholder="Min. 8 Zeichen" minlength="8" />
-        <button onclick="handleForgotPassword()" class="btn-primary full-width" data-de="Passwort zurücksetzen" data-en="Reset password">Passwort zurücksetzen</button>
-        <p id="forgot-msg" class="auth-error"></p>
-        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="showForgotPassword(false);return false;" class="forgot-link" data-de="← Zurück zum Login" data-en="← Back to login">← Zurück zum Login</a></p>
+        <button onclick="handleForgotPassword()" class="btn-primary full-width">Reset-Link senden</button>
+        <p id="forgot-msg" style="font-size:13px;margin:0;"></p>
+        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="showForgotPassword(false);return false;" class="forgot-link">← Zurück zum Login</a></p>
+      </div>
+      <!-- RESET PASSWORD PANEL — step 2: set new password (opened via ?reset=TOKEN) -->
+      <div id="reset-panel" style="display:none;flex-direction:column;gap:14px;">
+        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;">Neues Passwort für <strong id="reset-email-label" style="color:white;"></strong></p>
+        <label>Neues Passwort</label>
+        <input type="password" id="reset-new-pw" placeholder="Min. 8 Zeichen" minlength="8" />
+        <button onclick="handleResetPassword()" class="btn-primary full-width">Passwort speichern</button>
+        <p id="reset-msg" style="font-size:13px;margin:0;"></p>
       </div>
       <form id="form-signup" onsubmit="handleSignup(event)" style="display:none;flex-direction:column;gap:14px;">
         <label data-de="Dein Name" data-en="Your name">Dein Name</label>
