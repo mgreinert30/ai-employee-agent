@@ -2320,7 +2320,7 @@ function downloadPDF(length) {
     doc.setFillColor(...accent);
     doc.rect(0, y, 5, 11, 'F');
     // Subtle right accent glow
-    doc.setFillColor(37, 99, 235);
+    doc.setFillColor(...accent);
     doc.rect(pageW - 2, y, 2, 11, 'F');
     // White uppercase label
     const clean = label.replace(/[\u{1F300}-\u{1FFFF}]/gu,'').replace(/[^\x20-\x7E\u00C0-\u024F]/g,'').trim();
@@ -3921,9 +3921,12 @@ function getBrandColors() {
     const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
     return r ? [parseInt(r[1],16), parseInt(r[2],16), parseInt(r[3],16)] : null;
   };
+  const accent = hex2rgb(localStorage.getItem('brand_primary') || '#2563eb') || [37, 99, 235];
+  // Auto-derive dark version: mix accent with near-black at 22% accent strength
+  const navy = accent.map(c => Math.round(c * 0.22 + 8));
   return {
-    accent:  hex2rgb(localStorage.getItem('brand_primary')   || '#2563eb') || [37, 99, 235],
-    navy:    hex2rgb(localStorage.getItem('brand_secondary')  || '#0f172a') || [15, 23, 42],
+    accent,
+    navy,
     company: localStorage.getItem('brand_company') || '',
   };
 }
