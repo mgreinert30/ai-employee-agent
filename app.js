@@ -3822,8 +3822,7 @@ function getGeminiKey() {
 }
 
 function isRealAIEnabled() {
-  const key = getGeminiKey();
-  return key && key.length > 20;
+  return true; // API key stored on server (Vercel env var)
 }
 
 // =====================
@@ -4549,51 +4548,18 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   startProgressAnimation(60, 95, 50000, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
-  const apiKey = getGeminiKey();
   let result;
 
-  if (apiKey) {
-    // Direct browser → Gemini call: no server timeout, full token budget
-    const MODELS = pageImages.length > 0
-      ? ['gemini-2.5-flash', 'gemini-flash-latest']
-      : ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite'];
-
-    const parts = pageImages.length > 0
-      ? [...pageImages.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })), { text: prompt }]
-      : [{ text: prompt }];
-
-    const body = JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: { maxOutputTokens: 65536, temperature: 0.3, topP: 0.9, topK: 40 },
-    });
-
-    let lastErr;
-    for (const model of MODELS) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-        );
-        const data = await res.json();
-        if (!res.ok || data.error) { lastErr = data.error?.message || res.status; continue; }
-        result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (result) break;
-        lastErr = 'Leere Antwort';
-      } catch (err) { lastErr = err.message; }
-    }
-    if (!result) { stopProgressAnimation(); throw new Error(lastErr || 'Keine Antwort von der KI'); }
-  } else {
-    // Fallback: serverless function (requires GEMINI_API_KEY on Vercel)
-    const response = await fetchWithTimeout('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, images: pageImages })
-    }, 58000);
-    const data = await response.json();
-    if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
-    if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
-    result = data.result;
-  }
+  // Always route through server proxy — API key stored securely in Vercel env vars
+  const response = await fetchWithTimeout('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, images: pageImages })
+  }, 58000);
+  const data = await response.json();
+  if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
+  if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
+  result = data.result;
 
   const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
   startProgressAnimation(currentPct, 100, 600, currentLang === 'de' ? 'Fertig!' : 'Done!');
@@ -4612,14 +4578,4 @@ document.addEventListener('DOMContentLoaded', () => {
   initCharacterSelection();
   checkDueTasks();
 
-  // Show API key status in owner settings when it loads
-  const existingKey = getGeminiKey();
-  if (existingKey) {
-    const statusEl = document.getElementById('gemini-key-status');
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.style.color = '#4ade80';
-      statusEl.textContent = '✓ API-Key aktiv — echte KI-Analysen sind eingeschaltet.';
-    }
-  }
 });
