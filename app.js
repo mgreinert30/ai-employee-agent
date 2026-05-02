@@ -2386,150 +2386,180 @@ function downloadPDF(length) {
     y += 1;
   }
 
-  // ── COVER PAGE (#5) ──
+  // ── COVER PAGE ──
+  const de = currentLang === 'de';
   doc.setFillColor(...navy);
   doc.rect(0, 0, pageW, pageH, 'F');
 
-  // Bold left accent bar
+  // Left accent bar
   doc.setFillColor(...accent);
   doc.rect(0, 0, 6, pageH, 'F');
 
-  // Top-right decoration — three concentric faint rings (uses brand accent color)
-  const cx = pageW - 2, cy = 0;
-  [[55, 0.08], [38, 0.12], [22, 0.18]].forEach(([r, alpha]) => {
-    doc.setDrawColor(...accent);
-    doc.setLineWidth(0.6);
-    doc.setGState(doc.GState({ opacity: alpha }));
-    doc.circle(cx, cy, r, 'S');
-  });
-  doc.setGState(doc.GState({ opacity: 1 })); // reset opacity
+  // Top-right dot scatter decoration
+  doc.setGState(doc.GState({ opacity: 0.18 }));
+  doc.setFillColor(...accent);
+  const dotPositions = [];
+  const seed = { v: 42 };
+  const rng = () => { seed.v = (seed.v * 1664525 + 1013904223) & 0xffffffff; return (seed.v >>> 0) / 0xffffffff; };
+  for (let i = 0; i < 55; i++) {
+    const dx = pageW - 5 - rng() * 55;
+    const dy = rng() * 55;
+    const r  = 0.6 + rng() * 1.4;
+    dotPositions.push([dx, dy, r]);
+  }
+  dotPositions.forEach(([dx, dy, r]) => doc.circle(dx, dy, r, 'F'));
+  doc.setGState(doc.GState({ opacity: 1 }));
 
-  // Document type chip
+  // ── Chips row ──
+  const chipY = 22;
   const chipW = doc.getTextWidth(dtLabel) + 16;
   doc.setFillColor(...accent);
-  doc.roundedRect(mL + 8, 24, chipW, 8, 1.5, 1.5, 'F');
+  doc.roundedRect(mL + 8, chipY, chipW, 8.5, 1.5, 1.5, 'F');
   doc.setTextColor(...white);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.text(dtLabel, mL + 8 + 8, 29.5);
+  doc.text(dtLabel, mL + 8 + 8, chipY + 6);
 
-  // Depth badge (right of chip)
   const depthX = mL + 8 + chipW + 6;
   const depthChipW = doc.getTextWidth(depthLbl) + 14;
-  doc.setFillColor(30, 41, 59);
-  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'F');
+  doc.setFillColor(...navy);
+  doc.roundedRect(depthX, chipY, depthChipW, 8.5, 1.5, 1.5, 'F');
   doc.setDrawColor(...accent);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(depthX, 24, depthChipW, 8, 1.5, 1.5, 'S');
+  doc.setLineWidth(0.5);
+  doc.roundedRect(depthX, chipY, depthChipW, 8.5, 1.5, 1.5, 'S');
   doc.setTextColor(...silver);
-  doc.text(depthLbl, depthX + 7, 29.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(depthLbl.toUpperCase(), depthX + 7, chipY + 6);
 
-  // ── Title (larger, shifted down to give breathing room below chips) ──
+  // ── Title ──
   doc.setTextColor(...white);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(30);
-  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 26);
-  let ty = 56;
-  titleLines.slice(0, 4).forEach(ln => { doc.text(ln, mL + 8, ty); ty += 13; });
+  doc.setFontSize(28);
+  const titleLines = doc.splitTextToSize(fileBase, pageW - mL - mR - 30);
+  let ty = 46;
+  titleLines.slice(0, 3).forEach(ln => { doc.text(ln, mL + 8, ty); ty += 12; });
 
   // Subtitle
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(148, 163, 184);
-  const subtitle = currentLang === 'de' ? 'KI-gestützte Dokumentenanalyse' : 'AI-powered document analysis';
-  doc.text(subtitle, mL + 8, ty + 5);
-  ty += 20;
+  doc.setFontSize(10);
+  doc.setTextColor(...silver);
+  doc.text(de ? 'KI-gestützte Dokumentenanalyse' : 'AI-powered document analysis', mL + 8, ty + 4);
+  ty += 14;
 
-  // Divider under subtitle
+  // Red divider
   doc.setDrawColor(...accent);
-  doc.setLineWidth(0.6);
+  doc.setLineWidth(0.7);
   doc.line(mL + 8, ty, pageW - mR, ty);
-  ty += 12;
+  ty += 10;
 
-  // Metadata grid — 2-column layout (label left, value right)
+  // ── Metadata — labels in accent color ──
   const metaPairs = [
-    [currentLang === 'de' ? 'Datei' : 'File',      fileName ? (fileName.length > 38 ? fileName.slice(0,35)+'...' : fileName) : '—'],
-    [currentLang === 'de' ? 'Erstellt' : 'Created', today + '  ' + nowTime],
-    [currentLang === 'de' ? 'Tiefe' : 'Depth',     depthLbl],
-    [currentLang === 'de' ? 'Referenz' : 'Reference', refNr],
+    [de ? 'Datei'     : 'File',      fileName ? (fileName.length > 42 ? fileName.slice(0,39)+'...' : fileName) : '—'],
+    [de ? 'Erstellt'  : 'Created',   today + '  ' + nowTime],
+    [de ? 'Tiefe'     : 'Depth',     depthLbl],
+    [de ? 'Referenz'  : 'Reference', refNr],
   ];
-  doc.setFontSize(8.5);
+  doc.setFontSize(9);
   metaPairs.forEach(([label, val]) => {
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...silver);
+    doc.setTextColor(...accent);
     doc.text(label + ':', mL + 8, ty);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...white);
-    doc.text(val, mL + 8 + 32, ty);
-    ty += 9;
+    doc.text(val, mL + 8 + 35, ty);
+    ty += 9.5;
   });
-  ty += 8;
+  ty += 6;
 
-  // ── Mid-page info card (fills the empty space) ──
-  const cardY = ty;
-  const cardH = 52;
-  doc.setFillColor(20, 32, 54); // slightly lighter than navy
-  doc.roundedRect(mL + 8, cardY, cW - 8, cardH, 3, 3, 'F');
+  // ── Info card ──
+  const cardX = mL + 8, cardW = cW - 8;
+  const cardH = 66;
+  doc.setFillColor(navy[0] + 12, navy[1] + 12, navy[2] + 12);
+  doc.roundedRect(cardX, ty, cardW, cardH, 3, 3, 'F');
+  // Left accent strip
   doc.setFillColor(...accent);
-  doc.rect(mL + 8, cardY, 3, cardH, 'F');
-  // Card heading
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(...accent);
-  doc.text(
-    currentLang === 'de' ? 'ANALYSE — ÜBERSICHT' : 'ANALYSIS OVERVIEW',
-    mL + 16, cardY + 9
-  );
-  // Horizontal rule inside card
-  doc.setDrawColor(37, 60, 100);
-  doc.setLineWidth(0.3);
-  doc.line(mL + 16, cardY + 13, pageW - mR - 8, cardY + 13);
-  // Feature rows — 2 columns, 3 rows
-  const de = currentLang === 'de';
-  const features = [
-    [de ? 'Visuelle KI-Analyse' : 'Visual AI Analysis',   de ? 'Tabellen & Grafiken erkannt' : 'Tables & charts detected'],
-    [de ? 'Seitenreferenzen' : 'Page References',         de ? 'Jede Aussage belegt' : 'Every claim sourced'],
-    [de ? 'Vertraulich' : 'Confidential',                 de ? 'Daten nach Analyse geloscht' : 'Data deleted after analysis'],
-  ];
-  doc.setFontSize(8.5);
-  features.forEach(([left, right], i) => {
-    const fy = cardY + 21 + i * 10;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...white);
-    doc.text(left, mL + 16, fy);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 130, 180);
-    doc.text(right, mL + 16 + 58, fy);
-  });
-
-  // ── Task description preview (if available) ──
-  const taskPreview = (taskDescEl?.value || '').trim().slice(0, 160);
-  if (taskPreview && fileName) { // only show when we also have a real file name
-    const qY = cardY + cardH + 12;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8.5);
-    doc.setTextColor(80, 100, 140);
-    const qLines = doc.splitTextToSize('\u201E' + taskPreview + '\u201C', cW - 20);
-    qLines.slice(0, 3).forEach((ln, i) => doc.text(ln, mL + 8, qY + i * 6));
-  }
-
-  // ── Bottom info bar ──
-  doc.setFillColor(10, 18, 35);
-  doc.rect(0, pageH - 22, pageW, 22, 'F');
-  doc.setFillColor(...accent);
-  doc.rect(0, pageH - 22, pageW, 0.5, 'F');
+  doc.roundedRect(cardX, ty, 3.5, cardH, 1.5, 1.5, 'F');
+  // Card header
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...accent);
-  doc.text(currentLang === 'de' ? 'VERTRAULICH' : 'CONFIDENTIAL', mL + 8, pageH - 12);
+  doc.text(de ? 'ANALYSE \u2192 ÜBERSICHT' : 'ANALYSIS \u2192 OVERVIEW', cardX + 12, ty + 10);
+  // Divider in card
+  doc.setDrawColor(accent[0], accent[1], accent[2]);
+  doc.setLineWidth(0.25);
+  doc.line(cardX + 12, ty + 14, cardX + cardW - 8, ty + 14);
+
+  // Feature rows with icon circles
+  const feats = [
+    ['\u25CF', de ? 'Visuelle KI-Analyse'  : 'Visual AI Analysis',  de ? 'Tabellen & Grafiken erkannt'   : 'Tables & charts detected'],
+    ['\u25CF', de ? 'Seitenreferenzen'     : 'Page References',      de ? 'Jede Aussage belegt'           : 'Every claim sourced'],
+    ['\u25CF', de ? 'Vertraulich'          : 'Confidential',         de ? 'Daten nach Analyse gelöscht'   : 'Data deleted after analysis'],
+  ];
+  feats.forEach(([, left, right], i) => {
+    const fy = ty + 23 + i * 14;
+    // Icon circle
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.setGState(doc.GState({ opacity: 0.18 }));
+    doc.circle(cardX + 18, fy - 2.5, 5, 'F');
+    doc.setGState(doc.GState({ opacity: 1 }));
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(0.5);
+    doc.circle(cardX + 18, fy - 2.5, 5, 'S');
+    // Label + value
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...white);
+    doc.text(left, cardX + 27, fy);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...silver);
+    doc.text(right, cardX + 27 + 55, fy);
+  });
+  ty += cardH + 10;
+
+  // ── Quote block ──
+  const taskPreview = (taskDescEl?.value || '').trim().slice(0, 180);
+  const quoteText = taskPreview || (de ? 'KI-Analyse angefordert' : 'AI analysis requested');
+  // Large quotation mark
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...accent);
+  doc.text('\u201E', mL + 8, ty + 8);
+  // Quote text
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8.5);
+  doc.setTextColor(160, 180, 210);
+  const qLines = doc.splitTextToSize(quoteText + (taskPreview.length === 180 ? '\u2026' : '\u201C'), cardW - 18);
+  qLines.slice(0, 3).forEach((ln, i) => doc.text(ln, mL + 22, ty + 4 + i * 6.5));
+  ty += 10 + Math.min(qLines.length, 3) * 6.5;
+
+  // Divider above footer
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.5);
+  doc.line(mL + 8, pageH - 26, pageW - mR, pageH - 26);
+
+  // ── Footer ──
+  const footY = pageH - 16;
+  // Shield circle
+  doc.setFillColor(...navy);
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.6);
+  doc.circle(mL + 14, footY - 2, 6, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...accent);
+  doc.text('\u26E8', mL + 14, footY); // shield-like char fallback
+  // "VERTRAULICH" label
+  doc.setFontSize(9);
+  doc.setTextColor(...accent);
+  doc.text(de ? 'VERTRAULICH' : 'CONFIDENTIAL', mL + 23, footY);
+  // Right side text
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(...silver);
   doc.text(
-    currentLang === 'de'
-      ? 'Erstellt mit AI Employee Agent  \u2022  Alle Daten nach Analyse geloscht'
-      : 'Created with AI Employee Agent  \u2022  All data deleted after analysis',
-    pageW - mR, pageH - 12, { align: 'right' }
+    de ? 'Erstellt mit AI Employee Agent  \u2022  Alle Daten nach Analyse gelöscht'
+       : 'Created with AI Employee Agent  \u2022  All data deleted after analysis',
+    pageW - mR, footY, { align: 'right' }
   );
 
   // ── PARSE blocks early (needed for TOC) ──
