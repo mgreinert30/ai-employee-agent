@@ -1104,31 +1104,6 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 }
 .service-quality-hint:empty { display: none; }
 
-/* MASCOT RUNNER */
-.mascot-runner {
-  position: fixed;
-  bottom: 18px;
-  right: -120px;
-  z-index: 9999;
-  pointer-events: none;
-  animation: mascotRun 18s linear infinite;
-  animation-delay: 8s;
-}
-.mascot-runner img {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(37,99,235,0.4));
-  image-rendering: auto;
-}
-@keyframes mascotRun {
-  0%   { right: -80px; transform: scaleX(-1); }
-  45%  { right: calc(100vw + 80px); transform: scaleX(-1); }
-  46%  { right: calc(100vw + 80px); transform: scaleX(1); }
-  90%  { right: -80px; transform: scaleX(1); }
-  91%  { right: -80px; transform: scaleX(-1); }
-  100% { right: -80px; transform: scaleX(-1); }
-}
 
 /* RESPONSIVE */
 @media (max-width: 1100px) { .pdf-hl-wrap { grid-template-columns: 1fr; gap: 48px; } .pdf-hl-left h2 { font-size: 34px; } .pdf-hl-right { display: none; } .os-grid { grid-template-columns: repeat(2, 1fr); } }
