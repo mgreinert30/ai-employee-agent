@@ -4618,14 +4618,50 @@ NEXT STEPS
   }
   const depthInstructions = {
     short: isDE
-      ? `AUSGABELÄNGE: KURZ — Ziel ${shortTarget}. Klar und prägnant, alle Abschnitte trotzdem vollständig.`
-      : `OUTPUT LENGTH: SHORT — Target ${shortTarget}. Clear and concise, but all sections still complete.`,
+      ? `AUSGABELÄNGE: KURZ — Ziel ${shortTarget}.
+• Nur die wichtigsten Erkenntnisse — kein Fließtext, keine Wiederholungen.
+• Tabellen NUR wenn mehr als 4 Zahlen direkt vergleichbar sind.
+• Keine Grafiken — Zahlen als Stichpunkte genügen.
+• Jeder Satz trägt einen eigenständigen Informationswert.`
+      : `OUTPUT LENGTH: SHORT — Target ${shortTarget}.
+• Key findings only — no prose, no repetition.
+• Tables ONLY if more than 4 numbers are directly comparable.
+• No charts — bullet-point numbers suffice.
+• Every sentence must carry independent information value.`,
     medium: isDE
-      ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}. Fokussiert und informativ, alle Abschnitte gut ausgeführt.`
-      : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}. Focused and informative, all sections well developed.`,
+      ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}.
+• Deutlich umfangreicher als Kurz: jeder Abschnitt vollständig ausgeführt mit Kontext und Begründung.
+• TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle.
+• MINDESTENS 1 GRAFIK wenn Zeitreihen oder Kategorienvergleiche im Dokument vorhanden sind → [CHART:line|...] oder [CHART:bar|...].
+• Kennzahlen-Abschnitt vollständig befüllen.
+• Risiken und Chancen jeweils mit Begründung.`
+      : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}.
+• Clearly more extensive than short: every section fully developed with context and reasoning.
+• TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table.
+• AT LEAST 1 CHART if time series or category comparisons exist in the document → [CHART:line|...] or [CHART:bar|...].
+• Fill the key metrics section completely.
+• Risks and opportunities each with justification.`,
     long: isDE
-      ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}. Extrem gründlich, keine Kürzungen, jede Kennzahl kommentiert.`
-      : `OUTPUT LENGTH: LONG — Target ${longTarget}. Extremely thorough, no truncation, every metric commented on.`
+      ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}.
+• MAXIMALE TIEFE — deutlich länger als Mittel: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt.
+• TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe → Markdown-Tabelle. Kein Fließtext für Daten.
+• GRAFIKEN PFLICHT: Für JEDE Zeitreihe, jeden Kategorienvergleich und jede Anteilsverteilung eine eigene Grafik:
+  - Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...] direkt nach der Erläuterung einfügen
+  - Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...]
+  - Anteile/Verteilungen → [CHART:pie|Titel|Kat:Wert,...]
+• TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausführen — keine Dimension kürzen.
+• Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
+• Alle Abschnitte auf maximale Substanz bringen — kein Abschnitt darf kürzer als 3 Sätze sein.`
+      : `OUTPUT LENGTH: LONG — Target ${longTarget}.
+• MAXIMUM DEPTH — significantly longer than medium: every metric individually commented, every claim backed by page reference.
+• TABLES EVERYWHERE: Every list, comparison, data series → Markdown table. No prose for data.
+• CHARTS MANDATORY: For EVERY time series, category comparison, and proportion distribution, insert a dedicated chart:
+  - Development over time → [CHART:line|Title|Year:Value,...] insert directly after explanation
+  - Category comparison → [CHART:bar|Title|Cat:Value,...]
+  - Proportions/shares → [CHART:pie|Title|Cat:Value,...]
+• DEEP ANALYSIS in all 5 dimensions fully developed — no dimension shortened.
+• Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
+• All sections at maximum substance — no section shorter than 3 sentences.`
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
