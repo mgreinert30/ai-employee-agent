@@ -1,5 +1,7 @@
 // Vercel Serverless Function — Support chatbot powered by Gemini
-export const config = { api: { bodyParser: { sizeLimit: '16kb' } } };
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
+
+const MODELS = ['gemini-2.5-flash', 'gemini-flash-latest'];
 
 const SYSTEM_DE = `Du bist ein freundlicher Support-Assistent für "AI Employee Agent" — eine KI-Plattform für kleine Unternehmen.
 
@@ -12,26 +14,25 @@ Was du über die Plattform weißt:
 - Kostenloser Account nötig (E-Mail + Passwort) — Anmeldung direkt auf der Seite
 - Passwort vergessen: per E-Mail zurücksetzen möglich
 - Geschäftsfarben und Firmenname für den PDF-Bericht einstellbar (Owner-Panel)
-- Preise: noch nicht öffentlich — Nutzer können Interesse bekunden
+- Preise: noch nicht öffentlich
 - Sprachen: Deutsch und Englisch umschaltbar (oben rechts)
 
-Antworte immer auf Deutsch. Bleib freundlich, kurz (max. 3 Sätze) und hilfreich. Wenn du etwas nicht weißt, sage es ehrlich und bitte den Nutzer, den Betreiber zu kontaktieren.`;
+Antworte immer auf Deutsch. Bleib freundlich, kurz (max. 3 Sätze) und hilfreich.`;
 
 const SYSTEM_EN = `You are a friendly support assistant for "AI Employee Agent" — an AI platform for small businesses.
 
-What you know about the platform:
-- AI Employee Agent analyzes business documents (PDFs, emails, websites, finances, competitors) using AI
-- Users choose between two AI employees: Alex (professional & precise) or Emma (efficient & reliable)
-- 5 services: PDF analysis, email analysis, website analysis, finance analysis, competitor analysis
-- Analysis runs directly in the browser — no download needed, results exportable as PDF report
-- GDPR-compliant: all uploaded data is deleted immediately after analysis
-- Free account required (email + password) — sign up directly on the site
-- Forgot password: reset via email
-- Business colors and company name customizable for PDF reports (Owner Panel)
-- Pricing: not yet public — users can express interest
-- Languages: German and English (toggle top right)
+What you know:
+- Analyzes business documents (PDFs, emails, websites, finances, competitors) using AI
+- Two AI employees: Alex (professional & precise) or Emma (efficient & reliable)
+- 5 services: PDF, email, website, finance, competitor analysis
+- Runs in the browser, results exportable as PDF report
+- GDPR-compliant: data deleted after analysis
+- Free account required (email + password)
+- Password reset via email
+- Business colors/name customizable in Owner Panel
+- Pricing: not yet public
 
-Always reply in English. Stay friendly, brief (max. 3 sentences) and helpful. If you don't know something, say so honestly and suggest contacting the operator.`;
+Always reply in English. Stay friendly, brief (max. 3 sentences), and helpful.`;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -48,32 +49,54 @@ export default async function handler(req, res) {
 
   const systemPrompt = lang === 'en' ? SYSTEM_EN : SYSTEM_DE;
 
-  const contents = [
-    ...history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
-    { role: 'user', parts: [{ text: message }] }
-  ];
+  // Build conversation: inject system prompt into the first user turn
+  const historyParts = history.map(h => ({
+    role: h.role === 'model' ? 'model' : 'user',
+    parts: [{ text: h.text }]
+  }));
 
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: { maxOutputTokens: 300, temperature: 0.6 }
-      })
+  const firstUserText = historyParts.length === 0
+    ? `${systemPrompt}\n\n---\nNutzer: ${message}`
+    : message;
+
+  const contents = historyParts.length === 0
+    ? [{ role: 'user', parts: [{ text: firstUserText }] }]
+    : [...historyParts, { role: 'user', parts: [{ text: message }] }];
+
+  const allErrors = [];
+
+  for (const model of MODELS) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
+          })
+        }
+      );
+
+      let data;
+      try { data = await geminiRes.json(); } catch (_) {
+        allErrors.push(`[${model}] kein JSON`); continue;
+      }
+
+      if (!geminiRes.ok || data.error) {
+        allErrors.push(`[${model}] ${data.error?.message || geminiRes.status}`); continue;
+      }
+
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!reply) { allErrors.push(`[${model}] leere Antwort`); continue; }
+
+      return res.status(200).json({ reply });
+
+    } catch (err) {
+      allErrors.push(`[${model}] ${err.message}`);
     }
-  );
-
-  if (!geminiRes.ok) {
-    const err = await geminiRes.json().catch(() => ({}));
-    return res.status(500).json({ error: err.error?.message || 'KI-Fehler' });
   }
 
-  const data = await geminiRes.json();
-  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
-    ?? (lang === 'en' ? 'Sorry, I could not generate a response.' : 'Entschuldigung, ich konnte keine Antwort generieren.');
-
-  return res.status(200).json({ reply });
+  return res.status(500).json({ error: allErrors.join(' | ') });
 }
