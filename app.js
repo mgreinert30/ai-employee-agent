@@ -4897,12 +4897,12 @@ DER EINZIGE ERLAUBTE OUTPUT:
 // =====================
 // VISUAL PDF RENDERING — renders pages to JPEG for Gemini Vision
 // =====================
-async function renderPDFPagesToImages(file, maxPages = 12) {
+async function renderPDFPagesToImages(file) {
   if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
   const totalPages = pdf.numPages;
-  const pagesToRender = Math.min(totalPages, maxPages);
+  const pagesToRender = totalPages;
   const images = [];
 
   for (let i = 1; i <= pagesToRender; i++) {
@@ -4966,7 +4966,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
         ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
         : 'Rendering PDF pages for visual analysis...');
       try {
-        const rendered = await renderPDFPagesToImages(pdfFiles[0], 10);
+        const rendered = await renderPDFPagesToImages(pdfFiles[0]);
         pageImages  = [...pageImages, ...rendered.images];
         totalPages  += rendered.totalPages;
       } catch (err) {
