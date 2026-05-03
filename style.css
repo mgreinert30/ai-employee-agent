@@ -1235,8 +1235,8 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   gap: 12px;
 }
 .chat-fab {
-  width: 56px;
-  height: 56px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   border: none;
@@ -1266,8 +1266,8 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   border: 2px solid #0a0f1e;
 }
 .chat-panel {
-  width: 340px;
-  max-height: 480px;
+  width: 420px;
+  max-height: 580px;
   background: #0f172a;
   border: 1.5px solid rgba(37,99,235,0.3);
   border-radius: 20px;
