@@ -4869,7 +4869,6 @@ async function sendChatMessage(overrideText) {
   if (!overrideText) input.value = '';
 
   appendChatMsg('user', text);
-  chatHistory.push({ role: 'user', text });
 
   const typingId = 'ct-' + Date.now();
   const typingEl = document.createElement('div');
@@ -4883,17 +4882,19 @@ async function sendChatMessage(overrideText) {
     const r = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, history: chatHistory.slice(-10), lang: currentLang })
+      body: JSON.stringify({ message: text, history: chatHistory.slice(-20), lang: currentLang })
     });
     const data = await r.json();
     document.getElementById(typingId)?.remove();
-    const reply = data.reply || (currentLang === 'en' ? 'Sorry, an error occurred.' : 'Entschuldigung, ein Fehler ist aufgetreten.');
+    if (data.error) throw new Error(data.error);
+    const reply = data.reply || (currentLang === 'en' ? 'Sorry, no response received.' : 'Keine Antwort erhalten.');
     appendChatMsg('bot', reply);
-    chatHistory.push({ role: 'model', text: reply });
-  } catch {
+    chatHistory.push({ role: 'user', text }, { role: 'model', text: reply });
+  } catch (err) {
     document.getElementById(typingId)?.remove();
     const errMsg = currentLang === 'en' ? 'Connection error. Please try again.' : 'Verbindungsfehler. Bitte versuche es erneut.';
     appendChatMsg('bot', errMsg);
+    console.error('[chat]', err);
   }
 }
 
