@@ -5012,7 +5012,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, images: pageImages })
-  }, 115000); // 115s browser timeout — Vercel function is 60s but CDN can add latency
+  }, 295000); // 295s browser timeout — matches Vercel 300s function limit
   const data = await response.json();
   if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
   if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
