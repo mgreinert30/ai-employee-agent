@@ -1266,8 +1266,8 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   border: 2px solid #0a0f1e;
 }
 .chat-panel {
-  width: 420px;
-  max-height: 580px;
+  width: 520px;
+  max-height: 680px;
   background: #0f172a;
   border: 1.5px solid rgba(37,99,235,0.3);
   border-radius: 20px;
