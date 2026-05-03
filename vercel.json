@@ -2,6 +2,7 @@
   "functions": {
     "api/analyse.js":      { "maxDuration": 60 },
     "api/send-reset.js":   { "maxDuration": 10 },
-    "api/verify-reset.js": { "maxDuration": 10 }
+    "api/verify-reset.js": { "maxDuration": 10 },
+    "api/chat.js":         { "maxDuration": 15 }
   }
 }

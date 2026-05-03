@@ -4837,3 +4837,77 @@ document.addEventListener('DOMContentLoaded', () => {
   checkDueTasks();
 
 });
+
+// ── Support Chat Widget ──
+let chatHistory = [];
+let chatOpen = false;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const badge = document.getElementById('chat-badge');
+  if (chatOpen) {
+    panel.classList.remove('hidden');
+    badge.classList.add('hidden');
+    document.getElementById('chat-input').focus();
+  } else {
+    panel.classList.add('hidden');
+  }
+}
+
+function sendQuickReply(btn) {
+  const de = currentLang !== 'en';
+  const text = de ? btn.dataset.de : btn.dataset.en;
+  document.getElementById('chat-quick-replies')?.remove();
+  sendChatMessage(text);
+}
+
+async function sendChatMessage(overrideText) {
+  const input = document.getElementById('chat-input');
+  const text = (overrideText || input.value.trim());
+  if (!text) return;
+  if (!overrideText) input.value = '';
+
+  appendChatMsg('user', text);
+  chatHistory.push({ role: 'user', text });
+
+  const typingId = 'ct-' + Date.now();
+  const typingEl = document.createElement('div');
+  typingEl.id = typingId;
+  typingEl.className = 'chat-msg bot';
+  typingEl.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chat-messages').appendChild(typingEl);
+  scrollChatBottom();
+
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: chatHistory.slice(-10), lang: currentLang })
+    });
+    const data = await r.json();
+    document.getElementById(typingId)?.remove();
+    const reply = data.reply || (currentLang === 'en' ? 'Sorry, an error occurred.' : 'Entschuldigung, ein Fehler ist aufgetreten.');
+    appendChatMsg('bot', reply);
+    chatHistory.push({ role: 'model', text: reply });
+  } catch {
+    document.getElementById(typingId)?.remove();
+    const errMsg = currentLang === 'en' ? 'Connection error. Please try again.' : 'Verbindungsfehler. Bitte versuche es erneut.';
+    appendChatMsg('bot', errMsg);
+  }
+}
+
+function appendChatMsg(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  div.innerHTML = `<div class="chat-bubble">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div><div class="chat-time">${now}</div>`;
+  msgs.appendChild(div);
+  scrollChatBottom();
+}
+
+function scrollChatBottom() {
+  const msgs = document.getElementById('chat-messages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
