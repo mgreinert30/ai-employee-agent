@@ -563,7 +563,7 @@ async function runChain(prefix) {
   setProgress(100, de ? 'Fertig!' : 'Done!');
   updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
-  document.getElementById('result-content').textContent = currentResult;
+  renderResultRich(currentResult);
 }
 
 // =====================
@@ -2047,7 +2047,7 @@ TONE: ${toneLabel}`;
   lastCompletedTaskType = currentShortcutType || detectTaskType(taskDesc);
   updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
-  document.getElementById('result-content').textContent = currentResult;
+  renderResultRich(currentResult);
 
   // Demo mode banner (#6)
   const isDemo = !useRealAI;
@@ -2148,6 +2148,20 @@ function parseResultBlocks(text) {
 
     afterDivider = false;
 
+    // [CHART:type|title|label:val,label:val,...]
+    const chartMatch = t.match(/^\[CHART:(line|bar|pie)\|([^|]+)\|(.+)\]$/i);
+    if (chartMatch) {
+      const chartType = chartMatch[1].toLowerCase();
+      const title = chartMatch[2].trim();
+      const data = chartMatch[3].split(',').map(entry => {
+        const sepIdx = entry.lastIndexOf(':');
+        if (sepIdx < 1) return null;
+        return { label: entry.slice(0, sepIdx).trim(), value: parseFloat(entry.slice(sepIdx + 1).replace(/[^\d.-]/g, '')) };
+      }).filter(d => d && !isNaN(d.value));
+      if (data.length >= 2) blocks.push({ type: 'chart', chartType, title, data });
+      continue;
+    }
+
     // Markdown table — collect all consecutive pipe rows
     if (isTableRow(t)) {
       const rows = [];
@@ -2225,6 +2239,121 @@ function stripLeadingSymbol(s) {
   return s.replace(/^[\u{0080}-\u{10FFFF}]+\s*/gu, '')
           .replace(/^(KRITISCH|CRITICAL|WICHTIG|IMPORTANT|GERING|LOW|DRINGEND|URGENT)[\s:—-]*/i, '')
           .trim();
+}
+
+// ── Rich HTML result renderer (on-screen) ──────────────────────────────────
+function renderResultRich(text) {
+  const container = document.getElementById('result-content');
+  if (!container) return;
+  container.innerHTML = '';
+  const blocks = parseResultBlocks(text || '');
+  let kpiGrid = null;
+
+  blocks.forEach(b => {
+    if (b.type !== 'kpi') kpiGrid = null;
+
+    switch (b.type) {
+      case 'gap': {
+        const el = document.createElement('div'); el.style.height = '8px'; container.appendChild(el); break;
+      }
+      case 'section': {
+        const el = document.createElement('div'); el.className = 'r-section'; el.textContent = b.text; container.appendChild(el); break;
+      }
+      case 'table': {
+        const wrap = document.createElement('div'); wrap.className = 'r-table-wrap';
+        const tbl = document.createElement('table'); tbl.className = 'r-table';
+        const thead = document.createElement('thead');
+        const hr = document.createElement('tr');
+        b.headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
+        thead.appendChild(hr); tbl.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        b.rows.forEach((row, ri) => {
+          const tr = document.createElement('tr'); if (ri % 2 === 1) tr.className = 'r-odd';
+          row.forEach(cell => { const td = document.createElement('td'); td.textContent = cell; tr.appendChild(td); });
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap); break;
+      }
+      case 'chart': {
+        const wrap = document.createElement('div'); wrap.className = 'r-chart-wrap';
+        const title = document.createElement('div'); title.className = 'r-chart-title'; title.textContent = b.title;
+        wrap.appendChild(title);
+        const canvas = document.createElement('canvas'); canvas.height = 220; wrap.appendChild(canvas);
+        container.appendChild(wrap);
+        setTimeout(() => renderChartOnCanvas(canvas, b), 30);
+        break;
+      }
+      case 'kpi': {
+        if (!kpiGrid) { kpiGrid = document.createElement('div'); kpiGrid.className = 'r-kpi-grid'; container.appendChild(kpiGrid); }
+        const kpi = document.createElement('div'); kpi.className = 'r-kpi';
+        const lbl = document.createElement('div'); lbl.className = 'r-kpi-label'; lbl.textContent = b.label;
+        const val = document.createElement('div'); val.className = 'r-kpi-value'; val.textContent = b.value;
+        kpi.appendChild(lbl); kpi.appendChild(val); kpiGrid.appendChild(kpi); break;
+      }
+      case 'risk': {
+        const el = document.createElement('div'); el.className = `r-risk r-risk-${b.level}`;
+        el.textContent = b.text; container.appendChild(el); break;
+      }
+      case 'insight': {
+        const el = document.createElement('div'); el.className = 'r-insight';
+        if (b.label) { const s = document.createElement('strong'); s.textContent = b.label + ': '; el.appendChild(s); }
+        el.appendChild(document.createTextNode(b.text)); container.appendChild(el); break;
+      }
+      case 'labeled_bullet': {
+        const el = document.createElement('div'); el.className = 'r-labeled-bullet';
+        const s = document.createElement('strong'); s.textContent = b.label + ': '; el.appendChild(s);
+        el.appendChild(document.createTextNode(b.text)); container.appendChild(el); break;
+      }
+      case 'bullet': {
+        const el = document.createElement('div'); el.className = 'r-bullet'; el.textContent = b.text; container.appendChild(el); break;
+      }
+      case 'numbered': {
+        const el = document.createElement('div'); el.className = 'r-numbered'; el.textContent = `${b.n}. ${b.text}`; container.appendChild(el); break;
+      }
+      case 'meta': {
+        const el = document.createElement('div'); el.className = 'r-meta'; el.textContent = b.text; container.appendChild(el); break;
+      }
+      default: {
+        const el = document.createElement('p'); el.className = 'r-body'; el.textContent = b.text || ''; container.appendChild(el); break;
+      }
+    }
+  });
+}
+
+function renderChartOnCanvas(canvas, block) {
+  if (typeof Chart === 'undefined') return;
+  const colors = block.data.map((_, i) => `hsl(${(210 + i * 42) % 360}, 65%, 58%)`);
+  const accent = getBrandColors().accent;
+  const accentRgba = `rgba(${accent.join(',')},0.82)`;
+  const accentRgb = `rgb(${accent.join(',')})`;
+
+  new Chart(canvas, {
+    type: block.chartType,
+    data: {
+      labels: block.data.map(d => d.label),
+      datasets: [{
+        label: block.title,
+        data: block.data.map(d => d.value),
+        backgroundColor: block.chartType === 'pie' ? colors : accentRgba,
+        borderColor: block.chartType === 'pie' ? colors.map(c => c.replace('58%', '45%')) : accentRgb,
+        borderWidth: 2,
+        fill: block.chartType === 'line',
+        tension: 0.35,
+      }]
+    },
+    options: {
+      animation: { duration: 500 },
+      responsive: true,
+      plugins: {
+        legend: { display: block.chartType === 'pie', labels: { color: '#cbd5e1', font: { size: 12 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y ?? ctx.parsed}` } }
+      },
+      scales: block.chartType === 'pie' ? {} : {
+        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.07)' } }
+      }
+    }
+  });
 }
 
 // ── Step 2: render blocks into jsPDF ───────────────────────────────────────
@@ -2742,6 +2871,40 @@ function downloadPDF(length) {
         };
 
         drawTable(0);
+        break;
+      }
+
+      case 'chart': {
+        closeKpiRow();
+        if (typeof Chart === 'undefined' || !b.data?.length) break;
+        guard(68);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...navy);
+        doc.text(safe(b.title), mL, y + 4); y += 9;
+        const cvs = document.createElement('canvas');
+        cvs.width = 900; cvs.height = 380;
+        document.body.appendChild(cvs);
+        const clrs = b.data.map((_, i) => `hsl(${(210 + i * 42) % 360},65%,50%)`);
+        const acRgb = `rgb(${accent.join(',')})`;
+        try {
+          const ch = new Chart(cvs, {
+            type: b.chartType,
+            data: {
+              labels: b.data.map(d => d.label),
+              datasets: [{
+                label: b.title, data: b.data.map(d => d.value),
+                backgroundColor: b.chartType === 'pie' ? clrs : `rgba(${accent.join(',')},0.75)`,
+                borderColor: b.chartType === 'pie' ? clrs : acRgb,
+                borderWidth: 2, fill: false, tension: 0.35
+              }]
+            },
+            options: { animation: false, responsive: false, plugins: { legend: { display: b.chartType === 'pie' } } }
+          });
+          const imgData = cvs.toDataURL('image/png');
+          ch.destroy();
+          const imgH = cW * (cvs.height / cvs.width);
+          doc.addImage(imgData, 'PNG', mL, y, cW, imgH);
+          y += imgH + 4;
+        } finally { document.body.removeChild(cvs); }
         break;
       }
 
@@ -4530,8 +4693,13 @@ KERNREGELN — NIEMALS BRECHEN:
 5. JEDER SATZ trägt Information — keine Füllsätze.
 6. ANTWORTE AUF DEUTSCH.
 7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
-8. TABELLEN: Vergleiche, Zahlenreihen und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
+8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
+9. GRAFIKEN: Wenn echte Zahlenwerte über mehrere Perioden oder Kategorien vorliegen, füge direkt nach der Erläuterung eine Grafik-Markierung ein — NUR wenn mindestens 3 reale Datenpunkte im Dokument vorhanden sind:
+   • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,2022:Wert,...] (nur Zahlen, ohne Einheit)
+   • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
+   • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
+   Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
+10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
 10. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
 11. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
     • EXECUTIVE DASHBOARD: Die 3 kritischsten Erkenntnisse auf einen Blick.
@@ -4616,9 +4784,14 @@ CORE RULES — NEVER BREAK:
 5. EVERY SENTENCE carries information — no padding.
 6. RESPOND IN ENGLISH.
 7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important] | 2. [second] | 3. [third]"
-8. TABLES: Comparisons, data series and pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
-9. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
-10. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
+8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
+9. CHARTS: When real numeric values exist across multiple periods or categories (at least 3 data points), insert a chart marker directly after the explanation:
+   • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
+   • Category comparison → [CHART:bar|Title|CatA:Value,CatB:Value,CatC:Value,...]
+   • Proportions/percentages → [CHART:pie|Title|CatA:Value,CatB:Value,CatC:Value,...]
+   Example: [CHART:line|Revenue in M EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
+10. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
+11. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
 11. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
     • EXECUTIVE DASHBOARD: The 3 most critical findings at a glance.
     • FACT CHECK: Table with ALL important numbers, dates and hard commitments.
