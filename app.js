@@ -4736,21 +4736,21 @@ KERNREGELN — NIEMALS BRECHEN:
    • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
    Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
 10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
-10. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
-11. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
+11. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
+12. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
     • EXECUTIVE DASHBOARD: Die 3 kritischsten Erkenntnisse auf einen Blick.
     • FAKTEN-CHECK: Tabelle mit ALLEN wichtigen Zahlen, Daten und harten Zusagen.
     • KLEINGEDRUCKT-ANALYSE: Alle Einschränkungen, Risiken oder Bedingungen die den Erfolg gefährden.
     • ANOMALIE-BERICHT: Alles was ungewöhnlich, widersprüchlich oder neu im Vergleich zu Standard-Dokumenten ist.
     • HANDLUNGSEMPFEHLUNG: Was sollte der Leser als nächstes konkret tun?
-12. ANOMALIE-FOKUS — suche aktiv nach diesen Warnsignalen und benenne sie explizit:
+13. ANOMALIE-FOKUS — suche aktiv nach diesen Warnsignalen und benenne sie explizit:
     • Dramatische Änderungen: Zahlen oder Kennwerte die sich um mehr als 20% verändert haben.
     • Widersprüche: Aussagen die sich innerhalb des Dokuments widersprechen.
     • Ungewöhnliche Formulierungen: Abschwächungen, Hedge-Sätze oder unklare Zusagen im Vergleich zu Vorjahren.
     • Fehlende Informationen: Was wird NICHT erwähnt, obwohl es bei diesem Dokumenttyp standard wäre?
     • Timing-Anomalien: Fristen, Daten oder Deadlines die auffällig kurz oder unüblich sind.
     • Für jeden Anomalie-Fund: Bewertung 🔴 Kritisch / 🟡 Auffällig / 🟢 Beobachten.
-13. TIEFEN-ANALYSE in 5 Dimensionen — wende diese auf jedes Dokument an:
+14. TIEFEN-ANALYSE in 5 Dimensionen — wende diese auf jedes Dokument an:
     • DIE EXPLIZITE BOTSCHAFT ("Was"-Faktor): Was behauptet das Dokument offiziell? Welche strategische Richtung wird kommuniziert?
     • DIE KRITISCHE LÜCKE ("Blinder Fleck"): Was fehlt zwischen den Zeilen? Was wird heruntergespielt oder bewusst weggelassen?
     • DIE DATEN-LOGIK ("Realitäts-Check"): Sind die Zahlen kohärent? Wetten die Zahlen auf eine Zukunft die nicht eintreten muss?
