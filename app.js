@@ -1540,7 +1540,7 @@ function preselectPDF() {
   if (dc) dc.style.display = 'flex';
 }
 
-function updateCharCount(textareaId, counterId, max) {
+function updateCharCount(textareaId, counterId) {
   const ta = document.getElementById(textareaId);
   const counter = document.getElementById(counterId);
   if (ta && counter) counter.textContent = ta.value.length;
@@ -1590,7 +1590,7 @@ function handleDragOver(e) {
   document.getElementById('pdf-drop-zone').classList.add('drag-over');
 }
 
-function handleDragLeave(e) {
+function handleDragLeave(_e) {
   document.getElementById('pdf-drop-zone').classList.remove('drag-over');
 }
 
@@ -1848,7 +1848,6 @@ function goToAppSelection() {
   };
 
   const active = Object.entries(checked).filter(([,v]) => v).map(([k]) => k);
-  const showDepth = isRealAIEnabled() && uploadedPDFs.length > 0;
 
   const backBtn = document.getElementById('btn-back-apps');
   if (backBtn) {
@@ -2153,11 +2152,12 @@ function parseResultBlocks(text) {
     if (chartMatch) {
       const chartType = chartMatch[1].toLowerCase();
       const title = chartMatch[2].trim();
-      const data = chartMatch[3].split(',').map(entry => {
-        const sepIdx = entry.lastIndexOf(':');
-        if (sepIdx < 1) return null;
-        return { label: entry.slice(0, sepIdx).trim(), value: parseFloat(entry.slice(sepIdx + 1).replace(/[^\d.-]/g, '')) };
-      }).filter(d => d && !isNaN(d.value));
+      const data = [];
+      const pairRe = /([^,]+?):([-+]?\d+(?:\.\d+)?)/g;
+      let pm;
+      while ((pm = pairRe.exec(chartMatch[3])) !== null) {
+        data.push({ label: pm[1].trim(), value: parseFloat(pm[2]) });
+      }
       if (data.length >= 2) blocks.push({ type: 'chart', chartType, title, data });
       continue;
     }
@@ -2250,7 +2250,7 @@ function renderResultRich(text) {
   let kpiGrid = null;
 
   blocks.forEach(b => {
-    if (b.type !== 'kpi') kpiGrid = null;
+    if (b.type !== 'kpi' && b.type !== 'gap') kpiGrid = null;
 
     switch (b.type) {
       case 'gap': {
@@ -3063,7 +3063,7 @@ function downloadPDF(length) {
         doc.setTextColor(...steel);
         const tw = doc.getTextWidth(lbl) + 4;
         const lines = doc.splitTextToSize(t, cW - tw - 6);
-        lines.forEach((ln, i) => { guard(6); doc.text(ln, mL + tw + 3, y); y += 5.2; });
+        lines.forEach(ln => { guard(6); doc.text(ln, mL + tw + 3, y); y += 5.2; });
         y += 1;
         break;
       }
@@ -3167,7 +3167,6 @@ function downloadEmailResult() {
 function downloadHTMLReport() {
   const charName = getCharacterName();
   const today    = new Date().toLocaleDateString(currentLang === 'de' ? 'de-DE' : 'en-GB');
-  const desc     = document.getElementById('task-description').value;
   const lines    = (currentResult || '').split('\n');
 
   const html = lines.map(line => {
@@ -3327,8 +3326,6 @@ function generateDemoResult(desc) {
   const isEmail   = d.includes('email') || d.includes('mail') || d.includes('postfach') || d.includes('inbox');
   const isReport  = d.includes('report') || d.includes('bericht') || d.includes('summary') || d.includes('zusammenfassung');
   const isReply   = d.includes('reply') || d.includes('antwort') || d.includes('respond');
-  const isDoc     = d.includes('document') || d.includes('dokument') || d.includes('write') || d.includes('schreiben') || d.includes('erstell');
-
   if (currentLang === 'de') {
 
     if (isInvestor) return (
@@ -4828,20 +4825,20 @@ CORE RULES — NEVER BREAK:
    Example: [CHART:line|Revenue in M EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
 10. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
 11. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
-11. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
+12. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
     • EXECUTIVE DASHBOARD: The 3 most critical findings at a glance.
     • FACT CHECK: Table with ALL important numbers, dates and hard commitments.
     • FINE PRINT ANALYSIS: All limitations, risks or conditions that could jeopardise success.
     • ANOMALY REPORT: Everything unusual, contradictory or new compared to standard documents of this type.
     • RECOMMENDED ACTION: Based on the content — what should the reader do next, concretely?
-12. ANOMALY FOCUS — actively search for these warning signals and name them explicitly:
+13. ANOMALY FOCUS — actively search for these warning signals and name them explicitly:
     • Dramatic changes: Numbers or metrics that changed by more than 20%.
     • Contradictions: Statements that contradict each other within the document.
     • Unusual language: Hedging, softened commitments or vague promises compared to previous periods.
     • Missing information: What is NOT mentioned that would be standard for this document type?
     • Timing anomalies: Deadlines or dates that are unusually short or atypical.
     • For each anomaly found: Rating 🔴 Critical / 🟡 Notable / 🟢 Watch.
-13. DEEP ANALYSIS in 5 dimensions — apply these to every document:
+14. DEEP ANALYSIS in 5 dimensions — apply these to every document:
     • THE EXPLICIT MESSAGE ("What" factor): What does the document officially claim? What strategic direction is communicated?
     • THE CRITICAL GAP ("Blind Spot"): What is missing between the lines? What is downplayed or deliberately omitted?
     • DATA LOGIC ("Reality Check"): Are the numbers coherent? Do the figures bet on a future that may not materialise?
