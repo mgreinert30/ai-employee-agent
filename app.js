@@ -5007,15 +5007,46 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   let result;
 
+  // Trim images to stay under Vercel's ~4MB CDN body limit
+  // Each base64 page ≈ 130 KB — limit to ~28 pages worth of payload
+  const MAX_IMG_BYTES = 3.8 * 1024 * 1024; // 3.8 MB headroom for prompt text
+  let trimmedImages = pageImages;
+  let totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0); // base64 → bytes
+  if (totalImgBytes > MAX_IMG_BYTES) {
+    let cumBytes = 0;
+    trimmedImages = [];
+    for (const img of pageImages) {
+      const imgBytes = img.length * 0.75;
+      if (cumBytes + imgBytes > MAX_IMG_BYTES) break;
+      trimmedImages.push(img);
+      cumBytes += imgBytes;
+    }
+    console.warn(`[analyse] Payload too large — trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
+  }
+
   // Always route through server proxy — API key stored securely in Vercel env vars
   const response = await fetchWithTimeout('/api/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, images: pageImages })
+    body: JSON.stringify({ prompt, images: trimmedImages })
   }, 295000); // 295s browser timeout — matches Vercel 300s function limit
-  const data = await response.json();
+
+  // Guard against non-JSON error responses (e.g. HTTP 413 "Request Entity Too Large")
+  let data;
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    const msg = response.status === 413
+      ? (currentLang === 'de' ? 'Dokument zu groß — bitte ein kürzeres PDF verwenden.' : 'Document too large — please use a shorter PDF.')
+      : `HTTP ${response.status}: ${text.slice(0, 120)}`;
+    stopProgressAnimation();
+    throw new Error(msg);
+  }
+  try { data = await response.json(); } catch {
+    stopProgressAnimation();
+    throw new Error(currentLang === 'de' ? 'Ungültige Serverantwort erhalten.' : 'Invalid server response received.');
+  }
   if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
-  if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
+  if (!data.result) { stopProgressAnimation(); throw new Error(currentLang === 'de' ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   result = data.result;
 
   const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
