@@ -870,10 +870,12 @@ function connectGmail() {
   client.requestAccessToken();
 }
 
-// #8 — Reusable fetch with 30s timeout
+// #8 — Reusable fetch with timeout
 async function fetchWithTimeout(url, options = {}, ms = 30000) {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), ms);
+  const id = setTimeout(() => {
+    controller.abort(new DOMException('Zeitüberschreitung — die Analyse hat zu lange gedauert. Bitte versuche es mit einem kürzeren Dokument oder wähle "Kurz" als Analysetiefe.', 'TimeoutError'));
+  }, ms);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
@@ -4964,7 +4966,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
         ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
         : 'Rendering PDF pages for visual analysis...');
       try {
-        const rendered = await renderPDFPagesToImages(pdfFiles[0], 15);
+        const rendered = await renderPDFPagesToImages(pdfFiles[0], 10);
         pageImages  = [...pageImages, ...rendered.images];
         totalPages  += rendered.totalPages;
       } catch (err) {
@@ -5010,7 +5012,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, images: pageImages })
-  }, 58000);
+  }, 115000); // 115s browser timeout — Vercel function is 60s but CDN can add latency
   const data = await response.json();
   if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
   if (!data.result) { stopProgressAnimation(); throw new Error('Keine Antwort von der KI erhalten'); }
