@@ -4907,14 +4907,13 @@ async function renderPDFPagesToImages(file) {
 
   for (let i = 1; i <= pagesToRender; i++) {
     const page = await pdf.getPage(i);
-    // scale 1.5 → 893×1263px for A4 — sharp enough for Gemini to read tables
-    const viewport = page.getViewport({ scale: 1.5 });
+    // scale 1.2 → ~714×1010px for A4 — still sharp enough for Gemini, ~50-70 KB per page
+    const viewport = page.getViewport({ scale: 1.2 });
     const canvas = document.createElement('canvas');
     canvas.width  = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    // JPEG 70% ≈ 100–150 KB per page → 12 pages ≈ 1.5 MB total (well under Vercel's 4.5 MB limit)
-    images.push(canvas.toDataURL('image/jpeg', 0.55).split(',')[1]);
+    images.push(canvas.toDataURL('image/jpeg', 0.42).split(',')[1]);
   }
 
   return { images, totalPages, renderedPages: pagesToRender };
@@ -4992,8 +4991,10 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
     // If all pages were rendered visually, the text extraction is supplementary —
     // trim it down so we don't send redundant content.
-    if (pageImages.length >= totalPages && docText.length > 30000) {
-      docText = docText.slice(0, 30000) + '\n\n[Volltext gekürzt — visuelle Analyse hat alle Seiten abgedeckt]';
+    // When images present, text is supplementary — keep it short to stay under body limit
+    const textLimit = pageImages.length > 0 ? 15000 : 80000;
+    if (docText.length > textLimit) {
+      docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
     }
   } else {
     docText = `[Kein Dokument hochgeladen. Aufgabe basiert nur auf der Beschreibung: ${taskDesc}]`;
@@ -5007,9 +5008,9 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   let result;
 
-  // Trim images to stay under Vercel's ~4MB CDN body limit
-  // Each base64 page ≈ 130 KB — limit to ~28 pages worth of payload
-  const MAX_IMG_BYTES = 3.8 * 1024 * 1024; // 3.8 MB headroom for prompt text
+  // Trim images to stay under Vercel's ~4.5MB CDN body limit
+  // Each base64 page ≈ 55 KB at scale 1.2 / quality 0.42 — allows ~50+ pages
+  const MAX_IMG_BYTES = 3.2 * 1024 * 1024; // 3.2 MB images + ~1MB prompt = ~4.2 MB total
   let trimmedImages = pageImages;
   let totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0); // base64 → bytes
   if (totalImgBytes > MAX_IMG_BYTES) {
