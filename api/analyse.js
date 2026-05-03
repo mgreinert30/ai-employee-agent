@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  const { prompt, images } = req.body || {};
+  const { prompt, images, fileUri, fileMimeType } = req.body || {};
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'prompt (string) is required' });
   }
@@ -44,11 +44,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
   }
 
-  const hasImages = Array.isArray(images) && images.length > 0;
-  const models    = hasImages ? VISION_MODELS : TEXT_MODELS;
+  const hasFile   = typeof fileUri === 'string' && fileUri.startsWith('https://');
+  const hasImages = !hasFile && Array.isArray(images) && images.length > 0;
+  const models    = (hasFile || hasImages) ? VISION_MODELS : TEXT_MODELS;
 
-  // Build the multimodal prompt prefix when images are present
-  const visionPrefix = hasImages
+  // Build prompt prefix depending on input mode
+  const modePrefix = hasFile
+    ? `NATIVE PDF ANALYSIS MODE — You have direct access to the complete PDF document via the Gemini File API.
+Read ALL text, tables, charts, and data directly from the document without any limitations.
+Extract and analyse the full content comprehensively — no page limits apply.
+
+`
+    : hasImages
     ? `VISUAL ANALYSIS MODE — You are viewing ${images.length} rendered page image(s) of the document.
 CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 - TABLES: When you see a table in the images, extract EVERY row and column exactly. Format as:
@@ -62,12 +69,17 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 `
     : '';
 
-  const safePrompt = visionPrefix + (prompt.length > 100000
+  const safePrompt = modePrefix + (prompt.length > 100000
     ? prompt.slice(0, 100000) + '\n\n[Dokument gekürzt]'
     : prompt);
 
-  // Assemble content parts: images first, then the text prompt
-  const parts = hasImages
+  // Assemble content parts based on input mode
+  const parts = hasFile
+    ? [
+        { fileData: { mimeType: fileMimeType || 'application/pdf', fileUri } },
+        { text: safePrompt },
+      ]
+    : hasImages
     ? [
         ...images.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })),
         { text: safePrompt },
@@ -103,7 +115,7 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
         continue;
       }
 
-      return res.status(200).json({ result, model, pagesAnalysed: hasImages ? images.length : 0 });
+      return res.status(200).json({ result, model, pagesAnalysed: hasFile ? 'all' : hasImages ? images.length : 0 });
 
     } catch (err) {
       allErrors.push(`[${model}] ${err.message}`);

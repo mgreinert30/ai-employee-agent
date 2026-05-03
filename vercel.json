@@ -1,8 +1,9 @@
 {
   "functions": {
-    "api/analyse.js":      { "maxDuration": 300 },
-    "api/send-reset.js":   { "maxDuration": 10 },
-    "api/verify-reset.js": { "maxDuration": 10 },
-    "api/chat.js":         { "maxDuration": 15 }
+    "api/analyse.js":          { "maxDuration": 300 },
+    "api/initiate-upload.js":  { "maxDuration": 15 },
+    "api/send-reset.js":       { "maxDuration": 10 },
+    "api/verify-reset.js":     { "maxDuration": 10 },
+    "api/chat.js":             { "maxDuration": 15 }
   }
 }

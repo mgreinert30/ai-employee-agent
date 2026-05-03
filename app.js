@@ -2383,6 +2383,9 @@ function downloadPDF(length) {
   const red    = [220, 38, 38];
   const amber  = [217,119, 6];
   const green  = [22, 163, 74];
+  // Darken bright accents for text-on-white use (WCAG contrast)
+  const accentL = (accent[0] * 0.299 + accent[1] * 0.587 + accent[2] * 0.114) / 255;
+  const textAccent = accentL > 0.45 ? accent.map(c => Math.max(0, Math.round(c * 0.52))) : accent;
 
   const fileName   = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
   // When no PDF is uploaded use the task description as the cover title
@@ -2422,11 +2425,11 @@ function downloadPDF(length) {
     doc.setTextColor(...silver);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    const headerLeft = brand.company
+    const headerLeft = safe(brand.company
       ? brand.company.toUpperCase()
-      : (currentLang === 'de' ? 'ANALYSEBERICHT — VERTRAULICH' : 'ANALYSIS REPORT — CONFIDENTIAL');
+      : (currentLang === 'de' ? 'ANALYSEBERICHT - VERTRAULICH' : 'ANALYSIS REPORT - CONFIDENTIAL'));
     doc.text(headerLeft, mL, 6.5);
-    doc.text(`${refNr}  \u2022  ${today}`, pageW - mR, 6.5, { align: 'right' });
+    doc.text(`${refNr}  |  ${today}`, pageW - mR, 6.5, { align: 'right' });
     // Defensive reset
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
@@ -2614,7 +2617,7 @@ function downloadPDF(length) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...accent);
-  doc.text(de ? 'ANALYSE \u2192 ÜBERSICHT' : 'ANALYSIS \u2192 OVERVIEW', cardX + 12, ty + 10);
+  doc.text(de ? 'ANALYSE  UBERSICHT' : 'ANALYSIS  OVERVIEW', cardX + 12, ty + 10);
   // Divider in card
   doc.setDrawColor(accent[0], accent[1], accent[2]);
   doc.setLineWidth(0.25);
@@ -2786,7 +2789,6 @@ function downloadPDF(length) {
         closeKpiRow();
         const cols = b.headers.length || 1;
         const cellPad = 2.5;
-        const headerH = 7;
         const pageUsable = pageH - mTop - 14 - mBot;
 
         // Clean all cell content through safe() to strip emojis and unsupported chars
@@ -2808,6 +2810,16 @@ function downloadPDF(length) {
         }
         const colXpos = [mL];
         for (let i = 1; i < cols; i++) colXpos.push(colXpos[i-1] + colWidths[i-1]);
+
+        // Dynamic header height — allow multi-line headers
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        let maxHeaderLines = 1;
+        cleanHeaders.forEach((h, ci) => {
+          const ls = doc.splitTextToSize(h, colWidths[ci] - cellPad * 2);
+          maxHeaderLines = Math.max(maxHeaderLines, ls.length);
+        });
+        const headerH = maxHeaderLines * 4.5 + 5;
 
         // Pre-calculate row heights using cleaned text
         doc.setFont('helvetica', 'normal');
@@ -2834,7 +2846,8 @@ function downloadPDF(length) {
           doc.setFontSize(8);
           doc.setTextColor(...white);
           cleanHeaders.forEach((h, ci) => {
-            doc.text(doc.splitTextToSize(h, colWidths[ci] - cellPad * 2)[0] || '', colXpos[ci] + cellPad, y + 4.8);
+            const hLines = doc.splitTextToSize(h, colWidths[ci] - cellPad * 2);
+            hLines.forEach((ln, li) => doc.text(ln, colXpos[ci] + cellPad, y + 5 + li * 4.5));
           });
           y += headerH;
 
@@ -2989,7 +3002,7 @@ function downloadPDF(length) {
         // Bold blue label
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
-        doc.setTextColor(...accent);
+        doc.setTextColor(...textAccent);
         const lblW = doc.getTextWidth(lbl + ':') + 2;
         doc.text(lbl + ':', mL + 7, y);
         if (txt) {
@@ -3075,12 +3088,49 @@ function downloadPDF(length) {
   // Close any incomplete KPI row at end of content
   closeKpiRow();
 
-  // ── FINAL PAGE FOOTER ──
+  // ── ANALYSE-STATISTIK ──
+  const numTables  = blocks.filter(b => b.type === 'table').length;
+  const numCharts  = blocks.filter(b => b.type === 'chart').length;
+  const numChars   = (currentResult || '').replace(/\s+/g, '').length;
+  const numPages   = window.lastAnalysedPages ?? (uploadedPDFs.length > 0 ? uploadedPDFs[0].name ? '?' : 0 : 0);
+
   sep(4);
+  guard(28);
+  const statsBoxH = 26;
+  doc.setFillColor(...navy);
+  doc.roundedRect(mL, y, cW, statsBoxH, 3, 3, 'F');
+  doc.setFillColor(...accent);
+  doc.roundedRect(mL, y, 4, statsBoxH, 1.5, 1.5, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...accent);
+  doc.text(de ? 'ANALYSE-STATISTIK' : 'ANALYSIS STATISTICS', mL + 10, y + 7);
+  const statsItems = [
+    [de ? 'Seiten' : 'Pages',     String(numPages)],
+    [de ? 'Zeichen' : 'Chars',    numChars.toLocaleString()],
+    [de ? 'Tabellen' : 'Tables',  String(numTables)],
+    [de ? 'Grafiken' : 'Charts',  String(numCharts)],
+  ];
+  const statColW = cW / statsItems.length;
+  statsItems.forEach(([lbl, val], i) => {
+    const sx = mL + 10 + i * statColW;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...silver);
+    doc.text(lbl, sx, y + 15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...white);
+    doc.text(val, sx, y + 22);
+  });
+  y += statsBoxH + 5;
+
+  // ── FINAL PAGE FOOTER ──
+  sep(2);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
   doc.setTextColor(...silver);
-  body(currentLang === 'de'
+  body(de
     ? `Referenz: ${refNr}  |  Erstellt: ${today} ${nowTime}  |  Alle hochgeladenen Daten wurden nach der Analyse sicher und unwiderruflich geloscht.`
     : `Reference: ${refNr}  |  Created: ${today} ${nowTime}  |  All uploaded data was securely and permanently deleted after analysis.`,
     { color: silver, size: 8 });
@@ -4631,33 +4681,33 @@ NEXT STEPS
       ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}.
 • Deutlich umfangreicher als Kurz: jeder Abschnitt vollständig ausgeführt mit Kontext und Begründung.
 • TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle.
-• MINDESTENS 1 GRAFIK wenn Zeitreihen oder Kategorienvergleiche im Dokument vorhanden sind → [CHART:line|...] oder [CHART:bar|...].
+• MAXIMAL 2 GRAFIKEN — nur wenn mindestens 4 reale Datenpunkte vorhanden: die eine wichtigste Entwicklung als [CHART:line|...] oder [CHART:bar|...].
 • Kennzahlen-Abschnitt vollständig befüllen.
 • Risiken und Chancen jeweils mit Begründung.`
       : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}.
 • Clearly more extensive than short: every section fully developed with context and reasoning.
 • TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table.
-• AT LEAST 1 CHART if time series or category comparisons exist in the document → [CHART:line|...] or [CHART:bar|...].
+• MAXIMUM 2 CHARTS — only if at least 4 real data points exist: the single most important trend as [CHART:line|...] or [CHART:bar|...].
 • Fill the key metrics section completely.
 • Risks and opportunities each with justification.`,
     long: isDE
       ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}.
 • MAXIMALE TIEFE — deutlich länger als Mittel: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt.
 • TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe → Markdown-Tabelle. Kein Fließtext für Daten.
-• GRAFIKEN PFLICHT: Für JEDE Zeitreihe, jeden Kategorienvergleich und jede Anteilsverteilung eine eigene Grafik:
-  - Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...] direkt nach der Erläuterung einfügen
-  - Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...]
-  - Anteile/Verteilungen → [CHART:pie|Titel|Kat:Wert,...]
+• MAXIMAL 5 ESSENTIELLE GRAFIKEN — wähle nur die aussagekräftigsten aus: Überblende nicht mit Grafiken. Qualität vor Quantität.
+  - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...]
+  - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...]
+  - Wichtigste Anteile (nur wenn wirklich relevant) → [CHART:pie|Titel|Kat:Wert,...]
 • TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausführen — keine Dimension kürzen.
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
 • Alle Abschnitte auf maximale Substanz bringen — kein Abschnitt darf kürzer als 3 Sätze sein.`
       : `OUTPUT LENGTH: LONG — Target ${longTarget}.
 • MAXIMUM DEPTH — significantly longer than medium: every metric individually commented, every claim backed by page reference.
 • TABLES EVERYWHERE: Every list, comparison, data series → Markdown table. No prose for data.
-• CHARTS MANDATORY: For EVERY time series, category comparison, and proportion distribution, insert a dedicated chart:
-  - Development over time → [CHART:line|Title|Year:Value,...] insert directly after explanation
-  - Category comparison → [CHART:bar|Title|Cat:Value,...]
-  - Proportions/shares → [CHART:pie|Title|Cat:Value,...]
+• MAXIMUM 5 ESSENTIAL CHARTS — choose only the most impactful ones: do not overwhelm with charts. Quality over quantity.
+  - Most important trend over time → [CHART:line|Title|Year:Value,...]
+  - Most important category comparison → [CHART:bar|Title|Cat:Value,...]
+  - Most important shares (only if truly relevant) → [CHART:pie|Title|Cat:Value,...]
 • DEEP ANALYSIS in all 5 dimensions fully developed — no dimension shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
 • All sections at maximum substance — no section shorter than 3 sentences.`
@@ -4729,7 +4779,7 @@ KERNREGELN — NIEMALS BRECHEN:
 6. ANTWORTE AUF DEUTSCH.
 7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. GRAFIKEN: Wenn echte Zahlenwerte über mehrere Perioden oder Kategorien vorliegen, füge direkt nach der Erläuterung eine Grafik-Markierung ein — NUR wenn mindestens 3 reale Datenpunkte im Dokument vorhanden sind:
+9. GRAFIKEN: Maximal 1-5 essentielle Grafiken — nur für die wichtigsten Erkenntnisse, NIE für jede Zahl. Qualität vor Quantität. NUR wenn mindestens 4 reale Datenpunkte vorliegen:
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,2022:Wert,...] (nur Zahlen, ohne Einheit)
    • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
    • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
@@ -4820,7 +4870,7 @@ CORE RULES — NEVER BREAK:
 6. RESPOND IN ENGLISH.
 7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important] | 2. [second] | 3. [third]"
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
-9. CHARTS: When real numeric values exist across multiple periods or categories (at least 3 data points), insert a chart marker directly after the explanation:
+9. CHARTS: Maximum 1-5 essential charts — only for the most important insights, NEVER for every number. Quality over quantity. Only when at least 4 real data points exist:
    • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
    • Category comparison → [CHART:bar|Title|CatA:Value,CatB:Value,CatC:Value,...]
    • Proportions/percentages → [CHART:pie|Title|CatA:Value,CatB:Value,CatC:Value,...]
@@ -4933,13 +4983,66 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
   let docText = '';
   let pageImages = [];   // base64 JPEG strings sent to Gemini Vision
   let totalPages  = 0;
+  let fileUri     = null;  // Gemini File API URI (bypasses Vercel size limit)
+  let fileMimeType = null;
 
   if (uploadedPDFs.length > 0) {
     const imageFiles = uploadedPDFs.filter(isImageFile);
     const pdfFiles   = uploadedPDFs.filter(f => !isImageFile(f));
 
+    // ── Step 0: try Gemini File API for PDFs (1M context, no Vercel size limit)
+    if (pdfFiles.length > 0) {
+      try {
+        setProgress(10, currentLang === 'de'
+          ? 'PDF wird zu Gemini hochgeladen (1M Kontext)...'
+          : 'Uploading PDF to Gemini (1M context)...');
+        const pdfFile = pdfFiles[0];
+        const arrayBuf = await pdfFile.arrayBuffer();
+
+        // Step A: get a resumable upload URL from our server (keeps API key secret)
+        const initRes = await fetch('/api/initiate-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: pdfFile.name, mimeType: 'application/pdf', fileSize: arrayBuf.byteLength }),
+        });
+
+        if (initRes.ok) {
+          const { uploadUrl } = await initRes.json();
+          if (uploadUrl) {
+            setProgress(20, currentLang === 'de'
+              ? 'PDF-Daten werden direkt zu Google übertragen...'
+              : 'Transferring PDF data directly to Google...');
+
+            // Step B: upload raw PDF bytes directly from browser to Google (bypasses Vercel)
+            const uploadRes = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: {
+                'X-Goog-Upload-Offset': '0',
+                'X-Goog-Upload-Command': 'upload, finalize',
+              },
+              body: arrayBuf,
+            });
+
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              fileUri     = uploadData.file?.uri;
+              fileMimeType = uploadData.file?.mimeType || 'application/pdf';
+              totalPages  = 1;
+              console.log('[File API] Upload successful:', fileUri);
+            } else {
+              console.warn('[File API] Upload step failed:', uploadRes.status);
+            }
+          }
+        } else {
+          console.warn('[File API] Init failed:', initRes.status);
+        }
+      } catch (err) {
+        console.warn('[File API] Upload failed, falling back to visual rendering:', err.message);
+      }
+    }
+
     // ── Step 1: images uploaded directly → read as base64 for Gemini Vision
-    if (imageFiles.length > 0) {
+    if (!fileUri && imageFiles.length > 0) {
       setProgress(10, currentLang === 'de'
         ? 'Bilder werden geladen...'
         : 'Loading images...');
@@ -4959,8 +5062,8 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
       }
     }
 
-    // ── Step 2: render PDF pages as images (Gemini sees layout, tables, charts)
-    if (pdfFiles.length > 0) {
+    // ── Step 2: render PDF pages as images (fallback when File API unavailable)
+    if (!fileUri && pdfFiles.length > 0) {
       setProgress(15, currentLang === 'de'
         ? 'PDF wird als Bilder gerendert (visuelle Analyse)...'
         : 'Rendering PDF pages for visual analysis...');
@@ -4973,28 +5076,28 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
       }
     }
 
-    // ── Step 3: text extraction from PDFs (context for long docs)
-    setProgress(25, currentLang === 'de'
-      ? 'Text wird extrahiert (für lange Dokumente)...'
-      : 'Extracting text (for long documents)...');
-    for (const file of pdfFiles) {
-      try {
-        const text = await extractPDFText(file);
-        docText += text + '\n\n';
-      } catch (err) {
-        docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
+    // ── Step 3: text extraction (used as context in fallback path; skipped for File API)
+    if (!fileUri) {
+      setProgress(25, currentLang === 'de'
+        ? 'Text wird extrahiert (für lange Dokumente)...'
+        : 'Extracting text (for long documents)...');
+      for (const file of pdfFiles) {
+        try {
+          const text = await extractPDFText(file);
+          docText += text + '\n\n';
+        } catch (err) {
+          docText += `[Fehler beim Lesen von ${file.name}: ${err.message}]\n\n`;
+        }
       }
-    }
-    if (imageFiles.length > 0 && pdfFiles.length === 0) {
-      docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
-    }
-
-    // If all pages were rendered visually, the text extraction is supplementary —
-    // trim it down so we don't send redundant content.
-    // When images present, text is supplementary — keep it short to stay under body limit
-    const textLimit = pageImages.length > 0 ? 15000 : 80000;
-    if (docText.length > textLimit) {
-      docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
+      if (imageFiles.length > 0 && pdfFiles.length === 0) {
+        docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
+      }
+      const textLimit = pageImages.length > 0 ? 15000 : 80000;
+      if (docText.length > textLimit) {
+        docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
+      }
+    } else {
+      docText = `[Dokument via Gemini File API hochgeladen: ${uploadedPDFs[0].name} — vollständige Analyse aller Seiten]`;
     }
   } else {
     docText = `[Kein Dokument hochgeladen. Aufgabe basiert nur auf der Beschreibung: ${taskDesc}]`;
@@ -5008,28 +5111,34 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   let result;
 
-  // Trim images to stay under Vercel's ~4.5MB CDN body limit
-  // Each base64 page ≈ 55 KB at scale 1.2 / quality 0.42 — allows ~50+ pages
-  const MAX_IMG_BYTES = 3.2 * 1024 * 1024; // 3.2 MB images + ~1MB prompt = ~4.2 MB total
-  let trimmedImages = pageImages;
-  let totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0); // base64 → bytes
-  if (totalImgBytes > MAX_IMG_BYTES) {
-    let cumBytes = 0;
-    trimmedImages = [];
-    for (const img of pageImages) {
-      const imgBytes = img.length * 0.75;
-      if (cumBytes + imgBytes > MAX_IMG_BYTES) break;
-      trimmedImages.push(img);
-      cumBytes += imgBytes;
+  // Build request body — File API path sends fileUri; fallback path sends inline images
+  let analyseBody;
+  if (fileUri) {
+    analyseBody = { prompt, fileUri, fileMimeType };
+  } else {
+    // Trim images to stay under Vercel's ~4.5MB CDN body limit
+    const MAX_IMG_BYTES = 3.2 * 1024 * 1024;
+    let trimmedImages = pageImages;
+    const totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0);
+    if (totalImgBytes > MAX_IMG_BYTES) {
+      let cumBytes = 0;
+      trimmedImages = [];
+      for (const img of pageImages) {
+        const imgBytes = img.length * 0.75;
+        if (cumBytes + imgBytes > MAX_IMG_BYTES) break;
+        trimmedImages.push(img);
+        cumBytes += imgBytes;
+      }
+      console.warn(`[analyse] Payload trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
     }
-    console.warn(`[analyse] Payload too large — trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
+    analyseBody = { prompt, images: trimmedImages };
   }
 
   // Always route through server proxy — API key stored securely in Vercel env vars
   const response = await fetchWithTimeout('/api/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, images: trimmedImages })
+    body: JSON.stringify(analyseBody)
   }, 295000); // 295s browser timeout — matches Vercel 300s function limit
 
   // Guard against non-JSON error responses (e.g. HTTP 413 "Request Entity Too Large")
@@ -5049,6 +5158,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
   if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
   if (!data.result) { stopProgressAnimation(); throw new Error(currentLang === 'de' ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   result = data.result;
+  window.lastAnalysedPages = data.pagesAnalysed ?? totalPages;
 
   const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
   startProgressAnimation(currentPct, 100, 600, currentLang === 'de' ? 'Fertig!' : 'Done!');
@@ -5058,16 +5168,76 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 }
 
 // =====================
+// SCROLL REVEAL — below the fold (IntersectionObserver)
+// Hero animation is handled purely by CSS (@keyframes fadeSlideUp in style.css)
+// =====================
+function initScrollReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const delay = parseFloat(entry.target.dataset.srDelay || 0);
+      setTimeout(() => {
+        entry.target.style.opacity   = '1';
+        entry.target.style.transform = 'none';
+      }, delay);
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  const groups = [
+    { sel: '.pdf-highlight .section-chip',           delay: 0   },
+    { sel: '.pdf-hl-left h2',                        delay: 80  },
+    { sel: '.pdf-hl-left > p',                       delay: 160 },
+    { sel: '.pdf-hl-features li',                    delay: 80,  stagger: 80  },
+    { sel: '.pdf-hl-actions',                        delay: 400 },
+    { sel: '.pdf-preview-card',                      delay: 200 },
+    { sel: '.other-services .section-chip',          delay: 0   },
+    { sel: '.other-services h2',                     delay: 80  },
+    { sel: '.other-services .os-subtitle',           delay: 160 },
+    { sel: '.os-card',                               delay: 60,  stagger: 90  },
+    { sel: '.character-section h2',                  delay: 0   },
+    { sel: '.character-section > p',                 delay: 80  },
+    { sel: '.character-card',                        delay: 100, stagger: 130 },
+    { sel: '.whydiff-inner .section-chip',           delay: 0   },
+    { sel: '.whydiff-inner h2',                      delay: 80  },
+    { sel: '.whydiff-intro',                         delay: 160 },
+    { sel: '.whydiff-col',                           delay: 80,  stagger: 140 },
+    { sel: '.forwho-inner .section-chip',            delay: 0   },
+    { sel: '.forwho-inner h2',                       delay: 80  },
+    { sel: '.forwho-sub',                            delay: 160 },
+    { sel: '.forwho-card',                           delay: 60,  stagger: 100 },
+    { sel: '.testimonials-section h2, .reviews-section h2', delay: 0 },
+    { sel: '.testimonial-card, .review-card',        delay: 60,  stagger: 90  },
+    { sel: '.steps-section h2, .how-it-works h2',   delay: 0   },
+    { sel: '.step',                                  delay: 60,  stagger: 100 },
+    { sel: '.pricing-section h2',                    delay: 0   },
+    { sel: '.pricing-card',                          delay: 80,  stagger: 120 },
+    { sel: '.stats-grid .stat-item',                 delay: 60,  stagger: 80  },
+    { sel: '.sp-card',                               delay: 60,  stagger: 80  },
+  ];
+
+  groups.forEach(({ sel, delay, stagger }) => {
+    document.querySelectorAll(sel).forEach((el, i) => {
+      if (el.closest('.hero')) return;
+      srHide(el);
+      el.dataset.srDelay = String(delay + (stagger ? i * stagger : 0));
+      observer.observe(el);
+    });
+  });
+}
+
+// =====================
 // INIT
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
   initBrandColorSwatches();
+
   const hasResetToken = checkResetToken();
   if (!hasResetToken) {
     const saved = localStorage.getItem('ai_agent_user');
     if (saved) {
-      loadAuth(); // already logged in — skip cookie banner
+      loadAuth();
     } else {
       document.getElementById('cookie-overlay').style.display = 'flex';
     }
@@ -5075,7 +5245,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTestimonials();
   initCharacterSelection();
   checkDueTasks();
-
+  initScrollReveal();
 });
 
 // ── Support Chat Widget ──
