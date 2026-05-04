@@ -4662,66 +4662,62 @@ NEXT STEPS
   };
 
   // Calculate page-count-based targets (#2 — length control)
-  // Detect source page count from docText header "[Dokument: name | X Seiten]"
-  const pageMatch = docText.match(/\|\s*(\d+)\s*Seit/i);
-  const sourcePages = pageMatch ? parseInt(pageMatch[1]) : 0;
-  let shortTarget, mediumTarget, longTarget;
-  if (sourcePages > 0) {
-    // Percentage of source: short=12.5%, medium=25%, long=50%
-    shortTarget  = isDE ? `ca. ${Math.max(2, Math.round(sourcePages * 0.125))} Seiten (12,5% des Originals mit ${sourcePages} Seiten)` : `approx. ${Math.max(2, Math.round(sourcePages * 0.125))} pages (12.5% of the ${sourcePages}-page original)`;
-    mediumTarget = isDE ? `ca. ${Math.max(4, Math.round(sourcePages * 0.25))} Seiten (25% des Originals)`  : `approx. ${Math.max(4, Math.round(sourcePages * 0.25))} pages (25% of original)`;
-    longTarget   = isDE ? `ca. ${Math.max(8, Math.round(sourcePages * 0.5))} Seiten (50% des Originals)`   : `approx. ${Math.max(8, Math.round(sourcePages * 0.5))} pages (50% of original)`;
-  } else {
-    shortTarget  = isDE ? 'ca. 3 Seiten (700-900 Wörter)'    : 'approx. 3 pages (700-900 words)';
-    mediumTarget = isDE ? 'ca. 5 Seiten (1400-1800 Wörter)'  : 'approx. 5 pages (1400-1800 words)';
-    longTarget   = isDE ? 'ca. 8-10 Seiten (2500-3500 Wörter)' : 'approx. 8-10 pages (2500-3500 words)';
-  }
   const depthInstructions = {
     short: isDE
-      ? `AUSGABELÄNGE: KURZ — Ziel ${shortTarget}.
-• Nur die wichtigsten Erkenntnisse — kein Fließtext, keine Wiederholungen.
-• Tabellen NUR wenn mehr als 4 Zahlen direkt vergleichbar sind.
-• Keine Grafiken — Zahlen als Stichpunkte genügen.
-• Jeder Satz trägt einen eigenständigen Informationswert.`
-      : `OUTPUT LENGTH: SHORT — Target ${shortTarget}.
-• Key findings only — no prose, no repetition.
-• Tables ONLY if more than 4 numbers are directly comparable.
-• No charts — bullet-point numbers suffice.
-• Every sentence must carry independent information value.`,
+      ? `AUSGABELÄNGE: KURZ — STRIKT 1 bis maximal 2,5 Seiten (ca. 400-600 Wörter). HALTE DIESE GRENZE EIN.
+• NUR die 3-5 wichtigsten Kernaussagen als kompakte Zusammenfassung.
+• KEINE Grafiken — absolut verboten.
+• KEINE Tabellen — absolut verboten.
+• Kein Fließtext, keine Wiederholungen, keine Hintergründe.
+• Jeder Satz trägt einen eigenständigen Informationswert. Nach 600 Wörtern ist Schluss.`
+      : `OUTPUT LENGTH: SHORT — STRICTLY 1 to maximum 2.5 pages (approx. 400-600 words). RESPECT THIS LIMIT.
+• ONLY the 3-5 most important key findings as a compact summary.
+• NO charts — absolutely forbidden.
+• NO tables — absolutely forbidden.
+• No prose, no repetition, no background.
+• Every sentence must carry independent information value. Stop at 600 words.`,
     medium: isDE
-      ? `AUSGABELÄNGE: MITTEL — Ziel ${mediumTarget}.
-• Deutlich umfangreicher als Kurz: jeder Abschnitt vollständig ausgeführt mit Kontext und Begründung.
-• TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle.
-• MAXIMAL 2 GRAFIKEN — nur wenn mindestens 4 reale Datenpunkte vorhanden: die eine wichtigste Entwicklung als [CHART:line|...] oder [CHART:bar|...].
-• Kennzahlen-Abschnitt vollständig befüllen.
-• Risiken und Chancen jeweils mit Begründung.`
-      : `OUTPUT LENGTH: MEDIUM — Target ${mediumTarget}.
-• Clearly more extensive than short: every section fully developed with context and reasoning.
-• TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table.
-• MAXIMUM 2 CHARTS — only if at least 4 real data points exist: the single most important trend as [CHART:line|...] or [CHART:bar|...].
-• Fill the key metrics section completely.
-• Risks and opportunities each with justification.`,
-    long: isDE
-      ? `AUSGABELÄNGE: LANG — Ziel ${longTarget}.
-• MAXIMALE TIEFE — deutlich länger als Mittel: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt.
-• TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe → Markdown-Tabelle. Kein Fließtext für Daten.
-• MAXIMAL 5 ESSENTIELLE GRAFIKEN — wähle nur die aussagekräftigsten aus: Überblende nicht mit Grafiken. Qualität vor Quantität.
+      ? `AUSGABELÄNGE: MITTEL — ZIEL 10 bis 20 Seiten (ca. 3000-5500 Wörter). Fülle diesen Rahmen vollständig aus.
+• Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
+• TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als hochwertige Markdown-Tabelle mit klaren Spaltenüberschriften.
+• GRAFIKEN PFLICHT — mindestens 3, maximal 6 hochwertige Grafiken:
   - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...]
   - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...]
-  - Wichtigste Anteile (nur wenn wirklich relevant) → [CHART:pie|Titel|Kat:Wert,...]
-• TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausführen — keine Dimension kürzen.
-• Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
-• Alle Abschnitte auf maximale Substanz bringen — kein Abschnitt darf kürzer als 3 Sätze sein.`
-      : `OUTPUT LENGTH: LONG — Target ${longTarget}.
-• MAXIMUM DEPTH — significantly longer than medium: every metric individually commented, every claim backed by page reference.
-• TABLES EVERYWHERE: Every list, comparison, data series → Markdown table. No prose for data.
-• MAXIMUM 5 ESSENTIAL CHARTS — choose only the most impactful ones: do not overwhelm with charts. Quality over quantity.
+  - Wichtigste Anteile → [CHART:pie|Titel|Kat:Wert,...]
+• Kennzahlen-Abschnitt vollständig befüllen.
+• Risiken und Chancen jeweils mit Begründung und Handlungsempfehlung.`
+      : `OUTPUT LENGTH: MEDIUM — TARGET 10 to 20 pages (approx. 3000-5500 words). Fill this scope completely.
+• Every section thorough with context, reasoning and concrete figures.
+• TABLES MANDATORY: Every data series, comparison, pros/cons → as high-quality Markdown table with clear column headers.
+• CHARTS MANDATORY — minimum 3, maximum 6 high-quality charts:
   - Most important trend over time → [CHART:line|Title|Year:Value,...]
   - Most important category comparison → [CHART:bar|Title|Cat:Value,...]
-  - Most important shares (only if truly relevant) → [CHART:pie|Title|Cat:Value,...]
-• DEEP ANALYSIS in all 5 dimensions fully developed — no dimension shortened.
+  - Most important shares → [CHART:pie|Title|Cat:Value,...]
+• Fill the key metrics section completely.
+• Risks and opportunities each with justification and recommended action.`,
+    long: isDE
+      ? `AUSGABELÄNGE: LANG — ZIEL 30+ SEITEN (ca. 8000-12000 Wörter). Das ist eine vollständige Rundumanalyse — spare nichts aus.
+• MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt.
+• TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe, jede Aufzählung → Markdown-Tabelle mit allen Details. Kein Fließtext für Daten.
+• GRAFIKEN PFLICHT — mindestens 6 bis 10 hochwertige Grafiken, alle relevanten Typen nutzen:
+  - Zeitliche Entwicklungen → [CHART:line|Titel|Jahr:Wert,...]
+  - Kategorienvergleiche → [CHART:bar|Titel|Kat:Wert,...]
+  - Anteile und Verteilungen → [CHART:pie|Titel|Kat:Wert,...]
+• TIEFEN-ANALYSE in allen 5 Dimensionen vollständig — keine Dimension darf verkürzt werden.
+• Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
+• Alle Abschnitte auf maximale Substanz — kein Abschnitt kürzer als 5 Sätze.
+• Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit Zeitrahmen.`
+      : `OUTPUT LENGTH: LONG — TARGET 30+ PAGES (approx. 8000-12000 words). This is a complete 360° analysis — leave nothing out.
+• MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained.
+• TABLES EVERYWHERE: every list, comparison, data series, enumeration → Markdown table with all details. No prose for data.
+• CHARTS MANDATORY — minimum 6 to 10 high-quality charts, use all relevant types:
+  - Time trends → [CHART:line|Title|Year:Value,...]
+  - Category comparisons → [CHART:bar|Title|Cat:Value,...]
+  - Shares and distributions → [CHART:pie|Title|Cat:Value,...]
+• DEEP ANALYSIS in all 5 dimensions fully developed — no dimension may be shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
-• All sections at maximum substance — no section shorter than 3 sentences.`
+• All sections at maximum substance — no section shorter than 5 sentences.
+• Conclusion and action plan: prioritised, numbered measures with timeline.`
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
@@ -4881,7 +4877,7 @@ CORE RULES — NEVER BREAK:
 6. RESPOND IN ENGLISH.
 7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important] | 2. [second] | 3. [third]"
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
-9. CHARTS: Maximum 1-5 essential charts — only for the most important insights, NEVER for every number. Quality over quantity. Only when at least 4 real data points exist:
+9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10. Only when at least 4 real data points exist:
    • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
    • Category comparison → [CHART:bar|Title|CatA:Value,CatB:Value,CatC:Value,...]
    • Proportions/percentages → [CHART:pie|Title|CatA:Value,CatB:Value,CatC:Value,...]
