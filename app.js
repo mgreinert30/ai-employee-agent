@@ -1987,6 +1987,7 @@ async function startTask() {
 
   let taskDesc = document.getElementById('task-description').value;
   const businessDetails = document.getElementById('business-details')?.value || '';
+  const profession = document.getElementById('profession-input')?.value.trim() || '';
   const analysisLength = window.selectedAnalysisLength || 'medium';
 
   // For email writing form, build prompt from structured fields
@@ -2030,7 +2031,7 @@ TONE: ${toneLabel}`;
     for (const [pct, msg] of steps) { await delay(600); setProgress(pct, msg); }
     setProgress(95, currentLang === 'de' ? 'KI analysiert — bitte warten...' : 'AI is analysing — please wait...');
     try {
-      currentResult = await runRealAI(taskDesc, businessDetails, analysisLength);
+      currentResult = await runRealAI(taskDesc, businessDetails, profession, analysisLength);
     } catch (err) {
       console.error('Real AI failed:', err);
       currentResult = currentLang === 'de'
@@ -3330,6 +3331,7 @@ async function deleteData() {
 function resetForm() {
   document.getElementById('task-description').value = '';
   document.getElementById('business-details').value = '';
+  const profEl = document.getElementById('profession-input'); if (profEl) profEl.value = '';
   document.getElementById('pdf-file-list').innerHTML = '';
   document.querySelectorAll('.task-shortcut').forEach(b => { b.classList.remove('active'); b.style.display = 'inline-block'; });
   uploadedPDFs = [];
@@ -4401,11 +4403,16 @@ function detectLanguage(text) {
   return 'en';
 }
 
-function buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength) {
+function buildPrompt(taskDesc, businessDetails, profession, docText, docType, analysisLength) {
   const writtenLang = detectLanguage(taskDesc);
   const isDE = writtenLang === 'de';
   const businessCtx = businessDetails
     ? (isDE ? `Kontext des Unternehmens: ${businessDetails}\n` : `Business context: ${businessDetails}\n`)
+    : '';
+  const professionCtx = profession
+    ? (isDE
+        ? `EXPERTENROLLE: Agiere als erfahrener Experte im Bereich "${profession}". Analysiere das Dokument ausschließlich durch die Brille dieser Profession. Konzentriere dich auf die für ${profession} relevanten Themen, Kennzahlen und Risiken. Bewerte Risiken nach den gängigen Normen und Regulatoriken deines Fachgebiets. Dein Tonfall ist professionell und fachspezifisch.\n`
+        : `EXPERT ROLE: Act as an experienced expert in "${profession}". Analyse the document exclusively through the lens of this profession. Focus on topics, metrics and risks relevant to ${profession}. Assess risks according to the common standards and regulations of your field. Your tone is professional and domain-specific.\n`)
     : '';
 
   // Doc-type specific section templates (#1, #4)
@@ -4734,7 +4741,7 @@ NEXT STEPS
   const personaDE = (docType === 'create_reply')
     ? `Du bist ein erfahrener E-Mail-Texter. Schreibe jetzt die fertige, sofort versendbare E-Mail — mit allen Angaben, die der Nutzer gemacht hat. Keine Vorlage, keine Platzhalter, keine Optionen. Einfach die echte E-Mail.
 
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 ${taskDesc}
 
 REGELN:
@@ -4757,7 +4764,7 @@ Betreff: [Betreffzeile]
     ? `Du bist ein professioneller Texter und Dokumentenersteller. Deine Aufgabe ist es, ein hochwertiges Dokument zu erstellen — kein Analyse, sondern echte Erstellung.
 
 AUFGABE: ${taskDesc}
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 
 KERNREGELN:
 1. Erstelle ein vollständiges, professionelles Dokument — direkt verwendbar.
@@ -4776,7 +4783,7 @@ QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung?
 
 AUFGABE DES KUNDEN: ${taskDesc}
 DOKUMENTTYP: ${dtLabel}
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 KERNREGELN — NIEMALS BRECHEN:
 1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
 2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
@@ -4826,7 +4833,7 @@ QUALITÄTSPRÜFUNG:
   const personaEN = (docType === 'create_reply')
     ? `You are an experienced email copywriter. Write the finished, ready-to-send email now — using all the details the user has provided. No template, no placeholders, no options. Just the actual email.
 
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 ${taskDesc}
 
 RULES:
@@ -4849,7 +4856,7 @@ Subject: [subject line]
     ? `You are a professional writer and document creator. Your task is to create a high-quality document — not an analysis, but actual creation.
 
 TASK: ${taskDesc}
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 CORE RULES:
 1. Create a complete, professional document — directly usable.
 2. NO FILLER: Never "I will now...", "Here is the document:". Start directly with content.
@@ -4867,7 +4874,7 @@ QUALITY CHECK: Is the document directly usable without further editing? If not �
 
 CLIENT TASK: ${taskDesc}
 DOCUMENT TYPE: ${dtLabel}
-${businessCtx}${learningCtx}
+${professionCtx}${businessCtx}${learningCtx}
 CORE RULES — NEVER BREAK:
 1. PAGE REFERENCES MANDATORY: After EVERY important claim write "(see page X)".
 2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
@@ -4979,7 +4986,7 @@ async function renderPDFPagesToImages(file) {
 // =====================
 // REAL AI ENGINE — replaces demo mode when API key is set
 // =====================
-async function runRealAI(taskDesc, businessDetails, analysisLength) {
+async function runRealAI(taskDesc, businessDetails, profession, analysisLength) {
   const fn = uploadedPDFs.length > 0 ? uploadedPDFs[0].name : '';
   const taskKind = currentShortcutType || detectTaskType(taskDesc);
   // reply always = email creation, even with PDF (PDF = context only, never triggers analysis mode)
@@ -5112,7 +5119,7 @@ async function runRealAI(taskDesc, businessDetails, analysisLength) {
 
   setProgress(40, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
-  const prompt = buildPrompt(taskDesc, businessDetails, docText, docType, analysisLength);
+  const prompt = buildPrompt(taskDesc, businessDetails, profession, docText, docType, analysisLength);
 
   startProgressAnimation(60, 95, 50000, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
 
