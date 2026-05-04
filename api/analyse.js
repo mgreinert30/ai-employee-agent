@@ -9,11 +9,15 @@ export const config = {
 // Models confirmed available via /api/models endpoint
 const VISION_MODELS = [
   'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
   'gemini-flash-latest',
 ];
 
 const TEXT_MODELS = [
   'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
   'gemini-flash-latest',
   'gemini-2.5-flash-lite',
 ];
