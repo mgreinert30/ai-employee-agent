@@ -1,26 +1,68 @@
 // Vercel Serverless Function — Gemini PDF Analysis (text + vision)
-// Increase body size limit so PDF page images (up to ~6 MB base64) can be transmitted
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 };
 
-// Vision models see the actual rendered page layout, including tables and charts.
-
-// Models confirmed available via /api/models endpoint
+// Stable models first — 2.5-flash last (most capable but most likely to be overloaded)
 const VISION_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
   'gemini-1.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
   'gemini-flash-latest',
 ];
 
 const TEXT_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
   'gemini-1.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
   'gemini-flash-latest',
   'gemini-2.5-flash-lite',
 ];
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function callGemini(model, apiKey, body, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+      );
+
+      let data;
+      try { data = await res.json(); } catch (_) {
+        if (attempt < retries) { await sleep(1500); continue; }
+        return { error: `HTTP ${res.status} — no JSON` };
+      }
+
+      // 503 overloaded — retry after short delay
+      if (res.status === 503 || data?.error?.code === 503) {
+        if (attempt < retries) { await sleep(2000 * (attempt + 1)); continue; }
+        return { error: `HTTP 503: model overloaded` };
+      }
+
+      // 429 rate-limit — retry with longer delay
+      if (res.status === 429 || data?.error?.code === 429) {
+        if (attempt < retries) { await sleep(3000 * (attempt + 1)); continue; }
+        return { error: `HTTP 429: rate limit` };
+      }
+
+      if (!res.ok || data.error) {
+        return { error: `HTTP ${res.status}: ${data.error?.message || JSON.stringify(data).slice(0, 120)}` };
+      }
+
+      const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!result) return { error: `empty response: ${JSON.stringify(data).slice(0, 120)}` };
+
+      return { result };
+    } catch (err) {
+      if (attempt < retries) { await sleep(1500); continue; }
+      return { error: err.message };
+    }
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -30,9 +72,7 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -44,15 +84,12 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
-  }
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
 
   const hasFile   = typeof fileUri === 'string' && fileUri.startsWith('https://');
   const hasImages = !hasFile && Array.isArray(images) && images.length > 0;
   const models    = (hasFile || hasImages) ? VISION_MODELS : TEXT_MODELS;
 
-  // Build prompt prefix depending on input mode
   const modePrefix = hasFile
     ? `NATIVE PDF ANALYSIS MODE — You have direct access to the complete PDF document via the Gemini File API.
 Read ALL text, tables, charts, and data directly from the document without any limitations.
@@ -77,17 +114,10 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
     ? prompt.slice(0, 100000) + '\n\n[Dokument gekürzt]'
     : prompt);
 
-  // Assemble content parts based on input mode
   const parts = hasFile
-    ? [
-        { fileData: { mimeType: fileMimeType || 'application/pdf', fileUri } },
-        { text: safePrompt },
-      ]
+    ? [{ fileData: { mimeType: fileMimeType || 'application/pdf', fileUri } }, { text: safePrompt }]
     : hasImages
-    ? [
-        ...images.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })),
-        { text: safePrompt },
-      ]
+    ? [...images.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })), { text: safePrompt }]
     : [{ text: safePrompt }];
 
   const geminiBody = JSON.stringify({
@@ -98,36 +128,12 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
   const allErrors = [];
 
   for (const model of models) {
-    try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
-      );
-
-      let data;
-      try { data = await geminiRes.json(); }
-      catch (_) { allErrors.push(`[${model}] HTTP ${geminiRes.status} — kein JSON`); continue; }
-
-      if (!geminiRes.ok || data.error) {
-        allErrors.push(`[${model}] HTTP ${geminiRes.status}: ${data.error?.message || JSON.stringify(data).slice(0,120)}`);
-        continue;
-      }
-
-      const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!result) {
-        allErrors.push(`[${model}] Leere Antwort: ${JSON.stringify(data).slice(0,120)}`);
-        continue;
-      }
-
+    const { result, error } = await callGemini(model, apiKey, geminiBody);
+    if (result) {
       return res.status(200).json({ result, model, pagesAnalysed: hasFile ? 'all' : hasImages ? images.length : 0 });
-
-    } catch (err) {
-      allErrors.push(`[${model}] ${err.message}`);
     }
+    allErrors.push(`[${model}] ${error}`);
   }
 
-  return res.status(500).json({
-    error: allErrors.join(' | '),
-    allErrors,
-  });
+  return res.status(500).json({ error: allErrors.join(' | '), allErrors });
 }
