@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -502,27 +502,40 @@
   </section>
 
   <!-- CHARACTER SELECTOR -->
-  <section class="character-section">
-    <h2 data-de="Wähle deinen KI-Mitarbeiter" data-en="Choose your AI employee">Wähle deinen KI-Mitarbeiter</h2>
-    <p data-de="Beide sind gleich leistungsfähig — wähle einfach deinen bevorzugten Stil." data-en="Both are equally capable — just choose your preferred style.">Beide sind gleich leistungsfähig — wähle einfach deinen bevorzugten Stil.</p>
+  <section class="character-section sr" data-sr-delay="0">
+    <span class="section-chip">👥 Dein persönlicher KI-Mitarbeiter</span>
+    <h2 data-de="Lern dein Team kennen" data-en="Meet your team">Lern dein Team <span class="gradient-text">kennen</span></h2>
+    <p data-de="Beide sind gleich leistungsfähig — wähle einfach deinen bevorzugten Stil." data-en="Both are equally capable — just choose your preferred style.">Beide sind gleich leistungsfähig — wähle deinen Stil.</p>
     <div class="character-cards">
 
       <!-- MALE CHARACTER -->
       <div class="character-card" id="char-male" onclick="selectCharacter('male')">
-        <div class="character-badge selected-badge" id="badge-male" style="display:none;" data-de="✓ Ausgewählt" data-en="✓ Selected">✓ Ausgewählt</div>
+        <div class="character-badge selected-badge" id="badge-male" style="display:none;">✓ Ausgewählt</div>
+        <div class="char-bubble">"Ich analysiere deinen 80-seitigen Bericht in unter 3 Minuten — inklusive Risiken, Kennzahlen und Handlungsempfehlungen."</div>
         <img src="alex.png" alt="Alex" class="character-img" />
-        <h3 data-de="Alex" data-en="Alex">Alex</h3>
-        <p data-de="KI-Mitarbeiter · Professionell & präzise" data-en="AI Employee · Professional & precise">KI-Mitarbeiter · Professionell & präzise</p>
-        <button class="char-select-btn" id="charbtn-male" data-de="Alex wählen" data-en="Choose Alex">Alex wählen</button>
+        <h3>Alex</h3>
+        <p>KI-Mitarbeiter · Analytisch &amp; präzise</p>
+        <div class="char-skills">
+          <span class="char-skill">📄 PDF-Analyse</span>
+          <span class="char-skill">📊 Berichte</span>
+          <span class="char-skill">🔍 Recherche</span>
+        </div>
+        <button class="char-select-btn" id="charbtn-male">Alex wählen</button>
       </div>
 
       <!-- FEMALE CHARACTER -->
       <div class="character-card" id="char-female" onclick="selectCharacter('female')">
-        <div class="character-badge selected-badge" id="badge-female" style="display:none;" data-de="✓ Ausgewählt" data-en="✓ Selected">✓ Ausgewählt</div>
+        <div class="character-badge selected-badge" id="badge-female" style="display:none;">✓ Ausgewählt</div>
+        <div class="char-bubble">"Ich beantworte deine E-Mails, plane deinen Kalender und halte dein Business am Laufen — auch um 3 Uhr nachts."</div>
         <img src="emma.png" alt="Emma" class="character-img" />
-        <h3 data-de="Emma" data-en="Emma">Emma</h3>
-        <p data-de="KI-Mitarbeiterin · Effizient & zuverlässig" data-en="AI Employee · Efficient & reliable">KI-Mitarbeiterin · Effizient & zuverlässig</p>
-        <button class="char-select-btn" id="charbtn-female" data-de="Emma wählen" data-en="Choose Emma">Emma wählen</button>
+        <h3>Emma</h3>
+        <p>KI-Mitarbeiterin · Effizient &amp; zuverlässig</p>
+        <div class="char-skills">
+          <span class="char-skill">✉️ E-Mails</span>
+          <span class="char-skill">📅 Planung</span>
+          <span class="char-skill">💬 Support</span>
+        </div>
+        <button class="char-select-btn" id="charbtn-female">Emma wählen</button>
       </div>
 
     </div>
@@ -564,6 +577,51 @@
           </ul>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- COST COMPARISON -->
+  <section class="cost-compare-section sr" data-sr-delay="0">
+    <div class="cost-compare-inner">
+      <span class="section-chip">💶 Was kostet ein Mitarbeiter wirklich?</span>
+      <h2>Der Vergleich, der <span class="gradient-text">alles verändert</span></h2>
+      <p class="cost-compare-sub">Traditionelle Mitarbeiter sind teuer, begrenzt und anfällig. Dein KI-Mitarbeiter nicht.</p>
+      <div class="cost-compare-grid">
+        <div class="cost-col cost-col-bad">
+          <div class="cost-col-header">
+            <span class="cost-col-icon">👤</span>
+            <strong>Traditioneller Mitarbeiter</strong>
+          </div>
+          <ul class="cost-list">
+            <li><span class="cost-x">✗</span> €3.500 – €5.000 <small>pro Monat (inkl. Nebenkosten)</small></li>
+            <li><span class="cost-x">✗</span> Nur 8 Std./Tag <small>Feierabend, Wochenende, Urlaub</small></li>
+            <li><span class="cost-x">✗</span> Krankheit &amp; Ausfälle <small>im Schnitt 19 Tage/Jahr</small></li>
+            <li><span class="cost-x">✗</span> Wochen Einarbeitung <small>bis zur ersten Leistung</small></li>
+            <li><span class="cost-x">✗</span> Nur eine Aufgabe <small>gleichzeitig möglich</small></li>
+            <li><span class="cost-x">✗</span> Fehler durch Müdigkeit <small>und mangelnde Konzentration</small></li>
+          </ul>
+          <div class="cost-total cost-total-bad">≈ <strong>€42.000 – €60.000 / Jahr</strong></div>
+        </div>
+
+        <div class="cost-vs">VS</div>
+
+        <div class="cost-col cost-col-good">
+          <div class="cost-col-header">
+            <span class="cost-col-icon">🤖</span>
+            <strong>Dein KI-Mitarbeiter</strong>
+          </div>
+          <ul class="cost-list">
+            <li><span class="cost-check">✓</span> Ab <strong>€0</strong> <small>kostenlos starten, skalierbar</small></li>
+            <li><span class="cost-check">✓</span> 24 Std., 7 Tage <small>kein Feierabend, keine Pausen</small></li>
+            <li><span class="cost-check">✓</span> Kein Ausfall <small>immer verfügbar, immer bereit</small></li>
+            <li><span class="cost-check">✓</span> Sofort einsatzbereit <small>in 60 Sekunden startklar</small></li>
+            <li><span class="cost-check">✓</span> Unbegrenzte Aufgaben <small>parallel und gleichzeitig</small></li>
+            <li><span class="cost-check">✓</span> Konstante Präzision <small>keine Müdigkeit, kein Stress</small></li>
+          </ul>
+          <div class="cost-total cost-total-good">Ab <strong>€0 / Monat</strong> — sofort starten</div>
+        </div>
+      </div>
+      <a href="#" onclick="showPage('pdf');return false;" class="btn-primary" style="margin-top:32px;display:inline-block;">Jetzt kostenlos ausprobieren →</a>
     </div>
   </section>
 
@@ -1386,6 +1444,73 @@
 
   </div><!-- end page-task -->
 
+  <!-- FAQ SECTION -->
+  <section class="faq-section sr" data-sr-delay="0">
+    <div class="faq-inner">
+      <span class="section-chip">❓ Häufige Fragen</span>
+      <h2>Alles was du wissen <span class="gradient-text">möchtest</span></h2>
+      <div class="faq-list" id="faq-list">
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Für wen ist der AI Employee Agent geeignet? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Für jeden, der repetitive Aufgaben spart — Selbstständige, kleine Unternehmen, Berater, Anwälte, Steuerberater, Coaches. Wer regelmäßig PDFs analysiert, E-Mails bearbeitet oder Berichte erstellt, profitiert sofort.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Brauche ich technische Kenntnisse? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Nein. Dokument hochladen, Aufgabe beschreiben, Ergebnis herunterladen. Kein Code, keine Einrichtung, kein technisches Wissen notwendig. Wenn du eine E-Mail schreiben kannst, kannst du dieses Tool nutzen.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Was passiert mit meinen hochgeladenen Dokumenten? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Deine Dokumente werden ausschließlich für die Analyse an die Google Gemini API übertragen und danach sofort gelöscht. Wir speichern keine Inhalte deiner Dateien. Der Dienst ist vollständig DSGVO-konform.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Wie schnell bekomme ich Ergebnisse? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Kurze Analysen: 30–60 Sekunden. Mittlere Analysen (10–20 Seiten): 1–3 Minuten. Lange Analysen (30+ Seiten): 3–6 Minuten. Die Geschwindigkeit hängt von der Dokumentgröße und der gewählten Analysetiefe ab.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Kann ich das Ergebnis als PDF herunterladen? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Ja. Jede Analyse wird als professionell formatiertes PDF mit deinen Unternehmensfarben, Logo-Farben und Firmenname exportiert. Direkt versendbar an Kunden oder Kollegen.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Welche Dateiformate werden unterstützt? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Aktuell werden PDF-Dokumente unterstützt — von einseitigen Rechnungen bis zu 1.000-seitigen Geschäftsberichten. E-Mails über Gmail und Outlook sowie Kalender-Integration sind ebenfalls verfügbar.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Gibt es eine kostenlose Version? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Ja. Du kannst den AI Employee Agent kostenlos testen — ohne Kreditkarte und ohne Registrierung für die Basis-Funktionen. Premium-Funktionen wie unbegrenzte Analysen und erweiterte Berichte sind in kostenpflichtigen Plänen verfügbar.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Ist das eine echte KI oder nur ein einfacher Chatbot? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">Das ist Google Gemini — ein der leistungsfähigsten KI-Modelle der Welt mit bis zu 1 Million Token Kontextfenster. Es versteht komplexe Strukturen, erkennt Widersprüche, liest Tabellen und Charts — weit über das Niveau eines normalen Chatbots hinaus.</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
   <!-- LEAVE A REVIEW SECTION (on main page) -->
   <div id="review-cta-section">
   <section class="review-section" id="leave-review">
@@ -1682,6 +1807,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
