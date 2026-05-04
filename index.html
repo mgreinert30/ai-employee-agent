@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -822,16 +822,30 @@
             <p class="form-step-hint" data-de="Gib dein Unternehmen oder den Kontext der Analyse an." data-en="Describe your business or the context of the analysis.">Gib dein Unternehmen oder den Kontext der Analyse an.</p>
             <textarea id="business-details" rows="2" maxlength="500" oninput="updateCharCount('business-details','biz-char-count',500)" placeholder="z.B. Wir sind ein kleines Beratungsunternehmen..."></textarea>
             <div class="form-char-count"><span id="biz-char-count">0</span>/500</div>
-            <div class="brand-color-row">
-              <label class="brand-color-label" data-de="🎨 Berichtsfarbe" data-en="🎨 Report colour">🎨 Berichtsfarbe</label>
-              <div class="brand-color-swatches" id="brand-color-swatches">
-                <button type="button" class="color-swatch active-swatch" data-color="#2563eb" style="background:#2563eb;" onclick="pickBrandColor('#2563eb',this)" title="Blau"></button>
-                <button type="button" class="color-swatch" data-color="#16a34a" style="background:#16a34a;" onclick="pickBrandColor('#16a34a',this)" title="Grün"></button>
-                <button type="button" class="color-swatch" data-color="#dc2626" style="background:#dc2626;" onclick="pickBrandColor('#dc2626',this)" title="Rot"></button>
-                <button type="button" class="color-swatch" data-color="#9333ea" style="background:#9333ea;" onclick="pickBrandColor('#9333ea',this)" title="Violett"></button>
-                <button type="button" class="color-swatch" data-color="#ea580c" style="background:#ea580c;" onclick="pickBrandColor('#ea580c',this)" title="Orange"></button>
-                <button type="button" class="color-swatch" data-color="#0891b2" style="background:#0891b2;" onclick="pickBrandColor('#0891b2',this)" title="Cyan"></button>
-                <input type="color" id="brand-color-custom" value="#2563eb" oninput="pickBrandColor(this.value,null)" title="Eigene Farbe" class="color-swatch-custom" />
+            <div class="brand-color-group">
+              <div class="brand-color-row">
+                <label class="brand-color-label" data-de="🌟 Akzentfarbe" data-en="🌟 Accent colour">🌟 Akzentfarbe</label>
+                <div class="brand-color-swatches" id="brand-color-swatches">
+                  <button type="button" class="color-swatch active-swatch" data-color="#2563eb" style="background:#2563eb;" onclick="pickBrandColor('#2563eb',this)" title="Blau"></button>
+                  <button type="button" class="color-swatch" data-color="#16a34a" style="background:#16a34a;" onclick="pickBrandColor('#16a34a',this)" title="Grün"></button>
+                  <button type="button" class="color-swatch" data-color="#dc2626" style="background:#dc2626;" onclick="pickBrandColor('#dc2626',this)" title="Rot"></button>
+                  <button type="button" class="color-swatch" data-color="#9333ea" style="background:#9333ea;" onclick="pickBrandColor('#9333ea',this)" title="Violett"></button>
+                  <button type="button" class="color-swatch" data-color="#ea580c" style="background:#ea580c;" onclick="pickBrandColor('#ea580c',this)" title="Orange"></button>
+                  <button type="button" class="color-swatch" data-color="#0891b2" style="background:#0891b2;" onclick="pickBrandColor('#0891b2',this)" title="Cyan"></button>
+                  <input type="color" id="brand-color-custom" value="#2563eb" oninput="pickBrandColor(this.value,null)" title="Eigene Farbe" class="color-swatch-custom" />
+                </div>
+              </div>
+              <div class="brand-color-row">
+                <label class="brand-color-label" data-de="🌑 Dunkler Ton" data-en="🌑 Dark tone">🌑 Dunkler Ton</label>
+                <div class="brand-color-swatches" id="brand-dark-swatches">
+                  <button type="button" class="color-swatch dark-swatch active-swatch" data-color="#0f172a" style="background:#0f172a;" onclick="pickBrandDark('#0f172a',this)" title="Navy"></button>
+                  <button type="button" class="color-swatch dark-swatch" data-color="#1e1b4b" style="background:#1e1b4b;" onclick="pickBrandDark('#1e1b4b',this)" title="Indigo"></button>
+                  <button type="button" class="color-swatch dark-swatch" data-color="#14532d" style="background:#14532d;" onclick="pickBrandDark('#14532d',this)" title="Dunkelgrün"></button>
+                  <button type="button" class="color-swatch dark-swatch" data-color="#7f1d1d" style="background:#7f1d1d;" onclick="pickBrandDark('#7f1d1d',this)" title="Dunkelrot"></button>
+                  <button type="button" class="color-swatch dark-swatch" data-color="#3b0764" style="background:#3b0764;" onclick="pickBrandDark('#3b0764',this)" title="Dunkelviolett"></button>
+                  <button type="button" class="color-swatch dark-swatch" data-color="#1c1917" style="background:#1c1917;" onclick="pickBrandDark('#1c1917',this)" title="Anthrazit"></button>
+                  <input type="color" id="brand-dark-custom" value="#0f172a" oninput="pickBrandDark(this.value,null)" title="Eigene Farbe" class="color-swatch-custom" />
+                </div>
               </div>
             </div>
           </div>
@@ -1607,6 +1621,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

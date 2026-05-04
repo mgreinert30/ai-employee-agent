@@ -4127,21 +4127,33 @@ function isRealAIEnabled() {
 // =====================
 function pickBrandColor(hex, btn) {
   localStorage.setItem('brand_primary', hex);
-  // Update active swatch highlight
-  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active-swatch'));
+  document.querySelectorAll('#brand-color-swatches .color-swatch').forEach(s => s.classList.remove('active-swatch'));
   if (btn) btn.classList.add('active-swatch');
-  // Sync custom color picker value
   const custom = document.getElementById('brand-color-custom');
   if (custom) custom.value = hex;
 }
 
+function pickBrandDark(hex, btn) {
+  localStorage.setItem('brand_dark', hex);
+  document.querySelectorAll('#brand-dark-swatches .color-swatch').forEach(s => s.classList.remove('active-swatch'));
+  if (btn) btn.classList.add('active-swatch');
+  const custom = document.getElementById('brand-dark-custom');
+  if (custom) custom.value = hex;
+}
+
 function initBrandColorSwatches() {
-  const saved = localStorage.getItem('brand_primary') || '#2563eb';
-  const custom = document.getElementById('brand-color-custom');
-  if (custom) custom.value = saved;
-  const swatches = document.querySelectorAll('.color-swatch[data-color]');
-  swatches.forEach(s => {
-    s.classList.toggle('active-swatch', s.dataset.color === saved);
+  const savedPrimary = localStorage.getItem('brand_primary') || '#2563eb';
+  const customPrimary = document.getElementById('brand-color-custom');
+  if (customPrimary) customPrimary.value = savedPrimary;
+  document.querySelectorAll('#brand-color-swatches .color-swatch[data-color]').forEach(s => {
+    s.classList.toggle('active-swatch', s.dataset.color === savedPrimary);
+  });
+
+  const savedDark = localStorage.getItem('brand_dark') || '#0f172a';
+  const customDark = document.getElementById('brand-dark-custom');
+  if (customDark) customDark.value = savedDark;
+  document.querySelectorAll('#brand-dark-swatches .color-swatch[data-color]').forEach(s => {
+    s.classList.toggle('active-swatch', s.dataset.color === savedDark);
   });
 }
 
@@ -4163,8 +4175,7 @@ function getBrandColors() {
     return r ? [parseInt(r[1],16), parseInt(r[2],16), parseInt(r[3],16)] : null;
   };
   const accent = hex2rgb(localStorage.getItem('brand_primary') || '#2563eb') || [37, 99, 235];
-  // Auto-derive dark version: mix accent with near-black at 22% accent strength
-  const navy = accent.map(c => Math.round(c * 0.22 + 8));
+  const navy   = hex2rgb(localStorage.getItem('brand_dark')    || '#0f172a') || [15, 23, 42];
   return {
     accent,
     navy,
