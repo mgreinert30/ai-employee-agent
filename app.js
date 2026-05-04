@@ -1951,6 +1951,7 @@ function confirmApps() {
 
 async function startTask() {
   showStep('step-progress');
+  startFunFacts();
   document.querySelector('.agent-icon').textContent = getCharacterEmoji();
   const name = getCharacterName();
   const desc = document.getElementById('task-description').value.toLowerCase();
@@ -2064,6 +2065,53 @@ TONE: ${toneLabel}`;
   demoBanner.textContent = currentLang === 'de'
     ? '⚠️ Demo-Ergebnis — lade ein Dokument hoch für eine echte KI-Analyse'
     : '⚠️ Demo result — upload a document for real AI analysis';
+}
+
+const FUN_FACTS = {
+  de: [
+    'KI liest PDFs bis zu 50× schneller als ein Mensch — ohne eine Zeile zu überspringen.',
+    'Gemini analysiert bis zu 1 Million Tokens auf einmal — das entspricht ~750 Seiten Text.',
+    'Über 80 % der Zeit in Analysen wird für das Lesen aufgewendet — die KI übernimmt das sofort.',
+    'Professionelle Berater brauchen Tage für eine Analyse — deine KI schafft es in Minuten.',
+    'Die KI erkennt Widersprüche im Dokument, die Menschen bei 100+ Seiten leicht übersehen.',
+    'Jede Analyse wird komplett neu berechnet — keine gecachten oder veralteten Ergebnisse.',
+    'Alle Daten werden nach der Analyse sofort gelöscht — deine Dokumente bleiben privat.',
+    'Du kannst das Ergebnis direkt als PDF weitergeben — fertig formatiert und professionell.',
+    'Die KI bewertet Risiken nach denselben Prinzipien wie erfahrene Unternehmensberater.',
+    'Tipp: Je präziser deine Aufgabenbeschreibung, desto gezielter die Analyse.',
+  ],
+  en: [
+    'AI reads PDFs up to 50× faster than a human — without skipping a single line.',
+    'Gemini can analyse up to 1 million tokens at once — equivalent to ~750 pages of text.',
+    'Over 80% of analysis time is spent just reading — the AI handles that instantly.',
+    'Professional consultants take days for an analysis — your AI does it in minutes.',
+    'The AI spots contradictions in the document that humans easily miss across 100+ pages.',
+    'Every analysis is calculated fresh — no cached or outdated results.',
+    'All data is deleted immediately after analysis — your documents stay private.',
+    'You can share the result directly as a PDF — fully formatted and professional.',
+    'The AI evaluates risks using the same principles as experienced business consultants.',
+    'Tip: The more precise your task description, the more targeted the analysis.',
+  ],
+};
+
+let _factTimer = null;
+function startFunFacts() {
+  const facts = FUN_FACTS[currentLang] || FUN_FACTS.de;
+  const el = document.getElementById('progress-funfact-text');
+  if (!el) return;
+  let i = Math.floor(Math.random() * facts.length);
+  const show = () => {
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = '';
+    el.textContent = facts[i % facts.length];
+    i++;
+  };
+  show();
+  _factTimer = setInterval(show, 5000);
+}
+function stopFunFacts() {
+  if (_factTimer) { clearInterval(_factTimer); _factTimer = null; }
 }
 
 function setProgress(pct, msg) {
@@ -3349,7 +3397,10 @@ function goHome() { resetForm(); showPage('main'); }
 // STEP NAVIGATION
 // =====================
 const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
-function showStep(id) { ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; }); }
+function showStep(id) {
+  if (id !== 'step-progress') stopFunFacts();
+  ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; });
+}
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -5146,7 +5197,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   // Build request body — File API path sends fileUri; fallback path sends inline images
   let analyseBody;
   if (fileUri) {
-    analyseBody = { prompt, fileUri, fileMimeType };
+    analyseBody = { prompt, fileUri, fileMimeType, analysisLength };
   } else {
     // Trim images to stay under Vercel's ~4.5MB CDN body limit
     const MAX_IMG_BYTES = 3.2 * 1024 * 1024;
@@ -5163,7 +5214,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
       }
       console.warn(`[analyse] Payload trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
     }
-    analyseBody = { prompt, images: trimmedImages };
+    analyseBody = { prompt, images: trimmedImages, analysisLength };
   }
 
   // Always route through server proxy — API key stored securely in Vercel env vars

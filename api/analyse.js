@@ -78,7 +78,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  const { prompt, images, fileUri, fileMimeType } = req.body || {};
+  const { prompt, images, fileUri, fileMimeType, analysisLength } = req.body || {};
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'prompt (string) is required' });
   }
@@ -122,7 +122,10 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
-    generationConfig: { maxOutputTokens: 65536, temperature: 0.3, topP: 0.9, topK: 40 },
+    generationConfig: {
+      maxOutputTokens: analysisLength === 'short' ? 4096 : analysisLength === 'medium' ? 24576 : 65536,
+      temperature: 0.3, topP: 0.9, topK: 40,
+    },
   });
 
   const allErrors = [];
