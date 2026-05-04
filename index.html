@@ -64,6 +64,8 @@
         <span class="cookie-sep">|</span>
         <a href="#" onclick="openImpressum();return false;">Impressum</a>
         <span class="cookie-sep">|</span>
+        <a href="#" onclick="document.getElementById('modal-disclaimer').classList.remove('hidden');return false;">Disclaimer</a>
+        <span class="cookie-sep">|</span>
         <a href="#" onclick="openDatenschutz();return false;">FAQ</a>
       </div>
     </div>
@@ -1394,7 +1396,8 @@
     </p>
     <p style="margin-top:8px;">
       <a href="#" onclick="document.getElementById('modal-impressum').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Impressum" data-en="Imprint">Impressum</a>
-      <a href="#" onclick="document.getElementById('modal-datenschutz').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;" data-de="Datenschutz" data-en="Privacy Policy">Datenschutz</a>
+      <a href="#" onclick="document.getElementById('modal-datenschutz').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Datenschutz" data-en="Privacy Policy">Datenschutz</a>
+      <a href="#" onclick="document.getElementById('modal-disclaimer').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;" data-de="Disclaimer" data-en="Disclaimer">Disclaimer</a>
     </p>
   </footer>
 
@@ -1583,6 +1586,52 @@
         </div>
 
         <p class="legal-stand">Stand: Mai 2025</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER MODAL -->
+  <div id="modal-disclaimer" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="legal-modal">
+      <button onclick="document.getElementById('modal-disclaimer').classList.add('hidden')" class="legal-modal-close">✕</button>
+      <h2 class="legal-modal-title">Disclaimer</h2>
+      <div class="legal-modal-body">
+
+        <div class="legal-section">
+          <h3>1. Keine Anlageberatung</h3>
+          <p>Die von diesem KI-System erstellten Analysen, Berichte und Auswertungen stellen <strong>keine Anlageberatung, Finanzberatung, Rechtsberatung oder Steuerberatung</strong> dar. Alle Inhalte dienen ausschließlich zur allgemeinen Information und Unterstützung Ihrer eigenständigen Entscheidungsfindung.</p>
+          <p style="margin-top:8px;">Insbesondere stellen Aussagen wie „Ja, die Aktie ist kaufenswert" oder ähnliche Formulierungen in KI-generierten Berichten <strong>keine individuelle Empfehlung</strong> zum Kaufen, Halten oder Verkaufen eines Finanzprodukts dar. Sie begründen kein Beratungs- oder Auskunftsverhältnis.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>2. KI-generierte Inhalte</h3>
+          <p>Alle Analysen werden automatisiert durch ein KI-Sprachmodell (Google Gemini) erstellt. Die KI verarbeitet das hochgeladene Dokument und gibt eine Einschätzung auf Basis der darin enthaltenen Informationen. Diese Einschätzung kann <strong>Fehler, Unvollständigkeiten oder veraltete Informationen</strong> enthalten.</p>
+          <p style="margin-top:8px;">Wir übernehmen keine Gewähr für die Richtigkeit, Vollständigkeit, Aktualität oder Eignung der KI-generierten Inhalte für einen bestimmten Zweck.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>3. Eigenverantwortung des Nutzers</h3>
+          <p>Bevor Sie Investmententscheidungen, Vertragsabschlüsse oder andere bedeutsame Entscheidungen treffen, sollten Sie sich <strong>umfassend und unabhängig beraten lassen</strong> — etwa durch einen zugelassenen Finanzberater, Rechtsanwalt oder Steuerberater.</p>
+          <p style="margin-top:8px;">Bitte beachten Sie insbesondere: Die Wertentwicklung eines Finanzprodukts in der Vergangenheit ist <strong>keine Garantie für zukünftige Ergebnisse</strong>. Investitionen in Wertpapiere und andere Finanzprodukte sind mit Risiken verbunden, die bis zum Totalverlust des eingesetzten Kapitals führen können.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>4. Haftungsausschluss</h3>
+          <p>Der Betreiber dieses Dienstes haftet nicht für Schäden, die aus der Nutzung oder Nichtnutzung der bereitgestellten KI-Analysen entstehen — einschließlich finanzieller Verluste, entgangener Gewinne oder Folgeschäden.</p>
+          <p style="margin-top:8px;">Die Haftung ist ausgeschlossen, soweit dies gesetzlich zulässig ist. Dies gilt insbesondere für Entscheidungen, die auf Grundlage von KI-generierten Inhalten getroffen wurden.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>5. Keine Aufsicht durch Finanzregulierungsbehörden</h3>
+          <p>Dieser Dienst ist <strong>kein reguliertes Finanzdienstleistungsunternehmen</strong> und steht nicht unter der Aufsicht der BaFin (Bundesanstalt für Finanzdienstleistungsaufsicht) oder einer anderen Finanzaufsichtsbehörde. Die Nutzung dieses Dienstes ersetzt nicht den Gang zu einem regulierten Finanzdienstleister.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>6. Externe Datenquellen</h3>
+          <p>Die KI analysiert ausschließlich das vom Nutzer hochgeladene Dokument. Es werden keine externen Marktdaten, Echtzeit-Kurse oder aktuellen Nachrichten einbezogen, sofern diese nicht im Dokument selbst enthalten sind. Die Analyse spiegelt daher nur den Informationsstand des hochgeladenen Dokuments wider.</p>
+        </div>
+
+        <p class="legal-stand">Stand: Mai 2026</p>
       </div>
     </div>
   </div>
