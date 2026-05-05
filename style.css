@@ -1233,7 +1233,7 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
    ============================================= */
 .faq-section { padding: 100px 24px; background: #080d1a; }
 .faq-inner { max-width: 760px; margin: 0 auto; text-align: center; }
-.faq-inner h2 { margin-bottom: 48px; }
+.faq-inner h2 { margin-bottom: 48px; color: white; }
 .faq-list { text-align: left; display: flex; flex-direction: column; gap: 2px; }
 .faq-item { border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); }
 .faq-q { width: 100%; text-align: left; background: none; border: none; color: white; font-size: 15px; font-weight: 600; padding: 20px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.2s; font-family: inherit; }
