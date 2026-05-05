@@ -311,7 +311,75 @@ async function checkOwnerPassword(pw) {
   return hash === (localStorage.getItem('ai_owner_hash') || OWNER_HASH);
 }
 
+function injectOwnerDashboardHTML() {
+  const el = document.getElementById('owner-dashboard-overlay');
+  if (el.dataset.injected) return;
+  el.innerHTML = `
+    <div class="owner-dashboard">
+      <div class="owner-dash-header">
+        <div class="owner-dash-logo">Owner<span>Panel</span></div>
+        <button onclick="closeOwnerDashboard()" class="owner-close-btn">✕ Schließen</button>
+      </div>
+      <div class="owner-tabs">
+        <button class="owner-tab active" onclick="ownerTab('overview')" id="otab-overview">📊 Übersicht</button>
+        <button class="owner-tab" onclick="ownerTab('reviews')" id="otab-reviews">⭐ Bewertungen</button>
+        <button class="owner-tab" onclick="ownerTab('settings')" id="otab-settings">⚙️ Einstellungen</button>
+      </div>
+      <div id="owner-tab-overview" class="owner-tab-content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-value" id="stat-total-sales">0</div><div class="stat-label">Aufgaben abgeschlossen</div></div>
+          <div class="stat-card highlight"><div class="stat-value" id="stat-total-revenue">€0.00</div><div class="stat-label">Gesamtumsatz</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-month-revenue">€0.00</div><div class="stat-label">Umsatz diesen Monat</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-total-users">0</div><div class="stat-label">Registrierte Nutzer</div></div>
+        </div>
+        <h4 class="section-mini-title">Letzte Transaktionen</h4>
+        <div id="recent-transactions"><p class="empty-state">Noch keine Transaktionen.</p></div>
+      </div>
+      <div id="owner-tab-reviews" class="owner-tab-content" style="display:none;">
+        <p class="owner-tab-hint">Wähle bis zu 6 Bewertungen aus, die auf der Startseite angezeigt werden.</p>
+        <div id="owner-reviews-list"><p class="empty-state">Noch keine Bewertungen eingegangen.</p></div>
+      </div>
+      <div id="owner-tab-settings" class="owner-tab-content" style="display:none;">
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);margin-bottom:16px;">
+          <h4 style="color:#60a5fa;margin-bottom:10px;">🎨 Geschäftsfarben & Branding</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">Diese Farben werden im PDF-Bericht verwendet. Firmenname erscheint im Berichts-Header.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div><label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Primärfarbe (Akzent)</label><input type="color" id="brand-primary-color" value="#2563eb" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;" /></div>
+            <div><label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Sekundärfarbe (Header)</label><input type="color" id="brand-secondary-color" value="#0f172a" style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;" /></div>
+          </div>
+          <label style="font-size:12px;color:var(--gray);display:block;margin-bottom:6px;">Firmenname im Bericht</label>
+          <input type="text" id="brand-company-name" placeholder="z.B. Musterfirma GmbH" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;margin-bottom:10px;box-sizing:border-box;"/>
+          <button onclick="saveBrandColors()" class="btn-primary" style="width:100%;">Branding speichern</button>
+          <p id="brand-colors-status" style="margin-top:8px;font-size:13px;display:none;color:#4ade80;">✓ Gespeichert!</p>
+        </div>
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);">
+          <h4 style="color:#4ade80;margin-bottom:6px;">🤖 KI-Status</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:0;">✓ Gemini API-Key ist serverseitig konfiguriert. Alle Nutzer haben sofort Zugriff auf echte KI-Analysen.</p>
+        </div>
+        <div class="settings-section" style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);margin-top:16px;">
+          <h4 style="color:#60a5fa;margin-bottom:6px;">📨 Microsoft App-ID (Outlook)</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:14px;">Trage hier deine Microsoft Azure App-ID ein, damit Nutzer ihr Outlook-Postfach verbinden können.<br><a href="https://portal.azure.com" target="_blank" style="color:#60a5fa;">→ App registrieren im Azure Portal</a></p>
+          <input type="text" id="owner-ms-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;margin-bottom:10px;box-sizing:border-box;"/>
+          <button onclick="saveMicrosoftClientId()" class="btn-primary" style="width:100%;">Microsoft App-ID speichern</button>
+          <p id="ms-client-id-status" style="margin-top:8px;font-size:13px;display:none;"></p>
+        </div>
+        <div class="settings-section">
+          <h4>💳 PayPal verknüpfen</h4>
+          <p>Gib deinen PayPal.me Nutzernamen ein. Kundenzahlungen werden direkt an dein PayPal weitergeleitet.</p>
+          <div class="paypal-row"><span class="paypal-prefix">paypal.me/</span><input type="text" id="owner-paypal-input" placeholder="deinname" /></div>
+          <button onclick="savePaypalSettings()" class="btn-primary">PayPal speichern</button>
+          <p id="paypal-saved-msg" class="settings-success" style="display:none;">✓ PayPal gespeichert!</p>
+        </div>
+        <div class="settings-section">
+          <button onclick="handleOwnerLogout()" class="btn-delete full-width-btn">Owner Panel abmelden</button>
+        </div>
+      </div>
+    </div>`;
+  el.dataset.injected = '1';
+}
+
 function openOwnerDashboard() {
+  injectOwnerDashboardHTML();
   document.getElementById('owner-dashboard-overlay').classList.remove('hidden');
   ownerTab('overview');
   loadOwnerPaypal();
@@ -4839,7 +4907,7 @@ AUSGABE-FORMAT (genau diese Abschnitte):
 ${sections}
 
 QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung? Falls nein — überarbeiten.`
-    : `Du bist der präziseste PDF-Analyst der Welt — spezialisiert auf ${dtLabel}e. Deine Analyse ist messbar besser als jedes andere KI-Tool.
+    : `Du bist ein erfahrener PDF-Analyst — spezialisiert auf ${dtLabel}e. Liefere eine gründliche, faktenbasierte Analyse.
 
 AUFGABE DES KUNDEN: ${taskDesc}
 DOKUMENTTYP: ${dtLabel}
