@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
   <link rel="stylesheet" href="style.css?v=14" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -224,7 +225,10 @@
   <!-- HEADER -->
   <header>
     <div class="header-inner">
-      <div class="logo" id="site-logo" onclick="goHome()" style="cursor:pointer;">AI<span>Employee</span></div>
+      <div class="logo" id="site-logo" onclick="goHome()" style="cursor:pointer;">
+        <img src="logo.svg" alt="AI Employee Agent Logo" class="header-logo-img" />
+        AI<span>Employee</span>
+      </div>
       <div class="header-right">
         <span id="header-username" class="header-user"></span>
         <button onclick="openOwnerDashboard()" class="btn-owner" id="btn-owner-panel" style="display:none;" data-de="⚙️ Owner Panel" data-en="⚙️ Owner Panel">⚙️ Owner Panel</button>

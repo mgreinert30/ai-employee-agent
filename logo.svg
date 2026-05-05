@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="lg" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- A — left stroke: bottom-left up to apex -->
+  <line x1="18" y1="92" x2="52" y2="18" stroke="url(#lg)" stroke-width="13" stroke-linecap="round"/>
+  <!-- A — right stroke: apex down to mid-right -->
+  <line x1="52" y1="18" x2="72" y2="60" stroke="url(#lg)" stroke-width="13" stroke-linecap="round"/>
+  <!-- i — dot -->
+  <circle cx="90" cy="30" r="7" fill="url(#lg)"/>
+  <!-- i — body -->
+  <line x1="90" y1="46" x2="90" y2="92" stroke="url(#lg)" stroke-width="13" stroke-linecap="round"/>
+</svg>
