@@ -5,17 +5,15 @@ export const config = {
 
 // Fastest models first — lite/flash complete well within 60s
 const VISION_MODELS = [
-  'gemini-1.5-flash',
   'gemini-2.0-flash',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite-preview-06-17',
+  'gemini-flash-latest',
 ];
 
 const TEXT_MODELS = [
-  'gemini-1.5-flash',
   'gemini-2.0-flash',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite-preview-06-17',
+  'gemini-flash-latest',
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
