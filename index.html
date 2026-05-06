@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -435,8 +435,8 @@
           <p data-de="Sortiert E-Mails nach Dringlichkeit, fasst sie zusammen und schreibt Antwort-Entwürfe für die wichtigsten Nachrichten." data-en="Sorts emails by urgency, summarises them and writes draft replies for the most important messages.">Sortiert E-Mails nach Dringlichkeit, fasst sie zusammen und schreibt Antwort-Entwürfe für die wichtigsten Nachrichten.</p>
           <span class="os-badge">Outlook · Gmail</span>
         </div>
-        <div class="os-card os-card-beta">
-          <div class="os-beta-badge" data-de="Demnächst" data-en="Coming soon">Demnächst</div>
+        <div class="os-card os-card-active" onclick="selectShortcut('report')" style="cursor:pointer;">
+          <div class="os-active-badge" data-de="✅ Verfügbar" data-en="✅ Available">✅ Verfügbar</div>
           <div class="os-icon">📊</div>
           <h3 data-de="Bericht erstellen" data-en="Create Report">Bericht erstellen</h3>
           <p data-de="Erstellt professionelle Geschäftsberichte mit Executive Summary, allen Erkenntnissen und konkreten Handlungsempfehlungen." data-en="Creates professional business reports with executive summary, all findings and concrete action recommendations.">Erstellt professionelle Geschäftsberichte mit Executive Summary, allen Erkenntnissen und konkreten Handlungsempfehlungen.</p>
@@ -611,6 +611,86 @@
         <div class="step-number">4</div>
         <h3 data-de="Agent wird gelöscht" data-en="Agent gets deleted">Agent wird gelöscht</h3>
         <p data-de="Nach Abschluss wird der Agent vollständig von deinem PC entfernt. Kein Zugriff mehr. Keine Daten gespeichert." data-en="After completion the agent is fully removed from your PC. No access. No data kept.">Agent wird vollständig von deinem PC entfernt. Keine Daten gespeichert.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORT HIGHLIGHT SECTION -->
+  <section class="report-highlight" id="report-highlight">
+    <div class="rh-wrap">
+      <div class="rh-left" data-sr data-sr-delay="0">
+        <span class="section-chip chip-dark">📊 Berichte & Reports</span>
+        <h2 data-de="Macht aus jeder Sache einen ernsthaften Bericht." data-en="Turns anything into a serious report.">Macht aus jeder Sache einen <span class="rh-gradient">ernsthaften Bericht.</span></h2>
+        <p data-de="Lade ein Dokument hoch — oder beschreibe einfach ein Thema. Die KI erstellt daraus einen vollständigen, professionellen Bericht mit Struktur, Kennzahlen und klaren Handlungsempfehlungen." data-en="Upload a document — or just describe a topic. The AI creates a complete, professional report with structure, metrics and clear action recommendations.">Lade ein Dokument hoch — oder beschreibe einfach ein Thema. Die KI erstellt daraus einen vollständigen, professionellen Bericht mit Struktur, Kennzahlen und klaren Handlungsempfehlungen.</p>
+        <ul class="rh-features">
+          <li>
+            <span class="rh-feat-icon">📋</span>
+            <div>
+              <strong data-de="Automatische Struktur" data-en="Automatic structure">Automatische Struktur</strong>
+              <p data-de="Deckblatt, Inhaltsverzeichnis, Executive Summary, Fazit — alles wird automatisch generiert." data-en="Cover page, table of contents, executive summary, conclusion — all generated automatically.">Deckblatt, Inhaltsverzeichnis, Executive Summary, Fazit — alles automatisch generiert.</p>
+            </div>
+          </li>
+          <li>
+            <span class="rh-feat-icon">📈</span>
+            <div>
+              <strong data-de="Tabellen & Charts" data-en="Tables & charts">Tabellen & Charts</strong>
+              <p data-de="Alle relevanten Zahlen werden als Tabellen und visuelle Grafiken aufbereitet — sofort präsentierbar." data-en="All relevant numbers formatted as tables and visual charts — ready to present.">Alle relevanten Zahlen als Tabellen und Grafiken — sofort präsentierbar.</p>
+            </div>
+          </li>
+          <li>
+            <span class="rh-feat-icon">✅</span>
+            <div>
+              <strong data-de="Konkrete Empfehlungen" data-en="Concrete recommendations">Konkrete Empfehlungen</strong>
+              <p data-de="Kein generisches Fazit — die KI benennt priorisierte Maßnahmen mit Begründung und Zeitrahmen." data-en="No generic conclusions — the AI names prioritised measures with reasoning and timeline.">Priorisierte Maßnahmen mit Begründung und Zeitrahmen — nicht nur Theorie.</p>
+            </div>
+          </li>
+          <li>
+            <span class="rh-feat-icon">🔍</span>
+            <div>
+              <strong data-de="Web-Recherche inklusive" data-en="Web research included">Web-Recherche inklusive</strong>
+              <p data-de="Die KI recherchiert automatisch aktuelle Daten und Marktinformationen — dein Bericht ist immer auf dem neuesten Stand." data-en="The AI automatically researches current data and market information — your report is always up to date.">Automatische Recherche aktueller Daten — dein Bericht ist immer aktuell.</p>
+            </div>
+          </li>
+        </ul>
+        <div class="rh-actions">
+          <button class="btn-primary" onclick="selectShortcut('report')" data-de="Jetzt Bericht erstellen →" data-en="Create report now →">Jetzt Bericht erstellen →</button>
+          <p class="rh-meta" data-de="Ergebnisse in 2–5 Minuten · Kein Abo · Sofort starten" data-en="Results in 2–5 min · No subscription · Start immediately">Ergebnisse in 2–5 Minuten · Kein Abo · Sofort starten</p>
+        </div>
+      </div>
+      <div class="rh-right" data-sr data-sr-delay="120">
+        <div class="rh-preview-card">
+          <div class="rh-preview-header">
+            <div class="rh-preview-dots"><span></span><span></span><span></span></div>
+            <span class="rh-preview-title" data-de="Bericht wird erstellt..." data-en="Creating report...">Bericht wird erstellt...</span>
+          </div>
+          <div class="rh-preview-body">
+            <div class="rh-doc-row rh-doc-title">📄 <strong data-de="Quartalsbericht Q2 2025" data-en="Quarterly Report Q2 2025">Quartalsbericht Q2 2025</strong></div>
+            <div class="rh-doc-section">
+              <div class="rh-doc-label" data-de="Executive Summary" data-en="Executive Summary">Executive Summary</div>
+              <div class="rh-doc-lines"><span></span><span></span><span style="width:70%"></span></div>
+            </div>
+            <div class="rh-doc-section">
+              <div class="rh-doc-label" data-de="Kennzahlen" data-en="Key Metrics">Kennzahlen</div>
+              <div class="rh-metrics-row">
+                <div class="rh-metric"><span class="rh-metric-val">+24%</span><span class="rh-metric-lbl" data-de="Umsatz" data-en="Revenue">Umsatz</span></div>
+                <div class="rh-metric"><span class="rh-metric-val">-18%</span><span class="rh-metric-lbl" data-de="Kosten" data-en="Costs">Kosten</span></div>
+                <div class="rh-metric"><span class="rh-metric-val">3 Maß.</span><span class="rh-metric-lbl" data-de="Empfehlungen" data-en="Actions">Empfehlungen</span></div>
+              </div>
+            </div>
+            <div class="rh-doc-section">
+              <div class="rh-doc-label" data-de="Handlungsempfehlungen" data-en="Recommendations">Handlungsempfehlungen</div>
+              <div class="rh-action-list">
+                <div class="rh-action-item">🔴 <span data-de="Marketingbudget erhöhen — Q3" data-en="Increase marketing budget — Q3">Marketingbudget erhöhen — Q3</span></div>
+                <div class="rh-action-item">🟡 <span data-de="Lieferkette optimieren" data-en="Optimise supply chain">Lieferkette optimieren</span></div>
+                <div class="rh-action-item">🟢 <span data-de="Kundenbindung ausbauen" data-en="Expand customer retention">Kundenbindung ausbauen</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="rh-preview-footer">
+            <span class="rh-export-btn">⬇ Word</span>
+            <span class="rh-export-btn">⬇ PDF</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
