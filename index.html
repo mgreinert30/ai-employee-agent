@@ -1022,6 +1022,12 @@
           <div class="pdf-file-list" id="pdf-file-list"></div>
         </div>
 
+        <!-- Upload warning -->
+        <div class="upload-warning">
+          <span class="upload-warning-icon">⚠️</span>
+          <span data-de="Bitte keine sensiblen Daten hochladen (Passwörter, Gesundheitsdaten, Ausweisdokumente). Dokumente werden nach der Analyse sofort gelöscht und nicht gespeichert." data-en="Please do not upload sensitive data (passwords, health data, ID documents). Files are deleted immediately after analysis and never stored.">Bitte keine sensiblen Daten hochladen (Passwörter, Gesundheitsdaten, Ausweisdokumente). Dokumente werden nach der Analyse sofort gelöscht.</span>
+        </div>
+
         <!-- Trust signals -->
         <div class="form-trust-row">
           <div class="form-trust-item">
@@ -1492,6 +1498,7 @@
       <a href="#" onclick="document.getElementById('modal-impressum').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Impressum" data-en="Imprint">Impressum</a>
       <a href="#" onclick="document.getElementById('modal-datenschutz').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Datenschutz" data-en="Privacy Policy">Datenschutz</a>
       <a href="#" onclick="document.getElementById('modal-disclaimer').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Disclaimer" data-en="Disclaimer">Disclaimer</a>
+      <a href="#" onclick="document.getElementById('modal-agb').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Nutzungsbedingungen" data-en="Terms of Use">Nutzungsbedingungen</a>
       <a href="#" onclick="openSupport();return false;" style="color:#60a5fa;font-size:12px;text-decoration:none;font-weight:600;" data-de="💬 Support & Feedback" data-en="💬 Support & Feedback">💬 Support &amp; Feedback</a>
     </p>
   </footer>
@@ -1600,7 +1607,7 @@
           <p style="margin-top:8px;">Soweit die Inhalte auf dieser Seite nicht vom Betreiber erstellt wurden, werden die Urheberrechte Dritter beachtet. Insbesondere werden Inhalte Dritter als solche gekennzeichnet. Sollten Sie trotzdem auf eine Urheberrechtsverletzung aufmerksam werden, bitten wir um einen entsprechenden Hinweis. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Inhalte umgehend entfernen.</p>
         </div>
 
-        <p class="legal-stand">Stand: Mai 2025</p>
+        <p class="legal-stand">Stand: Mai 2026</p>
       </div>
     </div>
   </div>
@@ -1657,6 +1664,9 @@
 
           <p style="margin-top:12px;"><strong>4.4 Microsoft MSAL (Outlook-Integration)</strong></p>
           <p>Für die optionale Outlook-E-Mail-Integration nutzen wir Microsoft Authentication Library (MSAL). Anbieter: Microsoft Corporation, One Microsoft Way, Redmond, WA 98052, USA. Bei Aktivierung werden Authentifizierungsdaten verarbeitet. Datenschutzerklärung: <a href="https://privacy.microsoft.com/de-de/privacystatement" target="_blank" rel="noopener">Microsoft Datenschutz</a>. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO.</p>
+
+          <p style="margin-top:12px;"><strong>4.5 E-Mail-Versand: Resend</strong></p>
+          <p>Für den Versand von Support- und Kontaktanfragen nutzen wir den Dienst Resend (Resend Inc., 2261 Market Street #5039, San Francisco, CA 94114, USA). Wenn Sie das Kontaktformular nutzen, werden Ihr Name, Ihre E-Mail-Adresse und Ihre Nachricht zur Zustellung an Resend übermittelt. Eine dauerhafte Speicherung durch Resend findet nicht statt. Datenschutzerklärung: <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">resend.com/legal/privacy-policy</a>. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung / vorvertragliche Maßnahmen).</p>
         </div>
 
         <div class="legal-section">
@@ -1715,7 +1725,7 @@
           <p>Diese Datenschutzerklärung ist aktuell gültig und hat den Stand Mai 2025. Durch die Weiterentwicklung unserer Website und Angebote oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann es notwendig werden, diese Datenschutzerklärung zu ändern. Die jeweils aktuelle Datenschutzerklärung kann jederzeit auf der Website abgerufen werden.</p>
         </div>
 
-        <p class="legal-stand">Stand: Mai 2025</p>
+        <p class="legal-stand">Stand: Mai 2026</p>
       </div>
     </div>
   </div>
@@ -1759,6 +1769,69 @@
         <div class="legal-section">
           <h3>6. Externe Datenquellen</h3>
           <p>Die KI analysiert ausschließlich das vom Nutzer hochgeladene Dokument. Es werden keine externen Marktdaten, Echtzeit-Kurse oder aktuellen Nachrichten einbezogen, sofern diese nicht im Dokument selbst enthalten sind. Die Analyse spiegelt daher nur den Informationsstand des hochgeladenen Dokuments wider.</p>
+        </div>
+
+        <p class="legal-stand">Stand: Mai 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGB / NUTZUNGSBEDINGUNGEN MODAL -->
+  <div id="modal-agb" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="legal-modal">
+      <button onclick="document.getElementById('modal-agb').classList.add('hidden')" class="legal-modal-close">✕</button>
+      <h2 class="legal-modal-title">Nutzungsbedingungen</h2>
+      <div class="legal-content">
+
+        <div class="legal-section">
+          <h3>1. Geltungsbereich</h3>
+          <p>Diese Nutzungsbedingungen gelten für die Nutzung des Dienstes AI Employee Agent, betrieben unter a-i-employee.de. Mit der Nutzung des Dienstes erklärst du dich mit diesen Bedingungen einverstanden.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>2. Erlaubte Nutzung</h3>
+          <p>Der Dienst darf ausschließlich für legale Zwecke genutzt werden. Es ist untersagt:</p>
+          <ul style="margin-top:8px;padding-left:20px;line-height:2;">
+            <li>Dokumente hochzuladen, die gegen geltendes Recht verstoßen</li>
+            <li>Inhalte zu verarbeiten, die Rechte Dritter verletzen (z. B. Urheberrecht)</li>
+            <li>Den Dienst automatisiert zu missbrauchen oder zu überlasten</li>
+            <li>Ergebnisse als professionelle Rechts-, Finanz- oder Medizinberatung weiterzugeben</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h3>3. Hochgeladene Inhalte</h3>
+          <p>Du bist selbst verantwortlich für die Inhalte, die du hochlädst. Bitte lade keine sensiblen personenbezogenen Daten hoch (z. B. Ausweiskopien, Krankenakten, Passwörter). Hochgeladene Dokumente werden nach Abschluss der Analyse sofort gelöscht und nicht dauerhaft gespeichert.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>4. KI-generierte Ergebnisse</h3>
+          <p>Alle Analysen werden durch KI (Google Gemini) erstellt und können Fehler enthalten. Die Ergebnisse ersetzen keine professionelle Fachberatung. Du bist verpflichtet, Ergebnisse kritisch zu prüfen, bevor du Entscheidungen darauf basierst. Wir übernehmen keine Haftung für Schäden, die aus der Nutzung KI-generierter Inhalte entstehen.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>5. Nutzungsrechte</h3>
+          <p>Die generierten Analysen und Berichte dürfen für den persönlichen und geschäftlichen Gebrauch genutzt werden. Eine Weitergabe als eigenständige Dienstleistung oder ein Weiterverkauf der KI-Ergebnisse ist ohne ausdrückliche Genehmigung untersagt.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>6. Verfügbarkeit</h3>
+          <p>Wir bemühen uns um eine hohe Verfügbarkeit des Dienstes, können diese jedoch nicht garantieren. Wartungsarbeiten, technische Störungen oder Ausfälle bei Drittanbietern (z. B. Google Gemini API) können zu temporären Einschränkungen führen. Ein Anspruch auf ununterbrochene Verfügbarkeit besteht nicht.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>7. Haftungsbeschränkung</h3>
+          <p>Der Betreiber haftet nur für Schäden, die auf vorsätzlichem oder grob fahrlässigem Verhalten beruhen. Eine Haftung für mittelbare Schäden, entgangene Gewinne oder Datenverluste ist ausgeschlossen, soweit gesetzlich zulässig.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>8. Änderungen</h3>
+          <p>Wir behalten uns vor, diese Nutzungsbedingungen jederzeit zu ändern. Änderungen werden auf dieser Seite veröffentlicht. Die weitere Nutzung des Dienstes nach einer Änderung gilt als Zustimmung.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>9. Anwendbares Recht</h3>
+          <p>Es gilt deutsches Recht. Gerichtsstand ist, soweit gesetzlich zulässig, Neuss.</p>
         </div>
 
         <p class="legal-stand">Stand: Mai 2026</p>

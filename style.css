@@ -1652,3 +1652,14 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   .trust-grid { grid-template-columns: 1fr; }
   .trust-section h2 { font-size: 30px; }
 }
+
+/* UPLOAD WARNING */
+.upload-warning {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 12px; color: #92400e;
+  margin-top: 10px; line-height: 1.5;
+}
+.upload-warning-icon { flex-shrink: 0; font-size: 14px; }
