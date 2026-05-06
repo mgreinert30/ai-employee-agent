@@ -1,29 +1,26 @@
-// Vercel Serverless Function — Gemini PDF Analysis (text + vision)
+// Vercel Serverless Function — Gemini PDF Analysis
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 };
 
-// Stable models first — 2.5-flash last (most capable but most likely to be overloaded)
+// Fastest models first — lite/flash complete well within 60s
 const VISION_MODELS = [
+  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
   'gemini-2.5-flash',
-  'gemini-flash-latest',
 ];
 
 const TEXT_MODELS = [
+  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
   'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
   'gemini-2.5-flash',
-  'gemini-flash-latest',
-  'gemini-2.5-flash-lite',
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function callGemini(model, apiKey, body, retries = 2) {
+async function callGemini(model, apiKey, body, retries = 1) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(
@@ -33,19 +30,17 @@ async function callGemini(model, apiKey, body, retries = 2) {
 
       let data;
       try { data = await res.json(); } catch (_) {
-        if (attempt < retries) { await sleep(1500); continue; }
+        if (attempt < retries) { await sleep(500); continue; }
         return { error: `HTTP ${res.status} — no JSON` };
       }
 
-      // 503 overloaded — retry after short delay
       if (res.status === 503 || data?.error?.code === 503) {
-        if (attempt < retries) { await sleep(2000 * (attempt + 1)); continue; }
+        if (attempt < retries) { await sleep(800); continue; }
         return { error: `HTTP 503: model overloaded` };
       }
 
-      // 429 rate-limit — retry with longer delay
       if (res.status === 429 || data?.error?.code === 429) {
-        if (attempt < retries) { await sleep(3000 * (attempt + 1)); continue; }
+        if (attempt < retries) { await sleep(1000); continue; }
         return { error: `HTTP 429: rate limit` };
       }
 
@@ -58,11 +53,18 @@ async function callGemini(model, apiKey, body, retries = 2) {
 
       return { result };
     } catch (err) {
-      if (attempt < retries) { await sleep(1500); continue; }
+      if (attempt < retries) { await sleep(500); continue; }
       return { error: err.message };
     }
   }
 }
+
+// Token limits tuned to finish well within 60s on Vercel Hobby plan
+const TOKEN_LIMITS = {
+  short:  2048,
+  medium: 8192,
+  long:   16384,
+};
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -110,8 +112,9 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 `
     : '';
 
-  const safePrompt = modePrefix + (prompt.length > 100000
-    ? prompt.slice(0, 100000) + '\n\n[Dokument gekürzt]'
+  // Keep prompt under 60k chars to leave processing headroom
+  const safePrompt = modePrefix + (prompt.length > 60000
+    ? prompt.slice(0, 60000) + '\n\n[Dokument gekürzt]'
     : prompt);
 
   const parts = hasFile
@@ -120,10 +123,12 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
     ? [...images.map(b64 => ({ inlineData: { mimeType: 'image/jpeg', data: b64 } })), { text: safePrompt }]
     : [{ text: safePrompt }];
 
+  const maxTokens = TOKEN_LIMITS[analysisLength] || TOKEN_LIMITS.medium;
+
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
     generationConfig: {
-      maxOutputTokens: analysisLength === 'short' ? 4096 : analysisLength === 'medium' ? 24576 : 65536,
+      maxOutputTokens: maxTokens,
       temperature: 0.3, topP: 0.9, topK: 40,
     },
   });
