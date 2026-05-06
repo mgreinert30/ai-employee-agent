@@ -4,6 +4,7 @@
     "api/initiate-upload.js":  { "maxDuration": 15 },
     "api/send-reset.js":       { "maxDuration": 10 },
     "api/verify-reset.js":     { "maxDuration": 10 },
-    "api/chat.js":             { "maxDuration": 15 }
+    "api/chat.js":             { "maxDuration": 15 },
+    "api/learn.js":            { "maxDuration": 20 }
   }
 }

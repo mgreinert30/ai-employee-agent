@@ -492,13 +492,29 @@ function saveFeedbackToLearning(text) {
   localStorage.setItem('ai_improvement_notes', JSON.stringify(notes));
 }
 
-function getLearningContext(isDE) {
-  const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
-  if (!notes.length) return '';
+// Cached server learnings — refreshed once per session per task type
+const _serverLearningsCache = {};
+async function prefetchServerLearnings(taskType) {
+  if (_serverLearningsCache[taskType] !== undefined) return;
+  _serverLearningsCache[taskType] = [];
+  try {
+    const r = await fetch(`/api/learn?type=${encodeURIComponent(taskType)}`);
+    if (r.ok) {
+      const d = await r.json();
+      _serverLearningsCache[taskType] = (d.learnings || []).map(l => l.insight).filter(Boolean);
+    }
+  } catch (_) {}
+}
+
+function getLearningContext(isDE, taskType) {
+  const local  = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  const server = taskType ? (_serverLearningsCache[taskType] || []) : [];
+  const all    = [...new Set([...server, ...local])];
+  if (!all.length) return '';
   return (isDE
-    ? '\nNUTZER-PRÄFERENZEN (aus früherem Feedback — bitte berücksichtigen):\n'
-    : '\nUSER PREFERENCES (from previous feedback — please apply):\n')
-    + notes.map(n => `- ${n}`).join('\n') + '\n';
+    ? '\nGELERNTE ERKENNTNISSE (aus früheren Analysen — bitte berücksichtigen):\n'
+    : '\nLEARNED INSIGHTS (from previous analyses — please apply):\n')
+    + all.map(n => `- ${n}`).join('\n') + '\n';
 }
 
 // =====================
@@ -4857,7 +4873,7 @@ NEXT STEPS
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
   const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
-  const learningCtx = getLearningContext(isDE);
+  const learningCtx = getLearningContext(isDE, docType);
 
   const docTypeLabels = {
     de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
@@ -5263,6 +5279,9 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
 
   setProgress(40, currentLang === 'de' ? 'KI analysiert das Dokument...' : 'AI is analysing the document...');
 
+  // Prefetch server-side learnings so getLearningContext can include them
+  await prefetchServerLearnings(docType);
+
   const prompt = buildPrompt(taskDesc, businessDetails, profession, docText, docType, analysisLength);
 
   startProgressAnimation(60, 95, 50000, currentLang === 'de' ? 'KI denkt und schreibt die Analyse...' : 'AI is thinking and writing the analysis...');
@@ -5318,11 +5337,29 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   result = data.result;
   window.lastAnalysedPages = data.pagesAnalysed ?? totalPages;
 
+  // Fire-and-forget: extract non-sensitive insights and store server-side
+  fetch('/api/learn', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ result, taskType: detectTaskType(prompt) }),
+  }).catch(() => {});
+
   const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
   startProgressAnimation(currentPct, 100, 600, currentLang === 'de' ? 'Fertig!' : 'Done!');
   await new Promise(r => setTimeout(r, 650));
   stopProgressAnimation();
   return result;
+}
+
+function detectTaskType(prompt) {
+  const p = (prompt || '').toLowerCase();
+  if (p.includes('vertrag') || p.includes('contract')) return 'contract';
+  if (p.includes('jahresabschluss') || p.includes('finan')) return 'finance';
+  if (p.includes('rechnung') || p.includes('invoice')) return 'invoice';
+  if (p.includes('protokoll') || p.includes('minutes')) return 'report';
+  if (p.includes('e-mail') || p.includes('email')) return 'email';
+  if (p.includes('pdf') || p.includes('dokument') || p.includes('document')) return 'pdf';
+  return 'general';
 }
 
 // =====================

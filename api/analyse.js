@@ -125,6 +125,7 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
+    tools: [{ googleSearch: {} }],
     generationConfig: {
       maxOutputTokens: maxTokens,
       temperature: 0.3, topP: 0.9, topK: 40,
