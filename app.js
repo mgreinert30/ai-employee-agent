@@ -5496,12 +5496,13 @@ function openSupport() {
   document.getElementById('modal-support').classList.remove('hidden');
 }
 
-function submitSupport() {
+async function submitSupport() {
   const name    = document.getElementById('support-name').value.trim();
   const email   = document.getElementById('support-email').value.trim();
   const type    = document.getElementById('support-type').value;
   const message = document.getElementById('support-message').value.trim();
   const msg     = document.getElementById('support-msg');
+  const btn     = document.querySelector('#modal-support .btn-primary');
 
   if (!name || !email || !message) {
     msg.style.color = '#ef4444';
@@ -5510,13 +5511,31 @@ function submitSupport() {
     return;
   }
 
-  const typeLabels = { bug: '🐛 Bug', improvement: '💡 Verbesserung', question: '❓ Frage', other: '📝 Sonstiges' };
-  const subject = encodeURIComponent(`[AI Employee Agent] ${typeLabels[type] || type} von ${name}`);
-  const body = encodeURIComponent(`Name: ${name}\nE-Mail: ${email}\nArt: ${typeLabels[type]}\n\n${message}`);
+  btn.disabled = true;
+  btn.textContent = currentLang === 'en' ? 'Sending…' : 'Wird gesendet…';
+  msg.style.display = 'none';
 
-  window.location.href = `mailto:m.greinert30@gmail.com?subject=${subject}&body=${body}`;
+  try {
+    const res = await fetch('/api/support', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, type, message }),
+    });
+    if (res.ok) {
+      msg.style.color = '#4ade80';
+      msg.textContent = currentLang === 'en' ? '✓ Message sent! We\'ll reply within 24 hours.' : '✓ Nachricht gesendet! Wir melden uns innerhalb von 24 Stunden.';
+      document.getElementById('support-name').value = '';
+      document.getElementById('support-email').value = '';
+      document.getElementById('support-message').value = '';
+    } else {
+      throw new Error('server error');
+    }
+  } catch {
+    msg.style.color = '#ef4444';
+    msg.textContent = currentLang === 'en' ? 'Error sending. Please try again.' : 'Fehler beim Senden. Bitte erneut versuchen.';
+  }
 
-  msg.style.color = '#4ade80';
-  msg.textContent = currentLang === 'en' ? '✓ Your email client is opening…' : '✓ Dein E-Mail-Programm öffnet sich…';
   msg.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = currentLang === 'en' ? 'Send →' : 'Absenden →';
 }
