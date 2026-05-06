@@ -1491,9 +1491,45 @@
     <p style="margin-top:8px;">
       <a href="#" onclick="document.getElementById('modal-impressum').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Impressum" data-en="Imprint">Impressum</a>
       <a href="#" onclick="document.getElementById('modal-datenschutz').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Datenschutz" data-en="Privacy Policy">Datenschutz</a>
-      <a href="#" onclick="document.getElementById('modal-disclaimer').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;" data-de="Disclaimer" data-en="Disclaimer">Disclaimer</a>
+      <a href="#" onclick="document.getElementById('modal-disclaimer').classList.remove('hidden');return false;" style="color:#94a3b8;font-size:12px;text-decoration:none;margin-right:16px;" data-de="Disclaimer" data-en="Disclaimer">Disclaimer</a>
+      <a href="#" onclick="openSupport();return false;" style="color:#60a5fa;font-size:12px;text-decoration:none;font-weight:600;" data-de="💬 Support & Feedback" data-en="💬 Support & Feedback">💬 Support &amp; Feedback</a>
     </p>
   </footer>
+
+  <!-- SUPPORT MODAL -->
+  <div id="modal-support" class="overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="modal" style="max-width:500px;">
+      <button onclick="document.getElementById('modal-support').classList.add('hidden')" class="legal-modal-close">✕</button>
+      <div class="modal-logo">Support<span> & Feedback</span></div>
+      <p style="color:var(--gray);font-size:14px;margin:8px 0 24px;text-align:center;" data-de="Bug gefunden? Verbesserungsidee? Schreib uns — wir antworten innerhalb von 24 Stunden." data-en="Found a bug? Have an idea? Write to us — we reply within 24 hours.">Bug gefunden? Verbesserungsidee? Schreib uns — wir antworten innerhalb von 24 Stunden.</p>
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:13px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Dein Name" data-en="Your name">Dein Name</label>
+          <input type="text" id="support-name" placeholder="Max Mustermann" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Deine E-Mail" data-en="Your email">Deine E-Mail</label>
+          <input type="email" id="support-email" placeholder="max@firma.de" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Art der Anfrage" data-en="Type of request">Art der Anfrage</label>
+          <select id="support-type" style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:#1e293b;color:white;font-size:14px;box-sizing:border-box;">
+            <option value="bug" data-de="🐛 Bug melden" data-en="🐛 Report a bug">🐛 Bug melden</option>
+            <option value="improvement" data-de="💡 Verbesserung vorschlagen" data-en="💡 Suggest improvement">💡 Verbesserung vorschlagen</option>
+            <option value="question" data-de="❓ Frage stellen" data-en="❓ Ask a question">❓ Frage stellen</option>
+            <option value="other" data-de="📝 Sonstiges" data-en="📝 Other">📝 Sonstiges</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--gray);display:block;margin-bottom:6px;" data-de="Nachricht" data-en="Message">Nachricht</label>
+          <textarea id="support-message" rows="5" placeholder="Beschreibe dein Anliegen so genau wie möglich..." style="width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:white;font-size:14px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <button onclick="submitSupport()" class="btn-primary full-width" style="margin-top:4px;" data-de="Absenden →" data-en="Send →">Absenden →</button>
+        <p id="support-msg" style="display:none;text-align:center;font-size:13px;color:#4ade80;"></p>
+      </div>
+    </div>
+  </div>
 
   <!-- IMPRESSUM MODAL -->
   <!-- IMPRESSUM MODAL -->

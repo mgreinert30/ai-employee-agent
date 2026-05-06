@@ -5488,3 +5488,35 @@ function scrollChatBottom() {
   const msgs = document.getElementById('chat-messages');
   if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
+
+// =====================
+// SUPPORT MODAL
+// =====================
+function openSupport() {
+  document.getElementById('modal-support').classList.remove('hidden');
+}
+
+function submitSupport() {
+  const name    = document.getElementById('support-name').value.trim();
+  const email   = document.getElementById('support-email').value.trim();
+  const type    = document.getElementById('support-type').value;
+  const message = document.getElementById('support-message').value.trim();
+  const msg     = document.getElementById('support-msg');
+
+  if (!name || !email || !message) {
+    msg.style.color = '#ef4444';
+    msg.textContent = currentLang === 'en' ? 'Please fill in all fields.' : 'Bitte alle Felder ausfüllen.';
+    msg.style.display = 'block';
+    return;
+  }
+
+  const typeLabels = { bug: '🐛 Bug', improvement: '💡 Verbesserung', question: '❓ Frage', other: '📝 Sonstiges' };
+  const subject = encodeURIComponent(`[AI Employee Agent] ${typeLabels[type] || type} von ${name}`);
+  const body = encodeURIComponent(`Name: ${name}\nE-Mail: ${email}\nArt: ${typeLabels[type]}\n\n${message}`);
+
+  window.location.href = `mailto:m.greinert30@gmail.com?subject=${subject}&body=${body}`;
+
+  msg.style.color = '#4ade80';
+  msg.textContent = currentLang === 'en' ? '✓ Your email client is opening…' : '✓ Dein E-Mail-Programm öffnet sich…';
+  msg.style.display = 'block';
+}
