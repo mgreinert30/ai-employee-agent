@@ -3671,7 +3671,11 @@ function goHome() { resetForm(); showPage('main'); }
 const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
 function showStep(id) {
   if (id !== 'step-progress') stopFunFacts();
-  ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; });
+  ALL_STEPS.forEach(s => {
+    const el = document.getElementById(s);
+    if (s !== id) { el.style.display = 'none'; return; }
+    el.style.display = s === 'step-payment' ? 'flex' : 'block';
+  });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
