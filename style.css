@@ -753,7 +753,8 @@ textarea { resize: vertical; }
 .price-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* PAYMENT BOX */
-.payment-box { background: white; border-radius: 18px; padding: 38px; box-shadow: var(--shadow-lg); border: 1px solid rgba(37,99,235,0.08); }
+#step-payment { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 120px); padding: 32px 16px; }
+.payment-box { background: white; border-radius: 18px; padding: 38px; box-shadow: var(--shadow-lg); border: 1px solid rgba(37,99,235,0.08); width: 100%; max-width: 480px; }
 .payment-box h3 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
 .payment-amount-label { font-size: 30px; font-weight: 900; background: linear-gradient(135deg, var(--blue), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 26px; }
 .payment-options { display: flex; gap: 14px; margin-bottom: 24px; }
