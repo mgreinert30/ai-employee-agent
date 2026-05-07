@@ -5074,7 +5074,7 @@ Rules: No padding. No repetition. Every sentence must carry information value. B
 • Fill the key metrics section completely.
 • Risks and opportunities each with justification and recommended action.`,
     long: isDE
-      ? `AUSGABELÄNGE: LANG — ZIEL 30+ SEITEN (ca. 8000-12000 Wörter). Das ist eine vollständige Rundumanalyse — spare nichts aus.
+      ? `AUSGABELÄNGE: LANG — ZIEL 20-25 SEITEN (ca. 8000-9000 Wörter). Das ist eine vollständige Rundumanalyse — spare nichts aus.
 • MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt.
 • TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe, jede Aufzählung → Markdown-Tabelle mit allen Details. Kein Fließtext für Daten.
 • GRAFIKEN PFLICHT — mindestens 6 bis 10 hochwertige Grafiken, alle relevanten Typen nutzen:
@@ -5086,7 +5086,7 @@ Rules: No padding. No repetition. Every sentence must carry information value. B
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
 • Alle Abschnitte auf maximale Substanz — kein Abschnitt kürzer als 5 Sätze.
 • Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit Zeitrahmen.`
-      : `OUTPUT LENGTH: LONG — TARGET 30+ PAGES (approx. 8000-12000 words). This is a complete 360° analysis — leave nothing out.
+      : `OUTPUT LENGTH: LONG — TARGET 20-25 PAGES (approx. 8000-9000 words). This is a complete 360° analysis — leave nothing out.
 • MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained.
 • TABLES EVERYWHERE: every list, comparison, data series, enumeration → Markdown table with all details. No prose for data.
 • CHARTS MANDATORY — minimum 6 to 10 high-quality charts, use all relevant types:

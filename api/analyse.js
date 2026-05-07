@@ -12,11 +12,11 @@ const MODELS = [
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
-// Gemini 2.5 Flash ≈ 200 tok/s: short=~10s, medium=~25s, long=~50s
+// Gemini 2.5 Flash ≈ 200 tok/s: short=~10s, medium=~25s, long=~55s
 const TOKEN_LIMITS = {
   short:  2048,
   medium: 5000,
-  long:   10000,
+  long:   12000,
 };
 
 const MAX_PROMPT_CHARS = 30000;
