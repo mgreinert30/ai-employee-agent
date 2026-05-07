@@ -5502,11 +5502,27 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   }
 
   // Always route through server proxy — API key stored securely in Vercel env vars
-  const response = await fetchWithTimeout('/api/analyse', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(analyseBody)
-  }, 295000); // 295s browser timeout — matches Vercel 300s function limit
+  // On 504 timeout: auto-retry once with reduced settings (short length + max 3 images)
+  async function callAnalyse(body) {
+    return fetchWithTimeout('/api/analyse', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    }, 58000); // 58s — just under Vercel's 60s hard limit
+  }
+
+  let response = await callAnalyse(analyseBody);
+
+  // 504 timeout → retry with short analysis and at most 3 pages
+  if (response.status === 504 || response.status === 524) {
+    const de = currentLang === 'de';
+    startProgressAnimation(30, 70, 40000, de ? '⚡ Zu groß — wiederhole mit Kurzanalyse...' : '⚡ Too large — retrying with short analysis...');
+    const retryBody = {
+      ...analyseBody,
+      analysisLength: 'short',
+      images: analyseBody.images ? analyseBody.images.slice(0, 3) : undefined,
+    };
+    if (!retryBody.images) delete retryBody.images;
+    response = await callAnalyse(retryBody);
+  }
 
   // Guard against non-JSON error responses (e.g. HTTP 413 "Request Entity Too Large")
   let data;
