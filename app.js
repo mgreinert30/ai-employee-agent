@@ -1390,11 +1390,11 @@ const SERVICE_META = {
   },
   depthDescs: {
     de: {
-      analyse: { short: 'Kernaussagen & wichtige Punkte', medium: 'Ausgewogene Analyse mit Details', long: 'Umfassende Analyse mit tiefen Einblicken' },
+      analyse: { short: 'Kernaussagen & wichtige Punkte', medium: 'Ausgewogene Analyse mit Details · inkl. Tabellen', long: 'Umfassende Analyse mit tiefen Einblicken · mit Tabellen & Grafiken' },
       create:  { short: 'Kompaktes, präzises Ergebnis',   medium: 'Ausgewogenes, vollständiges Dokument', long: 'Ausführliches, tiefes Ergebnis' }
     },
     en: {
-      analyse: { short: 'Key findings & important points', medium: 'Balanced analysis with details', long: 'Comprehensive analysis with deep insights' },
+      analyse: { short: 'Key findings & important points', medium: 'Balanced analysis with details · incl. tables', long: 'Comprehensive analysis with deep insights · with tables & charts' },
       create:  { short: 'Compact, precise result',         medium: 'Balanced, complete document',      long: 'Extensive, in-depth result' }
     }
   }
