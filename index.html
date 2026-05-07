@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Employee Agent</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=15" />
+  <link rel="stylesheet" href="style.css?v=16" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -871,29 +871,33 @@
         <h3 data-de="Welchen Dienst möchtest du nutzen?" data-en="Which service do you want to use?">Welchen Dienst möchtest du nutzen?</h3>
         <p data-de="Wähle eine Option — wir erledigen den Rest." data-en="Choose an option — we handle the rest.">Wähle eine Option — wir erledigen den Rest.</p>
         <div class="sp-grid">
-          <button class="sp-card" onclick="pickService('email')">
+          <button class="sp-card sp-card-soon" disabled>
+            <span class="sp-soon-badge" data-de="Demnächst" data-en="Coming soon">Demnächst</span>
             <div class="sp-icon">📧</div>
             <strong data-de="E-Mails sortieren" data-en="Sort Emails">E-Mails sortieren</strong>
             <p data-de="Sortiert & fasst deine E-Mails zusammen" data-en="Sorts & summarises your emails">Sortiert & fasst deine E-Mails zusammen</p>
-            <span class="sp-price" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
+            <span class="sp-price sp-price-soon" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
           </button>
-          <button class="sp-card" onclick="pickService('report')">
+          <button class="sp-card sp-card-featured" onclick="pickService('report')">
+            <span class="sp-available-badge" data-de="✅ Verfügbar" data-en="✅ Available">✅ Verfügbar</span>
             <div class="sp-icon">📊</div>
             <strong data-de="Bericht erstellen" data-en="Create Report">Bericht erstellen</strong>
             <p data-de="Professioneller Geschäftsbericht" data-en="Professional business report">Professioneller Geschäftsbericht</p>
             <span class="sp-price" data-de="ab €1,49" data-en="from €1.49">ab €1,49</span>
           </button>
-          <button class="sp-card" onclick="pickService('reply')">
+          <button class="sp-card sp-card-soon" disabled>
+            <span class="sp-soon-badge" data-de="Demnächst" data-en="Coming soon">Demnächst</span>
             <div class="sp-icon">✉️</div>
             <strong data-de="Antworten schreiben" data-en="Write Replies">Antworten schreiben</strong>
             <p data-de="Professionelle Antworten auf Nachrichten" data-en="Professional replies to messages">Professionelle Antworten auf Nachrichten</p>
-            <span class="sp-price" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
+            <span class="sp-price sp-price-soon" data-de="ab €0,99" data-en="from €0.99">ab €0,99</span>
           </button>
-          <button class="sp-card" onclick="pickService('document')">
+          <button class="sp-card sp-card-soon" disabled>
+            <span class="sp-soon-badge" data-de="Demnächst" data-en="Coming soon">Demnächst</span>
             <div class="sp-icon">📝</div>
             <strong data-de="Dokument erstellen" data-en="Create Document">Dokument erstellen</strong>
             <p data-de="Strukturiertes, professionelles Dokument" data-en="Structured, professional document">Strukturiertes, professionelles Dokument</p>
-            <span class="sp-price" data-de="ab €1,49" data-en="from €1.49">ab €1,49</span>
+            <span class="sp-price sp-price-soon" data-de="ab €1,49" data-en="from €1.49">ab €1,49</span>
           </button>
         </div>
       </div>
@@ -976,10 +980,10 @@
               </button>
               <div class="form-service-dropdown" id="form-service-dropdown" style="display:none;">
                 <button type="button" onclick="selectShortcut('pdf');closeServiceDropdown();" data-de="📄 PDF analysieren" data-en="📄 Analyse PDF">📄 PDF analysieren</button>
-                <button type="button" onclick="selectShortcut('email');closeServiceDropdown();" data-de="📧 E-Mails sortieren" data-en="📧 Sort emails">📧 E-Mails sortieren</button>
                 <button type="button" onclick="selectShortcut('report');closeServiceDropdown();" data-de="📊 Bericht erstellen" data-en="📊 Create report">📊 Bericht erstellen</button>
-                <button type="button" onclick="selectShortcut('reply');closeServiceDropdown();" data-de="✉️ E-Mail schreiben" data-en="✉️ Write email">✉️ E-Mail schreiben</button>
-                <button type="button" onclick="selectShortcut('document');closeServiceDropdown();" data-de="📝 Dokument erstellen" data-en="📝 Create document">📝 Dokument erstellen</button>
+                <button type="button" class="dropdown-soon" disabled data-de="📧 E-Mails sortieren — Demnächst" data-en="📧 Sort emails — Coming soon">📧 E-Mails sortieren <span class="dropdown-soon-tag">Demnächst</span></button>
+                <button type="button" class="dropdown-soon" disabled data-de="✉️ E-Mail schreiben — Demnächst" data-en="✉️ Write email — Coming soon">✉️ E-Mail schreiben <span class="dropdown-soon-tag">Demnächst</span></button>
+                <button type="button" class="dropdown-soon" disabled data-de="📝 Dokument erstellen — Demnächst" data-en="📝 Create document — Coming soon">📝 Dokument erstellen <span class="dropdown-soon-tag">Demnächst</span></button>
               </div>
             </div>
           </div>

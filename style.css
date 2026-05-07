@@ -1709,3 +1709,17 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .rh-preview-footer { padding: 14px 22px; border-top: 1px solid #f1f5f9; display: flex; gap: 10px; }
 .rh-export-btn { font-size: 12px; font-weight: 700; color: var(--blue); background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
 @media (max-width: 900px) { .rh-wrap { grid-template-columns: 1fr; gap: 40px; } .rh-left h2 { font-size: 32px; } .rh-right { display: none; } }
+
+/* SP-CARD STATES */
+.sp-card { position: relative; }
+.sp-card-soon { opacity: 0.55; cursor: not-allowed !important; }
+.sp-card-soon:hover { transform: none !important; box-shadow: none !important; }
+.sp-soon-badge { position: absolute; top: 10px; right: 10px; background: #f59e0b; color: white; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; letter-spacing: .3px; }
+.sp-available-badge { position: absolute; top: 10px; right: 10px; background: #16a34a; color: white; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; letter-spacing: .3px; }
+.sp-price-soon { opacity: 0.5; }
+.sp-card-featured { border: 2px solid rgba(37,99,235,0.4) !important; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%) !important; }
+
+/* DROPDOWN SOON ITEMS */
+.form-service-dropdown .dropdown-soon { opacity: 0.5; cursor: not-allowed !important; display: flex !important; align-items: center; justify-content: space-between; }
+.form-service-dropdown .dropdown-soon:hover { background: none !important; color: var(--dark) !important; }
+.dropdown-soon-tag { font-size: 10px; font-weight: 800; background: #f59e0b; color: white; padding: 2px 7px; border-radius: 20px; margin-left: 8px; flex-shrink: 0; }
