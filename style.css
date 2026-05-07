@@ -1725,7 +1725,7 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .dropdown-soon-tag { font-size: 10px; font-weight: 800; background: #f59e0b; color: white; padding: 2px 7px; border-radius: 20px; margin-left: 8px; flex-shrink: 0; }
 
 /* SOCIAL PROOF STRIP */
-.social-strip { background: var(--lighter); padding: 28px 24px 80px; border-bottom: 1px solid rgba(37,99,235,0.08); }
+.social-strip { background: var(--lighter); padding: 28px 24px; border-bottom: 1px solid rgba(37,99,235,0.08); }
 .social-strip-label { text-align: center; font-size: 13px; color: var(--gray); font-weight: 600; margin-bottom: 16px; }
 .social-strip-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .ssl-item { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #475569; }
