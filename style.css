@@ -1643,7 +1643,7 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .trust-card p strong { color: #cbd5e1; }
 .trust-card p em { color: #ef4444; font-style: normal; font-weight: 700; }
 .trust-contact {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap;
   font-size: 15px; color: #64748b;
 }
 .trust-contact-link { color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 16px; }
