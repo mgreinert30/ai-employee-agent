@@ -5712,7 +5712,6 @@ function toggleChat() {
 function sendQuickReply(btn) {
   const de = currentLang !== 'en';
   const text = de ? btn.dataset.de : btn.dataset.en;
-  document.getElementById('chat-quick-replies')?.remove();
   sendChatMessage(text);
 }
 
