@@ -2834,12 +2834,11 @@ function downloadPDF(length) {
   doc.setGState(doc.GState({ opacity: 1 }));
 
   // ── Logo (oben rechts, falls hochgeladen) ──
-  if (window.brandLogo) {
+  if (window.brandLogo && !window.brandLogo.startsWith('data:image/svg')) {
     try {
-      const fmt = window.brandLogo.startsWith('data:image/png') ? 'PNG'
-        : window.brandLogo.startsWith('data:image/svg') ? 'SVG'
-        : 'JPEG';
-      doc.addImage(window.brandLogo, fmt, pageW - mR - 48, 8, 48, 20, '', 'FAST');
+      const fmt = window.brandLogo.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      const base64 = window.brandLogo.split(',')[1]; // jsPDF braucht reinen Base64 ohne Prefix
+      if (base64) doc.addImage(base64, fmt, pageW - mR - 48, 8, 48, 20, '', 'FAST');
     } catch (_) {}
   }
 

@@ -11,11 +11,12 @@ const MODELS = [
   'gemini-1.5-flash',       // fallback 3: older but widely available
 ];
 
-// Conservative limits: Gemini Flash ≈ 100 tok/s → 2048=~20s, 4096=~40s, 6144=~55s
+// Streaming keeps connection alive — limits only bound by 60s function timeout
+// Gemini 2.5 Flash ≈ 200 tok/s: short=~10s, medium=~25s, long=~50s
 const TOKEN_LIMITS = {
   short:  2048,
-  medium: 4096,
-  long:   6144,
+  medium: 5000,
+  long:   10000,
 };
 
 const MAX_PROMPT_CHARS = 30000;
