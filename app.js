@@ -3549,6 +3549,7 @@ function downloadHTMLReport() {
 </head>
 <body>
 <div class="header">
+  ${window.brandLogo ? `<img src="${window.brandLogo}" style="max-height:48px;max-width:160px;object-fit:contain;margin-bottom:10px;display:block;" alt="Logo" />` : ''}
   <h1>✅ ${currentLang === 'de' ? 'Aufgabe abgeschlossen' : 'Task complete'}</h1>
   <p>${currentLang === 'de' ? `Erstellt von ${charName} • ${today}` : `Created by ${charName} • ${today}`}</p>
 </div>
@@ -4442,6 +4443,36 @@ function pickBrandColor(hex, btn) {
   if (btn) btn.classList.add('active-swatch');
   const custom = document.getElementById('brand-color-custom');
   if (custom) custom.value = hex;
+}
+
+// ── Logo Upload ──
+function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    window.brandLogo = e.target.result;
+    const preview = document.getElementById('logo-preview');
+    const placeholder = document.getElementById('logo-upload-placeholder');
+    const removeBtn = document.getElementById('logo-remove-btn');
+    const area = document.getElementById('logo-upload-area');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = 'inline-block';
+    area.classList.add('has-logo');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo() {
+  window.brandLogo = null;
+  document.getElementById('logo-preview').style.display = 'none';
+  document.getElementById('logo-preview').src = '';
+  document.getElementById('logo-upload-placeholder').style.display = 'flex';
+  document.getElementById('logo-remove-btn').style.display = 'none';
+  document.getElementById('logo-upload-area').classList.remove('has-logo');
+  document.getElementById('logo-file-input').value = '';
 }
 
 function pickBrandDark(hex, btn) {

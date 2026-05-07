@@ -1065,6 +1065,24 @@
           </div>
         </div>
 
+        <!-- Card 1b: Logo upload -->
+        <div class="form-step-card">
+          <div class="form-step-badge" style="background:#6366f1;">🖼</div>
+          <div class="form-step-body">
+            <div class="form-step-label" data-de="Logo <span class='form-label-opt'>(optional)</span>" data-en="Logo <span class='form-label-opt'>(optional)</span>">Logo <span class="form-label-opt">(optional)</span></div>
+            <p class="form-step-hint" data-de="Lade dein Firmenlogo hoch — es erscheint auf dem PDF-Bericht." data-en="Upload your company logo — it will appear on the PDF report.">Lade dein Firmenlogo hoch — es erscheint auf dem PDF-Bericht.</p>
+            <div class="logo-upload-area" id="logo-upload-area" onclick="document.getElementById('logo-file-input').click()">
+              <img id="logo-preview" src="" alt="" style="display:none; max-height:60px; max-width:200px; object-fit:contain;" />
+              <span id="logo-upload-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span data-de="Klicken zum Hochladen (PNG, JPG, SVG)" data-en="Click to upload (PNG, JPG, SVG)">Klicken zum Hochladen (PNG, JPG, SVG)</span>
+              </span>
+            </div>
+            <input type="file" id="logo-file-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="handleLogoUpload(event)" />
+            <button id="logo-remove-btn" onclick="removeLogo()" style="display:none;" class="btn-link" data-de="✕ Logo entfernen" data-en="✕ Remove logo">✕ Logo entfernen</button>
+          </div>
+        </div>
+
         <!-- Card 2: Service selector -->
         <div class="form-step-card">
           <div class="form-step-badge">2</div>
