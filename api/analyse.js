@@ -123,9 +123,11 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const maxTokens = TOKEN_LIMITS[analysisLength] || TOKEN_LIMITS.medium;
 
-  // Only enable web search for text-only tasks — PDF/image analysis already has
-  // its own context and search grounding adds 10-20s latency that causes 504 timeouts.
-  const useSearch = !hasFile && !hasImages;
+  // Search grounding: text-only tasks always get it; small PDFs (≤4 pages via
+  // inline images) also get it for extra context. Large PDFs and File API uploads
+  // skip it — the added latency would push past the 60s Vercel timeout.
+  const smallPDF  = hasImages && images.length <= 4;
+  const useSearch = !hasFile && (!hasImages || smallPDF);
 
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
