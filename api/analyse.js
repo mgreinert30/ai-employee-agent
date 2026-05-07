@@ -59,7 +59,7 @@ async function callGemini(model, apiKey, body, retries = 1) {
 
 // Token limits tuned to finish well within 60s on Vercel Hobby plan
 const TOKEN_LIMITS = {
-  short:  2048,
+  short:  4096,
   medium: 8192,
   long:   16384,
 };

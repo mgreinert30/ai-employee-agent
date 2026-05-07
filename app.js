@@ -4918,20 +4918,38 @@ NEXT STEPS
   // Calculate page-count-based targets (#2 — length control)
   const depthInstructions = {
     short: isDE
-      ? `AUSGABELÄNGE: KURZ — STRIKT 1 bis maximal 2,5 Seiten (ca. 400-600 Wörter). HALTE DIESE GRENZE EIN.
-• FALLS die Aufgabe eine konkrete Frage enthält: Beginne mit der DIREKTANTWORT (✅ Ja, weil... / ❌ Nein, weil... / ⚠️ Kommt darauf an...) und liefere dann 3-5 kompakte Fakten als Begründung. Das ist alles.
-• FALLS keine konkrete Frage: NUR die 3-5 wichtigsten Kernaussagen als kompakte Zusammenfassung.
-• KEINE Grafiken — absolut verboten.
-• KEINE Tabellen — absolut verboten.
-• Kein Fließtext, keine Wiederholungen, keine Hintergründe.
-• Jeder Satz trägt einen eigenständigen Informationswert. Nach 600 Wörtern ist Schluss.`
-      : `OUTPUT LENGTH: SHORT — STRICTLY 1 to maximum 2.5 pages (approx. 400-600 words). RESPECT THIS LIMIT.
-• IF the task contains a concrete question: Start with the DIRECT ANSWER (✅ Yes, because... / ❌ No, because... / ⚠️ It depends...) then give 3-5 compact facts as justification. That is all.
-• IF no concrete question: ONLY the 3-5 most important key findings as a compact summary.
-• NO charts — absolutely forbidden.
-• NO tables — absolutely forbidden.
-• No prose, no repetition, no background.
-• Every sentence must carry independent information value. Stop at 600 words.`,
+      ? `AUSGABELÄNGE: KURZ — MINDESTENS 1 vollständige Seite, maximal 2 Seiten (ca. 450-700 Wörter). UNTERSCHREITE DIE MINDESTLÄNGE NICHT.
+PFLICHTSTRUKTUR — schreibe immer alle 4 Blöcke vollständig aus:
+
+**ZUSAMMENFASSUNG**
+2-3 Sätze: Worum geht es? Was ist das Kernthema des Dokuments?
+
+**WICHTIGSTE ERKENNTNISSE**
+Die 4-6 entscheidenden Punkte — jeweils 2-3 Sätze mit Begründung, nicht nur Stichworte.
+
+**KRITISCHE PUNKTE / RISIKEN**
+Was ist auffällig, problematisch oder besonders wichtig? Mindestens 2 Punkte ausformuliert.
+
+**EMPFEHLUNG**
+1-2 klare Handlungsempfehlungen — konkret und umsetzbar.
+
+Regeln: Kein Fließtext-Padding. Keine Wiederholungen. Jeder Satz trägt Informationswert. Aber: Schreibe vollständige Sätze, keine reinen Stichpunkte.`
+      : `OUTPUT LENGTH: SHORT — MINIMUM 1 full page, maximum 2 pages (approx. 450-700 words). DO NOT GO BELOW MINIMUM LENGTH.
+REQUIRED STRUCTURE — always write all 4 blocks in full:
+
+**SUMMARY**
+2-3 sentences: What is this about? What is the core topic of the document?
+
+**KEY FINDINGS**
+The 4-6 most important points — each 2-3 sentences with reasoning, not just keywords.
+
+**CRITICAL POINTS / RISKS**
+What stands out, is problematic or particularly important? At least 2 points written out fully.
+
+**RECOMMENDATION**
+1-2 clear action recommendations — specific and actionable.
+
+Rules: No padding. No repetition. Every sentence must carry information value. But: write complete sentences, not just bullet points.`,
     medium: isDE
       ? `AUSGABELÄNGE: MITTEL — ZIEL 10 bis 20 Seiten (ca. 3000-5500 Wörter). Fülle diesen Rahmen vollständig aus.
 • Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
