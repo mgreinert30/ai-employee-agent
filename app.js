@@ -2833,6 +2833,16 @@ function downloadPDF(length) {
   dotPositions.forEach(([dx, dy, r]) => doc.circle(dx, dy, r, 'F'));
   doc.setGState(doc.GState({ opacity: 1 }));
 
+  // ── Logo (oben rechts, falls hochgeladen) ──
+  if (window.brandLogo) {
+    try {
+      const fmt = window.brandLogo.startsWith('data:image/png') ? 'PNG'
+        : window.brandLogo.startsWith('data:image/svg') ? 'SVG'
+        : 'JPEG';
+      doc.addImage(window.brandLogo, fmt, pageW - mR - 48, 8, 48, 20, '', 'FAST');
+    } catch (_) {}
+  }
+
   // ── Chips row ──
   const chipY = 22;
   const chipW = doc.getTextWidth(dtLabel) + 16;
