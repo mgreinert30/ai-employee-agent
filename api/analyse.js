@@ -123,9 +123,13 @@ CRITICAL INSTRUCTIONS FOR VISUAL CONTENT:
 
   const maxTokens = TOKEN_LIMITS[analysisLength] || TOKEN_LIMITS.medium;
 
+  // Only enable web search for text-only tasks — PDF/image analysis already has
+  // its own context and search grounding adds 10-20s latency that causes 504 timeouts.
+  const useSearch = !hasFile && !hasImages;
+
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
-    tools: [{ googleSearch: {} }],
+    ...(useSearch ? { tools: [{ googleSearch: {} }] } : {}),
     generationConfig: {
       maxOutputTokens: maxTokens,
       temperature: 0.3, topP: 0.9, topK: 40,
