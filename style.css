@@ -1231,8 +1231,8 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 /* =============================================
    CHARACTER SECTION UPGRADES
    ============================================= */
-.char-bubble { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px 14px 14px 4px; padding: 14px 16px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.55; margin-bottom: 18px; position: relative; font-style: italic; }
-.char-bubble::after { content: ''; position: absolute; bottom: -10px; left: 18px; border: 5px solid transparent; border-top-color: rgba(255,255,255,0.12); }
+.char-bubble { background: #f0f5ff; border: 1px solid #dbeafe; border-radius: 14px 14px 14px 4px; padding: 10px 14px; font-size: 12px; color: #1e293b; line-height: 1.5; margin-bottom: 14px; position: relative; font-style: italic; }
+.char-bubble::after { content: ''; position: absolute; bottom: -10px; left: 18px; border: 5px solid transparent; border-top-color: #dbeafe; }
 .char-skills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 16px; }
 .char-skill { background: rgba(37,99,235,0.12); border: 1px solid rgba(37,99,235,0.25); color: #1e293b; font-size: 11px; padding: 4px 10px; border-radius: 99px; font-weight: 600; }
 
