@@ -2282,18 +2282,23 @@ function parseResultBlocks(text) {
 
     afterDivider = false;
 
-    // [CHART:type|title|label:val,label:val,...]
-    const chartMatch = t.match(/^\[CHART:(line|bar|pie)\|([^|]+)\|(.+)\]$/i);
-    if (chartMatch) {
-      const chartType = chartMatch[1].toLowerCase();
-      const title = chartMatch[2].trim();
-      const data = [];
-      const pairRe = /([^,]+?):([-+]?\d+(?:\.\d+)?)/g;
-      let pm;
-      while ((pm = pairRe.exec(chartMatch[3])) !== null) {
-        data.push({ label: pm[1].trim(), value: parseFloat(pm[2]) });
+    // [CHART:type|title|label:val,...|palette:X]
+    if (/^\[CHART:/i.test(t)) {
+      const paletteHit = t.match(/\|palette:(\w+)\]$/i);
+      const palette    = paletteHit ? paletteHit[1].toLowerCase() : 'default';
+      const stripped   = paletteHit ? t.replace(/\|palette:\w+(\])$/i, '$1') : t;
+      const chartMatch = stripped.match(/^\[CHART:(line|bar|pie)\|([^|]+)\|(.+)\]$/i);
+      if (chartMatch) {
+        const chartType = chartMatch[1].toLowerCase();
+        const title = chartMatch[2].trim();
+        const data = [];
+        const pairRe = /([^,]+?):([-+]?\d+(?:\.\d+)?)/g;
+        let pm;
+        while ((pm = pairRe.exec(chartMatch[3])) !== null) {
+          data.push({ label: pm[1].trim(), value: parseFloat(pm[2]) });
+        }
+        if (data.length >= 2) blocks.push({ type: 'chart', chartType, title, data, palette });
       }
-      if (data.length >= 2) blocks.push({ type: 'chart', chartType, title, data });
       continue;
     }
 
@@ -2455,40 +2460,123 @@ function renderResultRich(text) {
   });
 }
 
+// Vibrant palettes — chosen based on document topic/industry
+const CHART_PALETTES = {
+  finance:   ['#2563eb','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#0284c7'],
+  growth:    ['#10b981','#06b6d4','#2563eb','#84cc16','#14b8a6','#22d3ee','#4ade80','#34d399'],
+  costs:     ['#ef4444','#f97316','#f59e0b','#eab308','#dc2626','#fb923c','#b45309','#fbbf24'],
+  marketing: ['#8b5cf6','#ec4899','#f59e0b','#06b6d4','#10b981','#2563eb','#f43f5e','#a78bfa'],
+  tech:      ['#06b6d4','#2563eb','#8b5cf6','#10b981','#e879f9','#0ea5e9','#7c3aed','#14b8a6'],
+  hr:        ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#2563eb','#ec4899','#14b8a6','#a78bfa'],
+  logistics: ['#f59e0b','#f97316','#10b981','#2563eb','#06b6d4','#fbbf24','#34d399','#60a5fa'],
+  warm:      ['#ef4444','#f97316','#f59e0b','#fbbf24','#fb923c','#fca5a5','#dc2626','#b45309'],
+  cool:      ['#2563eb','#06b6d4','#0ea5e9','#0284c7','#38bdf8','#7c3aed','#4f46e5','#14b8a6'],
+  default:   ['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316','#14b8a6'],
+};
+
+function getPaletteColors(palette, count) {
+  const pal = CHART_PALETTES[palette] || CHART_PALETTES.default;
+  return Array.from({ length: count }, (_, i) => pal[i % pal.length]);
+}
+
+function hexToRgba(hex, alpha) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `rgba(${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)},${alpha})` : hex;
+}
+
 function renderChartOnCanvas(canvas, block) {
   if (typeof Chart === 'undefined') return;
-  const colors = block.data.map((_, i) => `hsl(${(210 + i * 42) % 360}, 65%, 58%)`);
-  const accent = getBrandColors().accent;
-  const accentRgba = `rgba(${accent.join(',')},0.82)`;
-  const accentRgb = `rgb(${accent.join(',')})`;
+  const n      = block.data.length;
+  const colors = getPaletteColors(block.palette || 'default', n);
+  const isDark = canvas.closest?.('.r-chart-wrap') !== null;
 
-  new Chart(canvas, {
-    type: block.chartType,
-    data: {
-      labels: block.data.map(d => d.label),
-      datasets: [{
-        label: block.title,
-        data: block.data.map(d => d.value),
-        backgroundColor: block.chartType === 'pie' ? colors : accentRgba,
-        borderColor: block.chartType === 'pie' ? colors.map(c => c.replace('58%', '45%')) : accentRgb,
-        borderWidth: 2,
-        fill: block.chartType === 'line',
-        tension: 0.35,
-      }]
-    },
-    options: {
-      animation: { duration: 500 },
-      responsive: true,
-      plugins: {
-        legend: { display: block.chartType === 'pie', labels: { color: '#cbd5e1', font: { size: 12 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y ?? ctx.parsed}` } }
+  const baseOpts = {
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    responsive: true,
+    plugins: {
+      legend: {
+        display: block.chartType === 'pie',
+        position: 'bottom',
+        labels: { color: '#475569', font: { size: 12, weight: '600' }, padding: 16, boxWidth: 12, boxHeight: 12 }
       },
-      scales: block.chartType === 'pie' ? {} : {
-        x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.07)' } }
+      tooltip: {
+        backgroundColor: 'rgba(15,23,42,0.92)',
+        titleColor: '#f1f5f9',
+        bodyColor: '#cbd5e1',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
       }
-    }
-  });
+    },
+  };
+
+  if (block.chartType === 'pie') {
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: block.data.map(d => d.label),
+        datasets: [{ data: block.data.map(d => d.value), backgroundColor: colors, borderColor: '#ffffff', borderWidth: 3, hoverOffset: 8 }]
+      },
+      options: { ...baseOpts, cutout: '52%' }
+    });
+  } else if (block.chartType === 'bar') {
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: block.data.map(d => d.label),
+        datasets: [{
+          label: block.title,
+          data: block.data.map(d => d.value),
+          backgroundColor: colors.map(c => hexToRgba(c, 0.88)),
+          borderColor: colors,
+          borderWidth: 2,
+          borderRadius: 7,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        ...baseOpts,
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 11, weight: '600' } }, grid: { display: false }, border: { display: false } },
+          y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false } }
+        }
+      }
+    });
+  } else {
+    // Line chart — gradient fill
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height || 220);
+    grad.addColorStop(0, hexToRgba(colors[0], 0.35));
+    grad.addColorStop(1, hexToRgba(colors[0], 0.02));
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: block.data.map(d => d.label),
+        datasets: [{
+          label: block.title,
+          data: block.data.map(d => d.value),
+          backgroundColor: grad,
+          borderColor: colors[0],
+          borderWidth: 3,
+          pointBackgroundColor: colors.map((c, i) => colors[i % colors.length]),
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          fill: true,
+          tension: 0.4,
+        }]
+      },
+      options: {
+        ...baseOpts,
+        scales: {
+          x: { ticks: { color: '#64748b', font: { size: 11, weight: '600' } }, grid: { display: false }, border: { display: false } },
+          y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false } }
+        }
+      }
+    });
+  }
 }
 
 // ── Step 2: render blocks into jsPDF ───────────────────────────────────────
@@ -3029,24 +3117,35 @@ function downloadPDF(length) {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...navy);
         doc.text(safe(b.title), mL, y + 4); y += 9;
         const cvs = document.createElement('canvas');
-        cvs.width = 900; cvs.height = 380;
+        cvs.width = 900; cvs.height = 400;
         document.body.appendChild(cvs);
-        const clrs = b.data.map((_, i) => `hsl(${(210 + i * 42) % 360},65%,50%)`);
-        const acRgb = `rgb(${accent.join(',')})`;
+        const clrs = getPaletteColors(b.palette || 'default', b.data.length);
+        const clrsAlpha = clrs.map(c => hexToRgba(c, 0.88));
         try {
-          const ch = new Chart(cvs, {
-            type: b.chartType,
-            data: {
-              labels: b.data.map(d => d.label),
-              datasets: [{
-                label: b.title, data: b.data.map(d => d.value),
-                backgroundColor: b.chartType === 'pie' ? clrs : `rgba(${accent.join(',')},0.75)`,
-                borderColor: b.chartType === 'pie' ? clrs : acRgb,
-                borderWidth: 2, fill: false, tension: 0.35
-              }]
-            },
-            options: { animation: false, responsive: false, plugins: { legend: { display: b.chartType === 'pie' } } }
-          });
+          let chartCfg;
+          if (b.chartType === 'pie') {
+            chartCfg = {
+              type: 'doughnut',
+              data: { labels: b.data.map(d => d.label), datasets: [{ data: b.data.map(d => d.value), backgroundColor: clrs, borderColor: '#ffffff', borderWidth: 3 }] },
+              options: { animation: false, responsive: false, cutout: '50%', plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 14 }, color: '#334155' } } } }
+            };
+          } else if (b.chartType === 'bar') {
+            chartCfg = {
+              type: 'bar',
+              data: { labels: b.data.map(d => d.label), datasets: [{ label: b.title, data: b.data.map(d => d.value), backgroundColor: clrsAlpha, borderColor: clrs, borderWidth: 2, borderRadius: 8, borderSkipped: false }] },
+              options: { animation: false, responsive: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 13, weight: '600' }, color: '#475569' } }, y: { grid: { color: 'rgba(0,0,0,0.07)' }, ticks: { font: { size: 12 }, color: '#64748b' } } }, plugins: { legend: { display: false } } }
+            };
+          } else {
+            const ctx2 = cvs.getContext('2d');
+            const grad = ctx2.createLinearGradient(0, 0, 0, 400);
+            grad.addColorStop(0, hexToRgba(clrs[0], 0.30)); grad.addColorStop(1, hexToRgba(clrs[0], 0.02));
+            chartCfg = {
+              type: 'line',
+              data: { labels: b.data.map(d => d.label), datasets: [{ label: b.title, data: b.data.map(d => d.value), backgroundColor: grad, borderColor: clrs[0], borderWidth: 3, pointBackgroundColor: clrs, pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 6, fill: true, tension: 0.4 }] },
+              options: { animation: false, responsive: false, scales: { x: { grid: { display: false }, ticks: { font: { size: 13, weight: '600' }, color: '#475569' } }, y: { grid: { color: 'rgba(0,0,0,0.07)' }, ticks: { font: { size: 12 }, color: '#64748b' } } }, plugins: { legend: { display: false } } }
+            };
+          }
+          const ch = new Chart(cvs, chartCfg);
           const imgData = cvs.toDataURL('image/png');
           ch.destroy();
           const imgH = cW * (cvs.height / cvs.width);
@@ -4832,18 +4931,20 @@ NEXT STEPS
 • Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
 • TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als hochwertige Markdown-Tabelle mit klaren Spaltenüberschriften.
 • GRAFIKEN PFLICHT — mindestens 3, maximal 6 hochwertige Grafiken:
-  - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...]
-  - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...]
-  - Wichtigste Anteile → [CHART:pie|Titel|Kat:Wert,...]
+  - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...|palette:X]
+  - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...|palette:X]
+  - Wichtigste Anteile → [CHART:pie|Titel|Kat:Wert,...|palette:X]
+  FARB-PALETTE — wähle passend zum Inhalt: finance (Bilanzen/Umsatz) · growth (Wachstum) · costs (Kosten/Verlust) · marketing (Marketing) · tech (Technologie) · hr (Personal) · logistics (Logistik) · warm (Warnungen/Risiken) · cool (Neutral/Übersicht)
 • Kennzahlen-Abschnitt vollständig befüllen.
 • Risiken und Chancen jeweils mit Begründung und Handlungsempfehlung.`
       : `OUTPUT LENGTH: MEDIUM — TARGET 10 to 20 pages (approx. 3000-5500 words). Fill this scope completely.
 • Every section thorough with context, reasoning and concrete figures.
 • TABLES MANDATORY: Every data series, comparison, pros/cons → as high-quality Markdown table with clear column headers.
 • CHARTS MANDATORY — minimum 3, maximum 6 high-quality charts:
-  - Most important trend over time → [CHART:line|Title|Year:Value,...]
-  - Most important category comparison → [CHART:bar|Title|Cat:Value,...]
-  - Most important shares → [CHART:pie|Title|Cat:Value,...]
+  - Most important trend over time → [CHART:line|Title|Year:Value,...|palette:X]
+  - Most important category comparison → [CHART:bar|Title|Cat:Value,...|palette:X]
+  - Most important shares → [CHART:pie|Title|Cat:Value,...|palette:X]
+  COLOR PALETTE — choose based on content: finance (balance/revenue) · growth (growth metrics) · costs (costs/loss) · marketing (campaigns) · tech (technology) · hr (people/staff) · logistics (operations) · warm (warnings/risk) · cool (neutral/overview)
 • Fill the key metrics section completely.
 • Risks and opportunities each with justification and recommended action.`,
     long: isDE
@@ -4851,9 +4952,10 @@ NEXT STEPS
 • MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt.
 • TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe, jede Aufzählung → Markdown-Tabelle mit allen Details. Kein Fließtext für Daten.
 • GRAFIKEN PFLICHT — mindestens 6 bis 10 hochwertige Grafiken, alle relevanten Typen nutzen:
-  - Zeitliche Entwicklungen → [CHART:line|Titel|Jahr:Wert,...]
-  - Kategorienvergleiche → [CHART:bar|Titel|Kat:Wert,...]
-  - Anteile und Verteilungen → [CHART:pie|Titel|Kat:Wert,...]
+  - Zeitliche Entwicklungen → [CHART:line|Titel|Jahr:Wert,...|palette:X]
+  - Kategorienvergleiche → [CHART:bar|Titel|Kat:Wert,...|palette:X]
+  - Anteile und Verteilungen → [CHART:pie|Titel|Kat:Wert,...|palette:X]
+  FARB-PALETTE — wähle passend zum Inhalt: finance · growth · costs · marketing · tech · hr · logistics · warm · cool
 • TIEFEN-ANALYSE in allen 5 Dimensionen vollständig — keine Dimension darf verkürzt werden.
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
 • Alle Abschnitte auf maximale Substanz — kein Abschnitt kürzer als 5 Sätze.
@@ -4862,9 +4964,10 @@ NEXT STEPS
 • MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained.
 • TABLES EVERYWHERE: every list, comparison, data series, enumeration → Markdown table with all details. No prose for data.
 • CHARTS MANDATORY — minimum 6 to 10 high-quality charts, use all relevant types:
-  - Time trends → [CHART:line|Title|Year:Value,...]
-  - Category comparisons → [CHART:bar|Title|Cat:Value,...]
-  - Shares and distributions → [CHART:pie|Title|Cat:Value,...]
+  - Time trends → [CHART:line|Title|Year:Value,...|palette:X]
+  - Category comparisons → [CHART:bar|Title|Cat:Value,...|palette:X]
+  - Shares and distributions → [CHART:pie|Title|Cat:Value,...|palette:X]
+  COLOR PALETTE — choose based on content: finance · growth · costs · marketing · tech · hr · logistics · warm · cool
 • DEEP ANALYSIS in all 5 dimensions fully developed — no dimension may be shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
 • All sections at maximum substance — no section shorter than 5 sentences.
@@ -4946,10 +5049,11 @@ KERNREGELN — NIEMALS BRECHEN:
 7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
 9. GRAFIKEN: Maximal 1-5 essentielle Grafiken — nur für die wichtigsten Erkenntnisse, NIE für jede Zahl. Qualität vor Quantität. NUR wenn mindestens 4 reale Datenpunkte vorliegen:
-   • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,2022:Wert,...] (nur Zahlen, ohne Einheit)
-   • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
-   • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,KatC:Wert,...]
-   Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
+   • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
+   • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:X]
+   • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:X]
+   Paletten (passend zum Inhalt wählen): finance · growth · costs · marketing · tech · hr · logistics · warm · cool
+   Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8|palette:finance]
 10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
 11. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
 12. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
