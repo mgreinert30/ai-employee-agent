@@ -537,9 +537,9 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 /* =====================
    CHARACTER SELECTOR
    ===================== */
-.character-section { background: white; padding: 70px 24px; text-align: center; border-bottom: 2px solid var(--light); }
-.character-section h2 { font-size: 32px; font-weight: 900; margin-bottom: 10px; letter-spacing: -0.5px; }
-.character-section > p { color: var(--gray); font-size: 16px; margin-bottom: 44px; }
+.character-section { background: white; padding: 40px 24px 60px; text-align: center; border-bottom: 2px solid var(--light); }
+.character-section h2 { font-size: 28px; font-weight: 900; margin-bottom: 6px; letter-spacing: -0.5px; color: var(--dark); }
+.character-section > p { color: var(--dark); font-size: 14px; margin-bottom: 32px; }
 .character-cards { display: flex; gap: 36px; justify-content: center; flex-wrap: wrap; }
 .character-card {
   position: relative; background: var(--lighter);
