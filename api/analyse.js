@@ -1,46 +1,24 @@
-// Vercel Serverless Function — Gemini PDF Analysis
+// Vercel Serverless Function — Gemini PDF Analysis (streaming)
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 };
 
-// Two models only — fastest first, fallback if overloaded
-const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash'];
+// Model priority list — self-healing: deprecated models 404 and the next one is tried automatically
+const MODELS = [
+  'gemini-2.5-flash',       // primary: latest, fastest
+  'gemini-2.0-flash',       // fallback 1
+  'gemini-2.0-flash-lite',  // fallback 2
+  'gemini-1.5-flash',       // fallback 3: older but widely available
+];
 
 // Conservative limits: Gemini Flash ≈ 100 tok/s → 2048=~20s, 4096=~40s, 6144=~55s
-// Each model gets ONE shot — no retries that waste precious seconds.
 const TOKEN_LIMITS = {
-  short:  2048,   // ~15-20s
-  medium: 4096,   // ~30-40s
-  long:   6144,   // ~50-55s — tight but fits if first model responds
+  short:  2048,
+  medium: 4096,
+  long:   6144,
 };
 
-// Max prompt size — keeps transfer + processing time under control
 const MAX_PROMPT_CHARS = 30000;
-
-async function callGemini(model, apiKey, body) {
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-    );
-
-    let data;
-    try { data = await res.json(); } catch (_) {
-      return { error: `HTTP ${res.status} — no JSON` };
-    }
-
-    if (!res.ok || data.error) {
-      return { error: `HTTP ${res.status}: ${data.error?.message || JSON.stringify(data).slice(0, 120)}` };
-    }
-
-    const result = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!result) return { error: `empty response: ${JSON.stringify(data).slice(0, 120)}` };
-
-    return { result };
-  } catch (err) {
-    return { error: err.message };
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -85,7 +63,6 @@ export default async function handler(req, res) {
 
   const maxTokens = TOKEN_LIMITS[analysisLength] || TOKEN_LIMITS.medium;
 
-  // No Google Search grounding — adds 10-20s latency that causes 504 timeouts
   const geminiBody = JSON.stringify({
     contents: [{ parts }],
     generationConfig: {
@@ -94,17 +71,72 @@ export default async function handler(req, res) {
     },
   });
 
+  const pagesAnalysed = hasFile ? 'all' : hasImages ? images.length : 0;
   const allErrors = [];
 
   for (const model of MODELS) {
-    const { result, error } = await callGemini(model, apiKey, geminiBody);
-    if (result) {
-      return res.status(200).json({ result, model, pagesAnalysed: hasFile ? 'all' : hasImages ? images.length : 0 });
+    let geminiRes;
+    try {
+      geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: geminiBody }
+      );
+    } catch (err) {
+      allErrors.push(`[${model}] network error: ${err.message}`);
+      continue;
     }
-    allErrors.push(`[${model}] ${error}`);
-    // Only fall through to next model for retriable errors (overload/rate-limit)
-    if (!error?.includes('503') && !error?.includes('429') && !error?.includes('overload')) break;
+
+    if (!geminiRes.ok) {
+      let errMsg = `HTTP ${geminiRes.status}`;
+      try { const d = await geminiRes.json(); errMsg += `: ${d.error?.message || JSON.stringify(d).slice(0, 120)}`; } catch (_) {}
+      allErrors.push(`[${model}] ${errMsg}`);
+      // Skip to next model for: deprecated/unavailable (404), bad request (400), overload (503), rate-limit (429)
+      const retriable = geminiRes.status === 404 || geminiRes.status === 400
+        || geminiRes.status === 503 || geminiRes.status === 429;
+      if (!retriable) break;
+      continue;
+    }
+
+    // Model responded — start SSE stream back to client
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no'); // disable nginx/Vercel response buffering
+
+    // First event: metadata
+    res.write(`data: ${JSON.stringify({ model, pagesAnalysed })}\n\n`);
+
+    const reader = geminiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let lineBuffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split('\n');
+        lineBuffer = lines.pop(); // keep any incomplete line
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (!payload) continue;
+          try {
+            const evt = JSON.parse(payload);
+            const text = evt.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) res.write(`data: ${JSON.stringify({ chunk: text })}\n\n`);
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+    }
+
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+    return;
   }
 
+  // All models failed — fall back to JSON error response
   return res.status(500).json({ error: allErrors.join(' | '), allErrors });
 }

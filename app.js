@@ -5501,47 +5501,82 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
     analyseBody = { prompt, images: trimmedImages, analysisLength };
   }
 
-  // Always route through server proxy — API key stored securely in Vercel env vars
-  // On 504 timeout: auto-retry once with reduced settings (short length + max 3 images)
-  async function callAnalyse(body) {
-    return fetchWithTimeout('/api/analyse', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    }, 58000); // 58s — just under Vercel's 60s hard limit
+  // Stream from server — SSE keeps connection alive, prevents 504 timeouts permanently
+  const de = currentLang === 'de';
+  const abortCtrl = new AbortController();
+  const abortTimer = setTimeout(() => abortCtrl.abort(), 58000);
+
+  let fetchRes;
+  try {
+    fetchRes = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(analyseBody),
+      signal: abortCtrl.signal,
+    });
+  } catch (err) {
+    clearTimeout(abortTimer);
+    stopProgressAnimation();
+    throw new Error(err.name === 'AbortError'
+      ? (de ? 'Zeitüberschreitung — bitte kürzeres Dokument oder "Kurz" wählen.' : 'Timeout — try a shorter document or "Short" analysis.')
+      : err.message);
   }
 
-  let response = await callAnalyse(analyseBody);
-
-  // 504 timeout → retry with short analysis and at most 3 pages
-  if (response.status === 504 || response.status === 524) {
-    const de = currentLang === 'de';
-    startProgressAnimation(30, 70, 40000, de ? '⚡ Zu groß — wiederhole mit Kurzanalyse...' : '⚡ Too large — retrying with short analysis...');
-    const retryBody = {
-      ...analyseBody,
-      analysisLength: 'short',
-      images: analyseBody.images ? analyseBody.images.slice(0, 3) : undefined,
-    };
-    if (!retryBody.images) delete retryBody.images;
-    response = await callAnalyse(retryBody);
-  }
-
-  // Guard against non-JSON error responses (e.g. HTTP 413 "Request Entity Too Large")
-  let data;
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    const msg = response.status === 413
-      ? (currentLang === 'de' ? 'Dokument zu groß — bitte ein kürzeres PDF verwenden.' : 'Document too large — please use a shorter PDF.')
-      : `HTTP ${response.status}: ${text.slice(0, 120)}`;
+  if (!fetchRes.ok) {
+    clearTimeout(abortTimer);
+    const text = await fetchRes.text().catch(() => '');
+    const msg = fetchRes.status === 413
+      ? (de ? 'Dokument zu groß — bitte ein kürzeres PDF verwenden.' : 'Document too large — please use a shorter PDF.')
+      : `HTTP ${fetchRes.status}: ${text.slice(0, 200)}`;
     stopProgressAnimation();
     throw new Error(msg);
   }
-  try { data = await response.json(); } catch {
+
+  // Read SSE stream
+  const streamReader = fetchRes.body.getReader();
+  const dec = new TextDecoder();
+  let lineBuf = '';
+  const chunks = [];
+
+  try {
+    while (true) {
+      const { done, value } = await streamReader.read();
+      if (done) break;
+      lineBuf += dec.decode(value, { stream: true });
+      const lines = lineBuf.split('\n');
+      lineBuf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (!payload) continue;
+        try {
+          const evt = JSON.parse(payload);
+          if (evt.error) throw new Error(evt.error);
+          if (evt.pagesAnalysed !== undefined) window.lastAnalysedPages = evt.pagesAnalysed;
+          if (evt.chunk) {
+            chunks.push(evt.chunk);
+            // Nudge progress bar to show activity
+            const cur = parseInt(document.getElementById('progress-fill')?.style.width) || 75;
+            if (cur < 93) startProgressAnimation(cur, cur + 2, 800, de ? 'KI schreibt...' : 'AI writing...');
+          }
+        } catch (evtErr) {
+          clearTimeout(abortTimer);
+          throw evtErr;
+        }
+      }
+    }
+  } catch (err) {
+    clearTimeout(abortTimer);
     stopProgressAnimation();
-    throw new Error(currentLang === 'de' ? 'Ungültige Serverantwort erhalten.' : 'Invalid server response received.');
+    throw new Error(err.name === 'AbortError'
+      ? (de ? 'Zeitüberschreitung — bitte kürzeres Dokument oder "Kurz" wählen.' : 'Timeout — try a shorter document or "Short" analysis.')
+      : err.message);
   }
-  if (data.error) { stopProgressAnimation(); throw new Error(data.error); }
-  if (!data.result) { stopProgressAnimation(); throw new Error(currentLang === 'de' ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
-  result = data.result;
-  window.lastAnalysedPages = data.pagesAnalysed ?? totalPages;
+
+  clearTimeout(abortTimer);
+  result = chunks.join('');
+  if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
+  window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
 
   // Fire-and-forget: extract non-sensitive insights and store server-side
   fetch('/api/learn', {
