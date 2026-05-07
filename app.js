@@ -2837,8 +2837,19 @@ function downloadPDF(length) {
   if (window.brandLogo && !window.brandLogo.startsWith('data:image/svg')) {
     try {
       const fmt = window.brandLogo.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      const base64 = window.brandLogo.split(',')[1]; // jsPDF braucht reinen Base64 ohne Prefix
-      if (base64) doc.addImage(base64, fmt, pageW - mR - 48, 8, 48, 20, '', 'FAST');
+      const base64 = window.brandLogo.split(',')[1];
+      if (base64) {
+        const maxW = 52, maxH = 22;
+        let w = maxW, h = maxH;
+        if (window.brandLogoSize?.w && window.brandLogoSize?.h) {
+          const ratio = window.brandLogoSize.w / window.brandLogoSize.h;
+          if (ratio >= maxW / maxH) { w = maxW; h = maxW / ratio; }
+          else { h = maxH; w = maxH * ratio; }
+        }
+        const x = pageW - mR - w;
+        const y = 8 + (maxH - h) / 2; // vertikal zentriert in der Bounding Box
+        doc.addImage(base64, fmt, x, y, w, h, '', 'FAST');
+      }
     } catch (_) {}
   }
 
@@ -4461,6 +4472,10 @@ function handleLogoUpload(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     window.brandLogo = e.target.result;
+    // Originalgröße speichern für korrekte Skalierung im PDF
+    const img = new Image();
+    img.onload = () => { window.brandLogoSize = { w: img.naturalWidth, h: img.naturalHeight }; };
+    img.src = e.target.result;
     const preview = document.getElementById('logo-preview');
     const placeholder = document.getElementById('logo-upload-placeholder');
     const removeBtn = document.getElementById('logo-remove-btn');
