@@ -1723,3 +1723,44 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .form-service-dropdown .dropdown-soon { opacity: 0.5; cursor: not-allowed !important; display: flex !important; align-items: center; justify-content: space-between; }
 .form-service-dropdown .dropdown-soon:hover { background: none !important; color: var(--dark) !important; }
 .dropdown-soon-tag { font-size: 10px; font-weight: 800; background: #f59e0b; color: white; padding: 2px 7px; border-radius: 20px; margin-left: 8px; flex-shrink: 0; }
+
+/* SOCIAL PROOF STRIP */
+.social-strip { background: var(--lighter); padding: 28px 24px; border-bottom: 1px solid rgba(37,99,235,0.08); }
+.social-strip-label { text-align: center; font-size: 13px; color: var(--gray); font-weight: 600; margin-bottom: 16px; }
+.social-strip-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.ssl-item { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #475569; }
+
+/* VIDEO DEMO CTA */
+.video-demo-cta { text-align: center; margin-top: 28px; }
+.video-demo-cta p { font-size: 15px; color: var(--gray); margin-bottom: 14px; }
+
+/* USE CASES SECTION */
+.usecases-section { padding: 100px 24px; background: white; }
+.usecases-inner { max-width: 1100px; margin: 0 auto; text-align: center; }
+.usecases-inner h2 { font-size: 38px; font-weight: 900; letter-spacing: -1px; margin: 16px 0 16px; }
+.usecases-sub { font-size: 17px; color: var(--gray); margin-bottom: 52px; }
+.usecases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; text-align: left; }
+.usecase-card { background: var(--lighter); border: 1.5px solid #e2e8f0; border-radius: 20px; padding: 28px; cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.usecase-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,99,235,0.12); border-color: rgba(37,99,235,0.35); }
+.uc-icon { font-size: 32px; margin-bottom: 14px; }
+.usecase-card h3 { font-size: 16px; font-weight: 800; color: var(--dark); margin-bottom: 10px; }
+.usecase-card p { font-size: 13px; color: var(--gray); line-height: 1.6; margin-bottom: 16px; }
+.uc-cta { font-size: 13px; font-weight: 700; color: var(--blue); }
+@media (max-width: 900px) { .usecases-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .usecases-grid { grid-template-columns: 1fr; } .usecases-inner h2 { font-size: 28px; } }
+
+/* TRUST BADGES BAR */
+.trust-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 36px; }
+.trust-badge-item { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); color: #1e3a5f; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
+.trust-card-highlight { border: 1.5px solid rgba(37,99,235,0.3) !important; }
+
+/* CTA BANNER */
+.cta-banner { padding: 80px 24px; background: linear-gradient(135deg, #f0f7ff 0%, #e8f4ff 100%); }
+.cta-banner-dark { background: linear-gradient(160deg, #050e28 0%, #081840 50%, #0a2255 100%); }
+.cta-banner-dark h2 { color: white !important; }
+.cta-banner-dark p { color: rgba(255,255,255,0.65) !important; }
+.cta-banner-inner { max-width: 700px; margin: 0 auto; text-align: center; }
+.cta-banner-inner h2 { font-size: 36px; font-weight: 900; letter-spacing: -1px; color: var(--dark); margin-bottom: 14px; }
+.cta-banner-inner p { font-size: 17px; color: var(--gray); margin-bottom: 28px; }
+.cta-banner-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cta-banner-note { font-size: 13px; color: #94a3b8; font-weight: 500; }
