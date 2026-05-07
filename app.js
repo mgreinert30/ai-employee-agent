@@ -3672,6 +3672,7 @@ const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-ap
 function showStep(id) {
   if (id !== 'step-progress') stopFunFacts();
   ALL_STEPS.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
