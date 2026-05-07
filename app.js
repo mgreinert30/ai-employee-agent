@@ -5541,10 +5541,13 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
     analyseBody = { prompt, images: trimmedImages, analysisLength };
   }
 
-  // Stream from server — SSE keeps connection alive, prevents 504 timeouts permanently
+  // Stream from server — Idle-Timeout: Timer resettet sich bei jedem Chunk
+  // Dadurch werden auch sehr große PDFs vollständig verarbeitet
   const de = currentLang === 'de';
   const abortCtrl = new AbortController();
-  const abortTimer = setTimeout(() => abortCtrl.abort(), 58000);
+  const IDLE_MS = 35000; // Abbruch nur wenn 35s lang kein Chunk kommt
+  let idleTimer = setTimeout(() => abortCtrl.abort(), IDLE_MS);
+  const resetIdle = () => { clearTimeout(idleTimer); idleTimer = setTimeout(() => abortCtrl.abort(), IDLE_MS); };
 
   let fetchRes;
   try {
@@ -5555,15 +5558,15 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
       signal: abortCtrl.signal,
     });
   } catch (err) {
-    clearTimeout(abortTimer);
+    clearTimeout(idleTimer);
     stopProgressAnimation();
     throw new Error(err.name === 'AbortError'
-      ? (de ? 'Zeitüberschreitung — bitte kürzeres Dokument oder "Kurz" wählen.' : 'Timeout — try a shorter document or "Short" analysis.')
+      ? (de ? 'Keine Antwort vom Server — bitte erneut versuchen.' : 'No response from server — please try again.')
       : err.message);
   }
 
   if (!fetchRes.ok) {
-    clearTimeout(abortTimer);
+    clearTimeout(idleTimer);
     const text = await fetchRes.text().catch(() => '');
     const msg = fetchRes.status === 413
       ? (de ? 'Dokument zu groß — bitte ein kürzeres PDF verwenden.' : 'Document too large — please use a shorter PDF.')
@@ -5582,6 +5585,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
     while (true) {
       const { done, value } = await streamReader.read();
       if (done) break;
+      resetIdle(); // Chunk empfangen → Idle-Timer zurücksetzen
       lineBuf += dec.decode(value, { stream: true });
       const lines = lineBuf.split('\n');
       lineBuf = lines.pop();
@@ -5595,26 +5599,30 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
           if (evt.pagesAnalysed !== undefined) window.lastAnalysedPages = evt.pagesAnalysed;
           if (evt.chunk) {
             chunks.push(evt.chunk);
-            // Nudge progress bar to show activity
             const cur = parseInt(document.getElementById('progress-fill')?.style.width) || 75;
             if (cur < 93) startProgressAnimation(cur, cur + 2, 800, de ? 'KI schreibt...' : 'AI writing...');
           }
         } catch (evtErr) {
-          clearTimeout(abortTimer);
+          clearTimeout(idleTimer);
           throw evtErr;
         }
       }
     }
   } catch (err) {
-    clearTimeout(abortTimer);
-    stopProgressAnimation();
-    throw new Error(err.name === 'AbortError'
-      ? (de ? 'Zeitüberschreitung — bitte kürzeres Dokument oder "Kurz" wählen.' : 'Timeout — try a shorter document or "Short" analysis.')
-      : err.message);
+    clearTimeout(idleTimer);
+    // Wenn bereits Chunks da sind → trotzdem anzeigen (Vercel hat Stream abgeschnitten)
+    if (chunks.length > 0) {
+      result = chunks.join('');
+    } else {
+      stopProgressAnimation();
+      throw new Error(err.name === 'AbortError'
+        ? (de ? 'Server antwortet nicht — bitte erneut versuchen.' : 'Server not responding — please try again.')
+        : err.message);
+    }
   }
 
-  clearTimeout(abortTimer);
-  result = chunks.join('');
+  clearTimeout(idleTimer);
+  if (!result) result = chunks.join('');
   if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
 
