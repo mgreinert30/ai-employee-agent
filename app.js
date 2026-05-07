@@ -2460,8 +2460,9 @@ function renderResultRich(text) {
   });
 }
 
-// Vibrant palettes — chosen based on document topic/industry
+// Palettes — chosen by Gemini based on document topic/industry
 const CHART_PALETTES = {
+  // Industry-specific
   finance:   ['#2563eb','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#0284c7'],
   growth:    ['#10b981','#06b6d4','#2563eb','#84cc16','#14b8a6','#22d3ee','#4ade80','#34d399'],
   costs:     ['#ef4444','#f97316','#f59e0b','#eab308','#dc2626','#fb923c','#b45309','#fbbf24'],
@@ -2469,8 +2470,14 @@ const CHART_PALETTES = {
   tech:      ['#06b6d4','#2563eb','#8b5cf6','#10b981','#e879f9','#0ea5e9','#7c3aed','#14b8a6'],
   hr:        ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#2563eb','#ec4899','#14b8a6','#a78bfa'],
   logistics: ['#f59e0b','#f97316','#10b981','#2563eb','#06b6d4','#fbbf24','#34d399','#60a5fa'],
+  // Tone-based
   warm:      ['#ef4444','#f97316','#f59e0b','#fbbf24','#fb923c','#fca5a5','#dc2626','#b45309'],
   cool:      ['#2563eb','#06b6d4','#0ea5e9','#0284c7','#38bdf8','#7c3aed','#4f46e5','#14b8a6'],
+  // Style-based
+  minimal:   ['#374151','#6b7280','#9ca3af','#d1d5db','#1f2937','#4b5563','#e5e7eb','#111827'],
+  luxury:    ['#b8953f','#1a1a1a','#2d5a3d','#c9a84c','#0f0f0f','#4a7c5f','#d4af6a','#1c3829'],
+  nature:    ['#4a7c59','#8b6914','#c4a35a','#6b9e6b','#3d6b47','#a67c3a','#d4b896','#5a8a5a'],
+  corporate: ['#1e3a5f','#475569','#94a3b8','#cbd5e1','#0f2744','#334155','#64748b','#e2e8f0'],
   default:   ['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316','#14b8a6'],
 };
 
@@ -2488,7 +2495,6 @@ function renderChartOnCanvas(canvas, block) {
   if (typeof Chart === 'undefined') return;
   const n      = block.data.length;
   const colors = getPaletteColors(block.palette || 'default', n);
-  const isDark = canvas.closest?.('.r-chart-wrap') !== null;
 
   const baseOpts = {
     animation: { duration: 600, easing: 'easeOutQuart' },
@@ -2559,7 +2565,7 @@ function renderChartOnCanvas(canvas, block) {
           backgroundColor: grad,
           borderColor: colors[0],
           borderWidth: 3,
-          pointBackgroundColor: colors.map((c, i) => colors[i % colors.length]),
+          pointBackgroundColor: colors.map((_, i) => colors[i % colors.length]),
           pointBorderColor: '#ffffff',
           pointBorderWidth: 2,
           pointRadius: 6,
@@ -4934,7 +4940,7 @@ NEXT STEPS
   - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...|palette:X]
   - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...|palette:X]
   - Wichtigste Anteile → [CHART:pie|Titel|Kat:Wert,...|palette:X]
-  FARB-PALETTE — wähle passend zum Inhalt: finance (Bilanzen/Umsatz) · growth (Wachstum) · costs (Kosten/Verlust) · marketing (Marketing) · tech (Technologie) · hr (Personal) · logistics (Logistik) · warm (Warnungen/Risiken) · cool (Neutral/Übersicht)
+  FARB-PALETTE — wähle passend zum Inhalt: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
 • Kennzahlen-Abschnitt vollständig befüllen.
 • Risiken und Chancen jeweils mit Begründung und Handlungsempfehlung.`
       : `OUTPUT LENGTH: MEDIUM — TARGET 10 to 20 pages (approx. 3000-5500 words). Fill this scope completely.
@@ -4944,7 +4950,7 @@ NEXT STEPS
   - Most important trend over time → [CHART:line|Title|Year:Value,...|palette:X]
   - Most important category comparison → [CHART:bar|Title|Cat:Value,...|palette:X]
   - Most important shares → [CHART:pie|Title|Cat:Value,...|palette:X]
-  COLOR PALETTE — choose based on content: finance (balance/revenue) · growth (growth metrics) · costs (costs/loss) · marketing (campaigns) · tech (technology) · hr (people/staff) · logistics (operations) · warm (warnings/risk) · cool (neutral/overview)
+  COLOR PALETTE — choose based on content: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
 • Fill the key metrics section completely.
 • Risks and opportunities each with justification and recommended action.`,
     long: isDE
@@ -5052,7 +5058,7 @@ KERNREGELN — NIEMALS BRECHEN:
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
    • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:X]
    • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:X]
-   Paletten (passend zum Inhalt wählen): finance · growth · costs · marketing · tech · hr · logistics · warm · cool
+   Paletten (passend zum Inhalt wählen): finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
    Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8|palette:finance]
 10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
 11. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
