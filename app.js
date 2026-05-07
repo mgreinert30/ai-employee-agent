@@ -150,6 +150,33 @@ function toggleCookieDetails() {
   label.textContent   = open ? '▾ Details ausblenden' : '▸ Details zu den verwendeten Cookies anzeigen';
 }
 
+// =====================
+// FREE TRIAL
+// =====================
+function isFreeTrialAvailable() {
+  if (!currentUser) return true; // guests see the "gratis" button until they log in
+  return !localStorage.getItem(`ai_free_trial_used_${currentUser.email}`);
+}
+
+function markFreeTrialUsed() {
+  if (currentUser) localStorage.setItem(`ai_free_trial_used_${currentUser.email}`, '1');
+}
+
+function updateHeroCTA() {
+  const btn = document.getElementById('hero-cta-primary');
+  if (!btn) return;
+  const de = currentLang === 'de';
+  if (isFreeTrialAvailable()) {
+    btn.textContent = de ? '🚀 Jetzt gratis testen →' : '🚀 Try for free now →';
+    btn.setAttribute('data-de', '🚀 Jetzt gratis testen →');
+    btn.setAttribute('data-en', '🚀 Try for free now →');
+  } else {
+    btn.textContent = de ? '📄 PDF analysieren' : '📄 Analyse PDF';
+    btn.setAttribute('data-de', '📄 PDF analysieren');
+    btn.setAttribute('data-en', '📄 Analyse PDF');
+  }
+}
+
 function showGuest() {
   document.getElementById('btn-header-login').style.display  = 'inline-block';
   document.getElementById('btn-header-signup').style.display = 'inline-block';
@@ -158,6 +185,7 @@ function showGuest() {
   document.getElementById('btn-my-account').style.display    = 'none';
   document.getElementById('btn-owner-panel').style.display   = 'none';
   document.getElementById('header-username').textContent     = '';
+  updateHeroCTA();
 }
 
 function showLoggedIn() {
@@ -170,6 +198,7 @@ function showLoggedIn() {
   document.getElementById('btn-owner-panel').style.display  = isVerifiedOwner ? 'inline-block' : 'none';
   document.getElementById('btn-my-account').style.display   = isVerifiedOwner ? 'none' : 'inline-block';
   renderTestimonials();
+  updateHeroCTA();
 }
 
 function requireLogin(action) {
@@ -1715,11 +1744,24 @@ function submitTask(e) {
   }
   updateActivity();
   currentEstimate = estimateTask(document.getElementById('task-description').value, uploadedPDFs.length);
+
+  // First task on a new account is always free
+  const freeTrial = isFreeTrialAvailable() && currentUser;
+  if (freeTrial) currentEstimate = { ...currentEstimate, price: 0, isFree: true };
+
   showStep('step-price');
   document.getElementById('price-icon').textContent = getCharacterEmoji();
   const name = getCharacterName();
   document.getElementById('price-time-text').textContent = currentLang === 'de' ? `${name} braucht ca. ${currentEstimate.minutes} Minute${currentEstimate.minutes !== 1 ? 'n' : ''}` : `${name} needs about ${currentEstimate.minutes} minute${currentEstimate.minutes !== 1 ? 's' : ''}`;
-  document.getElementById('price-amount').textContent = `€${currentEstimate.price.toFixed(2)}`;
+
+  const de = currentLang === 'de';
+  if (currentEstimate.isFree) {
+    document.getElementById('price-amount').textContent = de ? '🎁 Gratis — Erstes Mal kostenlos!' : '🎁 Free — First time on us!';
+    document.querySelector('#step-price .btn-primary').textContent = de ? 'Gratis starten →' : 'Start for free →';
+  } else {
+    document.getElementById('price-amount').textContent = `€${currentEstimate.price.toFixed(2)}`;
+    document.querySelector('#step-price .btn-primary').textContent = de ? 'Weiter zur Zahlung →' : 'Continue to payment →';
+  }
 }
 
 function cancelTask() { showStep('step-form'); }
@@ -1728,6 +1770,26 @@ function cancelTask() { showStep('step-form'); }
 // PAYMENT
 // =====================
 function goToPayment() {
+  // Free trial — skip payment entirely, mark used, go straight to task
+  if (currentEstimate?.isFree) {
+    markFreeTrialUsed();
+    updateHeroCTA();
+    const desc = document.getElementById('task-description').value;
+    saveSale(desc, '0.00', 'free_trial');
+    saveTaskToHistory(desc, '0.00');
+    const resolvedType = currentShortcutType || detectTaskType(desc);
+    if (resolvedType === 'email') {
+      window.skippedSetup = true;
+      document.getElementById('gmail-step-icon').textContent = getCharacterEmoji();
+      showStep('step-gmail');
+      return;
+    }
+    window.skippedSetup = true;
+    showStep('step-progress');
+    startTask();
+    return;
+  }
+
   showStep('step-payment');
   document.getElementById('payment-amount-label').textContent = `€${currentEstimate.price.toFixed(2)}`;
   const saved = getSavedPayment();
