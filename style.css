@@ -163,7 +163,7 @@ body {
 header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); color: white; padding: 20px 24px; border-bottom: 1px solid rgba(37,99,235,0.2); position: sticky; top: 0; z-index: 500; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; }
 .logo { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; display: flex; align-items: center; gap: 10px; }
-.header-logo-img { height: 44px; width: auto; max-width: 200px; display: block; flex-shrink: 0; background: white; border-radius: 8px; padding: 4px 10px; }
+.header-logo-img { height: 44px; width: auto; max-width: 200px; display: block; flex-shrink: 0; }
 .logo span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .header-right { display: flex; align-items: center; gap: 10px; }
 .header-user { color: #94a3b8; font-size: 14px; font-weight: 500; }
