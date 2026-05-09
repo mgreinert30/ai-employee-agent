@@ -1893,7 +1893,7 @@ function confirmPayment() {
 // SETUP & TASK
 // =====================
 function applyLangToSetup() {
-  document.querySelectorAll('[data-de]').forEach(el => { el.textContent = el.getAttribute(`data-${currentLang}`); });
+  document.querySelectorAll('[data-de]').forEach(el => { el.innerHTML = el.getAttribute(`data-${currentLang}`); });
 }
 
 // Auto-checks only the permissions that are actually needed for this task
