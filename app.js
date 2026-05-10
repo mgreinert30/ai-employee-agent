@@ -5932,6 +5932,7 @@ function showGameResult() {
 function closeGameOverlay() {
   const overlay = document.getElementById('game-done-overlay');
   if (overlay) overlay.style.display = 'none';
-  if (window._officeRunnerInstance) window._officeRunnerInstance.start();
+  // Resume from exact state — no restart, score and position preserved
+  if (window._officeRunnerInstance) window._officeRunnerInstance.state = 'running';
 }
 
