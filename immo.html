@@ -7,6 +7,7 @@
   <title>KI Immobilienbewerter — AI Employee</title>
   <link rel="icon" type="image/png" href="logo.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     html{scroll-behavior:smooth;}
@@ -293,6 +294,8 @@
     .btn-pdf:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(37,99,235,.5);}
     .btn-reset{background:#fff;color:var(--gray);border:2px solid #e2e8f0;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
     .btn-reset:hover{border-color:var(--blue);color:var(--blue);background:#eff6ff;}
+    .btn-delete-immo{background:#fff;color:#ef4444;border:2px solid #fecaca;border-radius:12px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+    .btn-delete-immo:hover{background:#fef2f2;border-color:#ef4444;}
 
     /* FOOTER */
     footer{background:#0a0f1e;color:#475569;text-align:center;padding:28px 24px;font-size:13px;}
@@ -685,7 +688,7 @@
     </div>
 
     <!-- 1. Hauptbewertung -->
-    <div class="value-card">
+    <div class="value-card" id="capture-value-card">
       <div class="value-label">📊 Geschätzter Marktwert</div>
       <div class="value-main" id="res-median">—</div>
       <div class="value-range-text" id="res-range-text">—</div>
@@ -705,7 +708,7 @@
     </div>
 
     <!-- 2. Score Grid -->
-    <div class="scores-grid">
+    <div id="capture-scores"><div class="scores-grid">
       <div class="score-card">
         <div class="score-circle-wrap">
           <svg width="90" height="90" viewBox="0 0 90 90">
@@ -768,7 +771,7 @@
         </div>
         <div class="score-title">KI-<br>Konfidenz</div>
       </div>
-    </div>
+    </div></div><!-- /capture-scores -->
 
     <!-- 3. Mietwert -->
     <div class="rent-card">
@@ -784,14 +787,14 @@
     </div>
 
     <!-- 4. Lage-Analyse -->
-    <div class="card">
+    <div class="card" id="capture-lage">
       <div class="section-title">📍 Lage-Analyse</div>
       <div class="lage-grid" id="lage-grid"></div>
     </div>
 
     <!-- 5. Preisprognose -->
     <div class="section-title">📈 Preisprognose</div>
-    <div class="prognose-grid">
+    <div class="prognose-grid" id="capture-prognose">
       <div class="prognose-card">
         <div class="prognose-label">In 1 Jahr</div>
         <div class="prognose-val" id="prog-1">—</div>
@@ -897,8 +900,22 @@
 
     <!-- Export -->
     <div class="export-row">
-      <button class="btn-pdf" onclick="generatePDF()">📄 PDF-Bericht herunterladen</button>
+      <button class="btn-pdf" id="btn-pdf" onclick="generatePDF()">📄 PDF-Bericht herunterladen</button>
       <button class="btn-reset" onclick="resetForm()">🔄 Neue Bewertung</button>
+      <button class="btn-delete-immo" onclick="confirmDeleteImmoData()">🗑 Daten löschen</button>
+    </div>
+
+    <!-- Delete confirm -->
+    <div id="immo-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:18px;padding:32px;max-width:360px;margin:16px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+        <h3 style="color:#ef4444;margin-bottom:10px;">Bewertungsdaten löschen?</h3>
+        <p style="color:#64748b;font-size:14px;margin-bottom:24px;">Die KI-Bewertung und alle eingegebenen Objektdaten werden gelöscht. Du kannst danach eine neue Bewertung starten.</p>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button onclick="document.getElementById('immo-delete-modal').style.display='none'" style="padding:10px 22px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;color:#0f172a;cursor:pointer;font-size:14px;">Abbrechen</button>
+          <button onclick="executeDeleteImmoData()" style="padding:10px 22px;border-radius:10px;border:none;background:#ef4444;color:white;cursor:pointer;font-size:14px;font-weight:600;">Ja, löschen</button>
+        </div>
+      </div>
     </div>
 
   </div><!-- /results-section -->
@@ -1364,8 +1381,11 @@ function resetForm() {
 }
 
 /* ===== PDF ===== */
-function generatePDF() {
+async function generatePDF() {
   if (typeof window.jspdf === 'undefined') { alert('PDF-Bibliothek lädt noch. Bitte versuche es erneut.'); return; }
+  const btn = document.getElementById('btn-pdf');
+  if (btn) { btn.textContent = '⏳ PDF wird erstellt...'; btn.disabled = true; }
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
   const data = lastResult || {};
@@ -1390,67 +1410,49 @@ function generatePDF() {
   doc.text(`${formData.typ || 'Immobilie'} · ${formData.stadt || ''}${formData.plz ? ' ' + formData.plz : ''} · ${formData.flaeche ? formData.flaeche + ' m²' : ''}`, margin, 37);
   y = 54;
 
-  // Market value box
-  doc.setFillColor(239, 246, 255);
-  doc.roundedRect(margin, y, cW, 38, 4, 4, 'F');
-  doc.setTextColor(37, 99, 235); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-  doc.text('GESCHÄTZTER MARKTWERT', margin + 8, y + 10);
-  doc.setTextColor(10, 15, 30); doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-  doc.text(fmtE(mw.median), margin + 8, y + 24);
-  doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-  doc.text(`Spanne: ${fmtE(mw.min)} – ${fmtE(mw.max)}  ·  ${fmt(mw.qmPreis)} €/m²  ·  KI-Sicherheit: ${sc.confidence || 0}%`, margin + 8, y + 33);
-  y += 48;
+  // ── Capture dashboard visuals via html2canvas ──────────────────────────
+  async function captureEl(id, maxW) {
+    const el = document.getElementById(id);
+    if (!el || typeof html2canvas === 'undefined') return null;
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+      const imgW = maxW || cW;
+      const imgH = (canvas.height / canvas.width) * imgW;
+      return { data: canvas.toDataURL('image/png'), w: imgW, h: imgH };
+    } catch(e) { return null; }
+  }
 
-  // Scores row
-  const scoreItems = [
-    { key: 'gesamt', label: 'Gesamtscore' }, { key: 'investition', label: 'Investition' },
-    { key: 'lage', label: 'Lage-Score' }, { key: 'zukunft', label: 'Zukunft' },
-  ];
-  const bw = (cW - 12) / 4;
-  scoreItems.forEach((s, i) => {
-    const val = sc[s.key] || 0;
-    const bx = margin + i * (bw + 4);
-    let r = 239, g = 68, b = 68;
-    if (val >= 75) { r = 16; g = 185; b = 129; }
-    else if (val >= 50) { r = 245; g = 158; b = 11; }
-    doc.setFillColor(248, 250, 252); doc.roundedRect(bx, y, bw, 24, 3, 3, 'F');
-    doc.setDrawColor(r, g, b); doc.roundedRect(bx, y, bw, 24, 3, 3, 'S');
-    doc.setTextColor(r, g, b); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text(String(val), bx + bw / 2, y + 13, { align: 'center' });
-    doc.setTextColor(100, 116, 139); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-    doc.text(s.label, bx + bw / 2, y + 21, { align: 'center' });
-  });
-  y += 32;
+  // Value card
+  const vcImg = await captureEl('capture-value-card', cW);
+  if (vcImg) {
+    doc.addImage(vcImg.data, 'PNG', margin, y, vcImg.w, vcImg.h); y += vcImg.h + 6;
+  } else {
+    doc.setFillColor(239,246,255); doc.roundedRect(margin,y,cW,20,4,4,'F');
+    doc.setTextColor(37,99,235); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(`Marktwert: ${fmtE(mw.median)}  (${fmtE(mw.min)} – ${fmtE(mw.max)})`, margin+6, y+13);
+    y += 28;
+  }
 
-  // Mietwert
-  doc.setFillColor(240, 253, 244); doc.roundedRect(margin, y, cW, 22, 3, 3, 'F');
-  doc.setTextColor(6, 95, 70); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-  doc.text('MIETWERT (KALTMIETE/MONAT):', margin + 8, y + 9);
-  doc.setTextColor(10, 15, 30); doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-  doc.text(`${fmtE(mv.min)} – ${fmtE(mv.max)}  ·  ${fmt(mv.qmMiete)} €/m²  ·  ${mv.bruttoRendite || 0}% Brutto-Rendite`, margin + 8, y + 18);
-  y += 30;
+  // Scores
+  const scImg = await captureEl('capture-scores', cW);
+  if (scImg) {
+    if (y + scImg.h > 270) { doc.addPage(); y = 18; }
+    doc.addImage(scImg.data, 'PNG', margin, y, scImg.w, scImg.h); y += scImg.h + 6;
+  }
+
+  // Lage
+  const lgImg = await captureEl('capture-lage', cW);
+  if (lgImg) {
+    if (y + lgImg.h > 270) { doc.addPage(); y = 18; }
+    doc.addImage(lgImg.data, 'PNG', margin, y, lgImg.w, lgImg.h); y += lgImg.h + 6;
+  }
 
   // Prognose
-  doc.setFillColor(248, 250, 252); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
-  doc.setTextColor(37, 99, 235); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-  doc.text('PREISPROGNOSE', margin + 4, y + 5.5);
-  y += 12;
-  const progVals = [
-    { lbl: 'In 1 Jahr', val: pr.ein_jahr }, { lbl: 'In 3 Jahren', val: pr.drei_jahre }, { lbl: 'In 5 Jahren', val: pr.fuenf_jahre },
-  ];
-  const pw = (cW - 8) / 3;
-  progVals.forEach((p, i) => {
-    const bx = margin + i * (pw + 4);
-    const val = p.val || 0;
-    doc.setFillColor(val >= 0 ? 240 : 254, val >= 0 ? 253 : 242, val >= 0 ? 244 : 242);
-    doc.roundedRect(bx, y, pw, 20, 3, 3, 'F');
-    doc.setTextColor(100, 116, 139); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
-    doc.text(p.lbl, bx + pw / 2, y + 7, { align: 'center' });
-    doc.setTextColor(val >= 0 ? 22 : 153, val >= 0 ? 163 : 27, val >= 0 ? 74 : 27);
-    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-    doc.text((val >= 0 ? '+' : '') + val + '%', bx + pw / 2, y + 16, { align: 'center' });
-  });
-  y += 28;
+  const prImg = await captureEl('capture-prognose', cW);
+  if (prImg) {
+    if (y + prImg.h > 270) { doc.addPage(); y = 18; }
+    doc.addImage(prImg.data, 'PNG', margin, y, prImg.w, prImg.h); y += prImg.h + 8;
+  }
 
   // Sections helper
   function addSec(title, text) {
@@ -1514,6 +1516,18 @@ function generatePDF() {
   const city = (formData.stadt || 'Immobilie').replace(/\s+/g, '_');
   const dp = new Date().toISOString().slice(0, 10);
   doc.save(`KI-Immobilienbewertung_${city}_${dp}.pdf`);
+  if (btn) { btn.textContent = '📄 PDF-Bericht herunterladen'; btn.disabled = false; }
+}
+
+function confirmDeleteImmoData() {
+  document.getElementById('immo-delete-modal').style.display = 'flex';
+}
+
+function executeDeleteImmoData() {
+  document.getElementById('immo-delete-modal').style.display = 'none';
+  lastResult = null;
+  formData = {};
+  resetForm();
 }
 
 /* ===== INIT ===== */
