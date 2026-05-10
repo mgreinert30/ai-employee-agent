@@ -774,7 +774,7 @@
     </div></div><!-- /capture-scores -->
 
     <!-- 3. Mietwert -->
-    <div class="rent-card">
+    <div class="rent-card" id="capture-rent">
       <div>
         <div class="rent-label">Mietwert (Kaltmiete/Monat)</div>
         <div class="rent-value" id="res-miete">—</div>
@@ -813,7 +813,7 @@
     </div>
 
     <!-- Market chips -->
-    <div class="market-chips">
+    <div class="market-chips" id="capture-market">
       <div class="market-chip">
         <div class="market-chip-label">Stadtdurchschnitt</div>
         <div class="market-chip-val" id="res-stadtdurchschnitt">—</div>
@@ -833,15 +833,19 @@
     </div>
 
     <!-- 6. Vergleichsobjekte -->
-    <div class="section-title">🏘 Vergleichsobjekte</div>
-    <div class="vergleich-grid" id="vergleich-grid"></div>
+    <div id="capture-vergleich">
+      <div class="section-title">🏘 Vergleichsobjekte</div>
+      <div class="vergleich-grid" id="vergleich-grid"></div>
+    </div>
 
     <!-- 7. KI-Insights -->
-    <div class="section-title">💡 KI-Erkenntnisse</div>
-    <div class="insights-grid" id="insights-grid"></div>
+    <div id="capture-insights">
+      <div class="section-title">💡 KI-Erkenntnisse</div>
+      <div class="insights-grid" id="insights-grid"></div>
+    </div>
 
     <!-- 8. Risiken & Chancen -->
-    <div class="risks-grid">
+    <div class="risks-grid" id="capture-risks">
       <div class="card" style="margin-bottom:0;">
         <div class="section-title" style="margin-bottom:12px;">⚠️ Risiken</div>
         <div id="res-risiken"></div>
@@ -881,7 +885,7 @@
 
     <!-- 11. Bildanalyse (only if images uploaded) -->
     <div id="bild-section" style="display:none;">
-      <div class="card">
+      <div class="card" id="capture-bildanalyse">
         <div class="section-title">🖼️ Bildanalyse</div>
         <div class="bild-grid">
           <div class="bild-item"><div class="bild-label">Zustand</div><div class="bild-val" id="bild-zustand">—</div></div>
@@ -893,7 +897,7 @@
     </div>
 
     <!-- 12. Datenquellen -->
-    <div class="quellen-card">
+    <div class="quellen-card" id="capture-quellen">
       <div class="quellen-title">Diese Bewertung basiert auf Daten von:</div>
       <div class="quellen-badges" id="quellen-badges"></div>
     </div>
@@ -1422,36 +1426,31 @@ async function generatePDF() {
     } catch(e) { return null; }
   }
 
-  // Value card
-  const vcImg = await captureEl('capture-value-card', cW);
-  if (vcImg) {
-    doc.addImage(vcImg.data, 'PNG', margin, y, vcImg.w, vcImg.h); y += vcImg.h + 6;
-  } else {
-    doc.setFillColor(239,246,255); doc.roundedRect(margin,y,cW,20,4,4,'F');
-    doc.setTextColor(37,99,235); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text(`Marktwert: ${fmtE(mw.median)}  (${fmtE(mw.min)} – ${fmtE(mw.max)})`, margin+6, y+13);
-    y += 28;
-  }
+  // Capture all visual sections in order
+  const captures = [
+    'capture-value-card',
+    'capture-scores',
+    'capture-rent',
+    'capture-lage',
+    'capture-prognose',
+    'capture-market',
+    'capture-vergleich',
+    'capture-insights',
+    'capture-risks',
+    'reno-section',
+    'capture-bildanalyse',
+    'capture-quellen',
+  ];
 
-  // Scores
-  const scImg = await captureEl('capture-scores', cW);
-  if (scImg) {
-    if (y + scImg.h > 270) { doc.addPage(); y = 18; }
-    doc.addImage(scImg.data, 'PNG', margin, y, scImg.w, scImg.h); y += scImg.h + 6;
-  }
-
-  // Lage
-  const lgImg = await captureEl('capture-lage', cW);
-  if (lgImg) {
-    if (y + lgImg.h > 270) { doc.addPage(); y = 18; }
-    doc.addImage(lgImg.data, 'PNG', margin, y, lgImg.w, lgImg.h); y += lgImg.h + 6;
-  }
-
-  // Prognose
-  const prImg = await captureEl('capture-prognose', cW);
-  if (prImg) {
-    if (y + prImg.h > 270) { doc.addPage(); y = 18; }
-    doc.addImage(prImg.data, 'PNG', margin, y, prImg.w, prImg.h); y += prImg.h + 8;
+  for (const id of captures) {
+    const el = document.getElementById(id);
+    // skip hidden elements (e.g. bild-section when no images)
+    if (!el || el.closest('[style*="display:none"]') || el.style.display === 'none') continue;
+    const img = await captureEl(id, cW);
+    if (!img) continue;
+    if (y + img.h > 270) { doc.addPage(); y = 18; }
+    doc.addImage(img.data, 'PNG', margin, y, img.w, img.h);
+    y += img.h + 6;
   }
 
   // Sections helper
@@ -1494,17 +1493,6 @@ async function generatePDF() {
   addSec('EMPFEHLUNG', br.empfehlung);
   addList('RISIKEN', data.risiken, 153, 27, 27);
   addList('CHANCEN', data.chancen, 6, 95, 70);
-
-  // Quellen
-  if (Array.isArray(data.quellen) && data.quellen.length) {
-    if (y > 255) { doc.addPage(); y = 18; }
-    doc.setFillColor(248, 250, 252); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
-    doc.setTextColor(37, 99, 235); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.text('DATENQUELLEN', margin + 4, y + 5.5); y += 12;
-    doc.setTextColor(100, 116, 139); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-    const quellenLines = doc.splitTextToSize(data.quellen.join(' · '), cW - 8);
-    doc.text(quellenLines, margin, y); y += quellenLines.length * 5 + 3;
-  }
 
   // Footer
   const totalPages = doc.getNumberOfPages();
