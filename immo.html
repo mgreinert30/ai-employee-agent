@@ -371,11 +371,6 @@
       <div class="card-title">Lage &amp; Immobilientyp</div>
       <div class="card-subtitle">Wo befindet sich die Immobilie und um was handelt es sich?</div>
 
-      <div class="form-group">
-        <label>Adresse, Stadtteil oder Region <span class="opt">(optional)</span></label>
-        <input type="text" id="region" placeholder='z.B. "Berlin Mitte", "Hamburg Altona", "ruhige Lage in NRW"' />
-      </div>
-
       <div class="form-row">
         <div class="form-group">
           <label>Stadt <span style="color:var(--red)">*</span></label>
@@ -385,6 +380,17 @@
         <div class="form-group">
           <label>PLZ <span class="opt">(optional)</span></label>
           <input type="text" id="plz" placeholder="z.B. 80331" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Straße &amp; Hausnummer <span class="opt">(für präzise Bewertung)</span></label>
+          <input type="text" id="strasse" placeholder='z.B. "Neusser Str. 82"' />
+        </div>
+        <div class="form-group">
+          <label>Stadtteil / Lage <span class="opt">(optional)</span></label>
+          <input type="text" id="region" placeholder='z.B. "Altona", "Innenstadt", "am See"' />
         </div>
       </div>
 
@@ -1066,7 +1072,8 @@ function resizeImage(file) {
 function collectFormData() {
   const ausstattung = Array.from(document.querySelectorAll('.cb-item input[type="checkbox"]:checked')).map(cb => cb.value);
   return {
-    region: document.getElementById('region').value.trim(),
+    strasse: document.getElementById('strasse').value.trim() || null,
+    region: document.getElementById('region').value.trim() || null,
     stadt: document.getElementById('stadt').value.trim(),
     plz: document.getElementById('plz').value.trim(),
     typ: document.querySelector('input[name="typ"]:checked')?.value || 'Eigentumswohnung',

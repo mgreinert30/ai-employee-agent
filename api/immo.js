@@ -11,7 +11,7 @@ const MODELS = [
 
 function buildPrompt(property) {
   const {
-    region, stadt, plz, typ, modus,
+    strasse, region, stadt, plz, typ, modus,
     flaeche, grundstueck, zimmer, baujahr, renovierung,
     zustand, ausstattung, ausstattungsqualitaet, energieklasse,
     etagen, etage, heiztechnik, moebliert,
@@ -41,9 +41,11 @@ Dein Wissen umfasst folgende deutsche Immobiliendatenquellen:
 IMMOBILIEN-DATEN ZUR BEWERTUNG:
 - Typ: ${typ || 'Wohnung'}
 - Modus: ${modus || 'Kaufen'}
-- Region/Lage: ${region || 'nicht angegeben'}
-- Stadt: ${stadt || 'nicht angegeben'}
+- EXAKTE ADRESSE: ${strasse ? strasse + ', ' : ''}${plz ? plz + ' ' : ''}${stadt || 'nicht angegeben'}
+- Straße: ${strasse || 'nicht angegeben'}
 - PLZ: ${plz || 'nicht angegeben'}
+- Stadt: ${stadt || 'nicht angegeben'}
+- Stadtteil/Lage: ${region || 'nicht angegeben'}
 - Wohnfläche: ${flaeche ? flaeche + ' m²' : 'nicht angegeben'}
 - Grundstücksfläche: ${grundstueck ? grundstueck + ' m²' : 'nicht zutreffend'}
 - Zimmer: ${zimmer || 'nicht angegeben'}
@@ -62,13 +64,15 @@ BEWERTUNGSAUFGABE:
 Analysiere diese Immobilie auf Basis deines umfassenden Wissens über den deutschen Immobilienmarkt (Stand 2025).
 
 LAGEANALYSE (sehr wichtig):
-Beschreibe die Mikrolage präzise: Ist die Immobilie in der Innenstadt, am Wasser (Fluss, See, Meer, Kanal), in einer Villengegend, am Stadtrand, in einem Industrie-Quartier, neben Grünflächen, in einer Fußgängerzone oder Einkaufsstraße? Nenne konkrete Merkmale der unmittelbaren Umgebung und wie diese den Wert beeinflussen. Verwende den BORIS-Bodenrichtwert für exakt diese Lage (Straße/Stadtteil/PLZ), nicht nur den Stadtdurchschnitt.
+Die Bewertungsadresse lautet: ${strasse ? strasse + ', ' : ''}${plz ? plz + ' ' : ''}${stadt || ''}.
+Beschreibe die Mikrolage dieser EXAKTEN Adresse präzise: Ist sie in der Innenstadt, am Wasser (Fluss, See, Meer, Kanal), in einer Villengegend, am Stadtrand, in einem Gewerbegebiet, neben Grünflächen, in einer Einkaufsstraße? Nenne, was sich konkret in der unmittelbaren Umgebung dieser Adresse befindet. Verwende den BORIS-Bodenrichtwert für exakt diese PLZ ${plz || ''} / Straße${strasse ? ' "' + strasse + '"' : ''}, nicht nur den Stadtdurchschnitt.
 
 MIETPREISE (sehr wichtig):
 Gib min und max der Kaltmiete pro m² basierend auf dem qualifizierten Mietspiegel der Stadt für diese Lage, Baujahr, Ausstattungsqualität und Etage. Trenne dabei deutlich: einfache Lage vs. gute Lage vs. sehr gute Lage. Nutze die offizielle Mietspiegeltabelle, nicht nur Durchschnittswerte.
 
 VERGLEICHSOBJEKTE (sehr wichtig):
-Nenne ausschließlich Vergleichsobjekte im Umkreis von maximal 500 Metern oder direkt auf der gleichen Straße. Bevorzuge Objekte in der gleichen Straße oder im gleichen Straßenblock. Wenn keine bekannten Objekte auf der gleichen Straße vorhanden sind, wähle die nächstgelegenen innerhalb 500m. Gib für jedes Objekt die tatsächliche Entfernung an (z.B. "gleiche Straße", "120m", "350m").
+Die Immobilie befindet sich in: ${strasse ? '"' + strasse + '", ' : ''}${plz ? plz + ' ' : ''}${stadt || ''}.
+Nenne ausschließlich Vergleichsobjekte, die sich auf der GLEICHEN STRASSE ("${strasse || 'angegebene Straße'}") oder im Umkreis von maximal 500 Metern befinden. Erfinde KEINE Straßennamen. Nutze ausschließlich echte Straßen in ${stadt || 'der angegebenen Stadt'} in der Nähe der angegebenen Adresse. Gib für jedes Objekt die konkrete Entfernung an (z.B. "gleiche Straße", "150m nördlich", "320m entfernt").
 
 Beziehe alle relevanten Datenquellen ein: BORIS-Bodenrichtwerte für exakt diese PLZ/Straße, Mietspiegel (Tabellenwerte), aktuelle ImmoScout24/Immowelt-Vergleichspreise und den Bundesbank-Immobilienpreisindikator.
 Berücksichtige: Makrolage (Stadtgröße, Wirtschaftsstärke), Mikrolage (Stadtteil, Wasserlagen, Parknähe, Infrastruktur), Objekteigenschaften (Baujahr, Zustand, Ausstattung, Energieklasse) und aktuelle Marktdynamik.
