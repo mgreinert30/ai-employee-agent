@@ -4,9 +4,9 @@ export const config = {
 };
 
 const MODELS = [
-  { name: 'gemini-2.5-flash',          api: 'v1beta', jsonMime: true  },
-  { name: 'gemini-2.5-flash-8b',       api: 'v1beta', jsonMime: true  },
-  { name: 'gemini-1.5-flash-latest',   api: 'v1beta', jsonMime: false },
+  { name: 'gemini-2.5-flash',      api: 'v1beta' },
+  { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+  { name: 'gemini-2.5-pro',        api: 'v1beta' },
 ];
 
 function buildPrompt(property) {
@@ -170,8 +170,8 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
 function repairAndParseJSON(raw) {
   let s = raw.trim();
 
-  // Strip markdown code fences
-  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  // Strip markdown code fences (including nested)
+  s = s.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
 
   // Extract outermost { ... }
   const start = s.indexOf('{');
@@ -183,6 +183,10 @@ function repairAndParseJSON(raw) {
   s = s.replace(/\/\/[^\n]*/g, '');
   // Remove JS-style block comments
   s = s.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Replace unfilled angle-bracket placeholders with safe defaults
+  s = s.replace(/:\s*<[^>]+als Zahl[^>]*>/g, ': 0');
+  s = s.replace(/:\s*<[^>]+als Text[^>]*>/g, ': ""');
+  s = s.replace(/:\s*<[^>]*>/g, ': ""');
   // Remove trailing commas before } or ]
   s = s.replace(/,\s*([}\]])/g, '$1');
 
@@ -227,7 +231,7 @@ export default async function handler(req, res) {
 
   const allErrors = [];
 
-  for (const { name: model, api, jsonMime } of MODELS) {
+  for (const { name: model, api } of MODELS) {
     const geminiBody = JSON.stringify({
       contents: [{ parts }],
       generationConfig: {
@@ -235,8 +239,9 @@ export default async function handler(req, res) {
         temperature: 0.2,
         topP: 0.9,
         topK: 40,
-        ...(jsonMime ? { responseMimeType: 'application/json' } : {}),
       },
+      // Disable thinking tokens — they corrupt JSON output
+      ...(model.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     });
 
     let geminiRes;
