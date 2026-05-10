@@ -239,9 +239,9 @@ export default async function handler(req, res) {
         temperature: 0.2,
         topP: 0.9,
         topK: 40,
+        // Disable thinking tokens — they corrupt JSON output in 2.5 models
+        ...(model.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
-      // Disable thinking tokens — they corrupt JSON output
-      ...(model.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     });
 
     let geminiRes;
