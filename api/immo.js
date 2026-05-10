@@ -4,9 +4,9 @@ export const config = {
 };
 
 const MODELS = [
-  { name: 'gemini-2.5-flash',      api: 'v1beta' },
-  { name: 'gemini-2.0-flash-lite', api: 'v1beta' },
-  { name: 'gemini-1.5-flash',      api: 'v1'     },
+  { name: 'gemini-2.5-flash',          api: 'v1beta', jsonMime: true  },
+  { name: 'gemini-2.5-flash-8b',       api: 'v1beta', jsonMime: true  },
+  { name: 'gemini-1.5-flash-latest',   api: 'v1beta', jsonMime: false },
 ];
 
 function buildPrompt(property) {
@@ -167,6 +167,28 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
 }`;
 }
 
+function repairAndParseJSON(raw) {
+  let s = raw.trim();
+
+  // Strip markdown code fences
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
+  // Extract outermost { ... }
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('Kein JSON-Objekt gefunden');
+  s = s.slice(start, end + 1);
+
+  // Remove JS-style single-line comments
+  s = s.replace(/\/\/[^\n]*/g, '');
+  // Remove JS-style block comments
+  s = s.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Remove trailing commas before } or ]
+  s = s.replace(/,\s*([}\]])/g, '$1');
+
+  return JSON.parse(s);
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -203,20 +225,20 @@ export default async function handler(req, res) {
       ]
     : [{ text: prompt }];
 
-  const geminiBody = JSON.stringify({
-    contents: [{ parts }],
-    generationConfig: {
-      maxOutputTokens: 4096,
-      temperature: 0.2,
-      topP: 0.9,
-      topK: 40,
-      responseMimeType: 'application/json',
-    },
-  });
-
   const allErrors = [];
 
-  for (const { name: model, api } of MODELS) {
+  for (const { name: model, api, jsonMime } of MODELS) {
+    const geminiBody = JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: {
+        maxOutputTokens: 4096,
+        temperature: 0.2,
+        topP: 0.9,
+        topK: 40,
+        ...(jsonMime ? { responseMimeType: 'application/json' } : {}),
+      },
+    });
+
     let geminiRes;
     try {
       const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`;
@@ -250,30 +272,12 @@ export default async function handler(req, res) {
       continue;
     }
 
-    // Strip markdown code fences if present
-    let jsonText = rawText.trim();
-    const fenceMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) {
-      jsonText = fenceMatch[1].trim();
-    }
-
     let parsed;
     try {
-      parsed = JSON.parse(jsonText);
-    } catch {
-      // Try to extract JSON object from surrounding text
-      const objMatch = jsonText.match(/\{[\s\S]*\}/);
-      if (objMatch) {
-        try {
-          parsed = JSON.parse(objMatch[0]);
-        } catch (innerErr) {
-          allErrors.push(`${model}: JSON-Parse fehlgeschlagen — ${innerErr.message}`);
-          continue;
-        }
-      } else {
-        allErrors.push(`${model}: Kein JSON-Objekt in Antwort gefunden`);
-        continue;
-      }
+      parsed = repairAndParseJSON(rawText);
+    } catch (err) {
+      allErrors.push(`${model}: JSON-Parse fehlgeschlagen — ${err.message}`);
+      continue;
     }
 
     return res.status(200).json({
