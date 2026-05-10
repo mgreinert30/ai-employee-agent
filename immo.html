@@ -1207,7 +1207,8 @@ function renderResults(data, hasImages) {
 
   // Mietwert
   document.getElementById('res-miete').textContent = `${fmtE(mv.min)} – ${fmtE(mv.max)}`;
-  document.getElementById('res-miete-qm').textContent = `${fmt(mv.qmMiete)} €/m²`;
+  const qmRange = (mv.qmMin && mv.qmMax) ? `${fmt(mv.qmMin)}–${fmt(mv.qmMax)} €/m²` : `${fmt(mv.qmMiete)} €/m²`;
+  document.getElementById('res-miete-qm').textContent = qmRange;
   document.getElementById('res-rendite-badge').textContent = mv.bruttoRendite ? `${mv.bruttoRendite}% Rendite` : '—% Rendite';
 
   // Lage details
@@ -1271,6 +1272,7 @@ function renderResults(data, hasImages) {
       <div class="vergleich-row-item"><span class="vergleich-key">Preis</span><span class="vergleich-val">${fmtE(v.preis)}</span></div>
       <div class="vergleich-row-item"><span class="vergleich-key">€/m²</span><span class="vergleich-val">${fmt(v.qmPreis)} €</span></div>
       <div class="vergleich-row-item"><span class="vergleich-key">Zustand</span><span class="vergleich-val">${v.zustand || '—'}</span></div>
+      ${v.strasse ? `<div class="vergleich-dist">🏠 ${v.strasse}</div>` : ''}
       ${v.entfernung ? `<div class="vergleich-dist">📍 ${v.entfernung} entfernt</div>` : ''}
     </div>`).join('');
 

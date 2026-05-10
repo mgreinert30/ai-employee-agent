@@ -60,8 +60,18 @@ IMMOBILIEN-DATEN ZUR BEWERTUNG:
 
 BEWERTUNGSAUFGABE:
 Analysiere diese Immobilie auf Basis deines umfassenden Wissens über den deutschen Immobilienmarkt (Stand 2025).
-Beziehe alle relevanten Datenquellen ein: BORIS-Bodenrichtwerte für die Region, den gültigen Mietspiegel, aktuelle ImmoScout24/Immowelt-Vergleichspreise und den Bundesbank-Immobilienpreisindikator.
-Berücksichtige: Makrolage (Stadtgröße, Wirtschaftsstärke), Mikrolage (Stadtteil, Infrastruktur), Objekteigenschaften (Baujahr, Zustand, Ausstattung, Energieklasse) und aktuelle Marktdynamik.
+
+LAGEANALYSE (sehr wichtig):
+Beschreibe die Mikrolage präzise: Ist die Immobilie in der Innenstadt, am Wasser (Fluss, See, Meer, Kanal), in einer Villengegend, am Stadtrand, in einem Industrie-Quartier, neben Grünflächen, in einer Fußgängerzone oder Einkaufsstraße? Nenne konkrete Merkmale der unmittelbaren Umgebung und wie diese den Wert beeinflussen. Verwende den BORIS-Bodenrichtwert für exakt diese Lage (Straße/Stadtteil/PLZ), nicht nur den Stadtdurchschnitt.
+
+MIETPREISE (sehr wichtig):
+Gib min und max der Kaltmiete pro m² basierend auf dem qualifizierten Mietspiegel der Stadt für diese Lage, Baujahr, Ausstattungsqualität und Etage. Trenne dabei deutlich: einfache Lage vs. gute Lage vs. sehr gute Lage. Nutze die offizielle Mietspiegeltabelle, nicht nur Durchschnittswerte.
+
+VERGLEICHSOBJEKTE (sehr wichtig):
+Nenne ausschließlich Vergleichsobjekte im Umkreis von maximal 500 Metern oder direkt auf der gleichen Straße. Bevorzuge Objekte in der gleichen Straße oder im gleichen Straßenblock. Wenn keine bekannten Objekte auf der gleichen Straße vorhanden sind, wähle die nächstgelegenen innerhalb 500m. Gib für jedes Objekt die tatsächliche Entfernung an (z.B. "gleiche Straße", "120m", "350m").
+
+Beziehe alle relevanten Datenquellen ein: BORIS-Bodenrichtwerte für exakt diese PLZ/Straße, Mietspiegel (Tabellenwerte), aktuelle ImmoScout24/Immowelt-Vergleichspreise und den Bundesbank-Immobilienpreisindikator.
+Berücksichtige: Makrolage (Stadtgröße, Wirtschaftsstärke), Mikrolage (Stadtteil, Wasserlagen, Parknähe, Infrastruktur), Objekteigenschaften (Baujahr, Zustand, Ausstattung, Energieklasse) und aktuelle Marktdynamik.
 ${ausstattung && ausstattung.length > 0 ? `Berücksichtige bei der Bewertung besonders diese Ausstattungsmerkmale: ${ausstattungText}.` : ''}
 
 Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Codeblöcke, keine Erklärungen. Nur das reine JSON-Objekt:
@@ -74,9 +84,11 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
     "qmPreis": <Kaufpreis pro m² in EUR als Zahl>
   },
   "mietWert": {
-    "min": <monatliche Kaltmiete min in EUR als Zahl>,
-    "max": <monatliche Kaltmiete max in EUR als Zahl>,
-    "qmMiete": <Kaltmiete pro m² in EUR als Zahl>,
+    "min": <monatliche Kaltmiete min in EUR laut Mietspiegel-Untergrenze für diese Lage/Baujahr/Ausstattung als Zahl>,
+    "max": <monatliche Kaltmiete max in EUR laut Mietspiegel-Obergrenze für diese Lage/Baujahr/Ausstattung als Zahl>,
+    "qmMiete": <mittlerer Mietspiegel-Wert Kaltmiete pro m² für diese konkrete Lage als Zahl>,
+    "qmMin": <Mietspiegel-Untergrenze pro m² für diese Lage als Zahl>,
+    "qmMax": <Mietspiegel-Obergrenze pro m² für diese Lage als Zahl>,
     "bruttoRendite": <Bruttomietrendite in % als Zahl, z.B. 4.2>
   },
   "scores": {
@@ -118,11 +130,12 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
       "flaeche": <Wohnfläche in m² als Zahl>,
       "preis": <Kaufpreis in EUR als Zahl>,
       "qmPreis": <Preis pro m² als Zahl>,
-      "entfernung": "<geschätzte Entfernung, z.B. '500m' oder '1,2km'>",
+      "entfernung": "<exakte Entfernung: 'gleiche Straße', '80m', '250m' oder max. '500m'>",
+      "strasse": "<Straßenname des Vergleichsobjekts oder 'selbe Straße'>",
       "zustand": "<Zustand des Vergleichsobjekts>"
     },
-    { "typ": "", "flaeche": 0, "preis": 0, "qmPreis": 0, "entfernung": "", "zustand": "" },
-    { "typ": "", "flaeche": 0, "preis": 0, "qmPreis": 0, "entfernung": "", "zustand": "" }
+    { "typ": "", "flaeche": 0, "preis": 0, "qmPreis": 0, "entfernung": "", "strasse": "", "zustand": "" },
+    { "typ": "", "flaeche": 0, "preis": 0, "qmPreis": 0, "entfernung": "", "strasse": "", "zustand": "" }
   ],
   "insights": [
     "<konkrete KI-Erkenntnis 1 zur Immobilie/Lage>",
@@ -148,8 +161,8 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
   },
   "bericht": {
     "zusammenfassung": "<2-3 Sätze: Gesamtbewertung der Immobilie>",
-    "lageAnalyse": "<detaillierte Analyse: Makrolage, Mikrolage, Stadtteil, Infrastruktur, Nahverkehr, Umgebung>",
-    "marktAnalyse": "<aktuelle Marktlage: Preisindex, Vergleichspreise, BORIS-Werte, Mietspiegel, Angebot/Nachfrage>",
+    "lageAnalyse": "<detaillierte Analyse: Makrolage (Stadt, Wirtschaft), Mikrolage (Stadtteil, Straße, unmittelbare Umgebung: Wasserlage/Innenstadt/Villenviertel/Grünfläche/etc.), Infrastruktur, ÖPNV, BORIS-Bodenrichtwert für genau diese PLZ/Lage>",
+    "marktAnalyse": "<aktuelle Marktlage: BORIS-Wert für diese PLZ, Mietspiegel-Tabellenwerte (min/max/m²) für diese Lage und Ausstattungsklasse, aktuelle ImmoScout24/Immowelt-Vergleichspreise in 500m Umkreis, Bundesbank-Indikator, Angebot/Nachfrage>",
     "zustandsBewertung": "<Baujahr, Zustand, Ausstattungsqualität, Energieklasse, technische Einschätzung>",
     "investitionsAnalyse": "<Renditeberechnung, Cashflow-Einschätzung, Finanzierungsüberlegungen>",
     "empfehlung": "<konkrete Handlungsempfehlung: Kaufen/Verkaufen/Halten/Mieten + Begründung + Verhandlungsspielraum>"
