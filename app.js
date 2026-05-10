@@ -675,7 +675,7 @@ async function runChain(prefix) {
 
   setProgress(100, de ? 'Fertig!' : 'Done!');
   updateChainButtons(lastCompletedTaskType);
-  showStep('step-result');
+  readyToShowResult();
   renderResultRich(currentResult);
 }
 
@@ -818,7 +818,7 @@ async function startCalendarTask(token) {
   let events = [];
   try { events = await fetchCalendarEvents(token); } catch (err) {
     currentResult = (de ? 'Fehler beim Lesen des Kalenders: ' : 'Error reading calendar: ') + err.message;
-    setProgress(100, 'Fertig.'); showStep('step-result');
+    setProgress(100, 'Fertig.'); readyToShowResult();
     document.getElementById('result-content').textContent = currentResult;
     return;
   }
@@ -839,7 +839,7 @@ async function startCalendarTask(token) {
   }
 
   setProgress(100, de ? 'Fertig!' : 'Done!');
-  showStep('step-result');
+  readyToShowResult();
   document.getElementById('result-content').textContent = currentResult;
 }
 
@@ -1071,7 +1071,7 @@ async function startGmailTask() {
   try { emails = await fetchGmailEmails(gmailAccessToken); } catch (err) {
     currentResult = (de ? 'Fehler beim Lesen der E-Mails: ' : 'Error reading emails: ') + err.message;
     setProgress(100, de ? 'Fertig.' : 'Done.');
-    showStep('step-result');
+    readyToShowResult();
     document.getElementById('result-content').textContent = currentResult;
     gmailAccessToken = null;
     return;
@@ -1153,7 +1153,7 @@ ${emailList}`;
       ? '⚠️ Gmail Labels konnten nicht erstellt werden. Bitte prüfe die Gmail-Berechtigungen und versuche es erneut.'
       : '⚠️ Gmail labels could not be created. Please check Gmail permissions and try again.';
     setProgress(100, de ? 'Fehler.' : 'Error.');
-    showStep('step-result');
+    readyToShowResult();
     document.getElementById('result-content').innerHTML = `<div style="text-align:center;padding:20px;color:#ef4444;font-size:15px;">⚠️ ${de ? 'Labels konnten nicht in Gmail erstellt werden.<br><br>Bitte stelle sicher dass du die Gmail-Berechtigung vollständig erteilt hast, und versuche es erneut.' : 'Labels could not be created in Gmail.<br><br>Please ensure you granted full Gmail permission and try again.'}</div>`;
     gmailAccessToken = null;
     return;
@@ -1213,7 +1213,7 @@ ${emailList}`;
 
   lastCompletedTaskType = 'email';
   updateChainButtons('email');
-  showStep('step-result');
+  readyToShowResult();
   document.getElementById('result-content').innerHTML = resultHTML;
 }
 
@@ -1312,7 +1312,7 @@ async function startOutlookTask() {
   } catch (err) {
     currentResult = (de ? 'Fehler beim Lesen der Outlook-E-Mails: ' : 'Error reading Outlook emails: ') + err.message;
     setProgress(100, de ? 'Fertig.' : 'Done.');
-    showStep('step-result');
+    readyToShowResult();
     document.getElementById('result-content').textContent = currentResult;
     return;
   }
@@ -1320,7 +1320,7 @@ async function startOutlookTask() {
   if (!emails.length) {
     currentResult = de ? 'Keine ungelesenen E-Mails im Posteingang gefunden.' : 'No unread emails found in inbox.';
     setProgress(100, de ? 'Fertig.' : 'Done.');
-    showStep('step-result');
+    readyToShowResult();
     document.getElementById('result-content').innerHTML = `<p>${currentResult}</p>`;
     return;
   }
@@ -1345,7 +1345,7 @@ async function startOutlookTask() {
 
   stopProgressAnimation();
   setProgress(100, de ? 'Fertig!' : 'Done!');
-  showStep('step-result');
+  readyToShowResult();
   document.getElementById('result-content').innerHTML = marked.parse ? marked.parse(currentResult) : currentResult;
   outlookAccessToken = null;
 }
@@ -2195,7 +2195,7 @@ TONE: ${toneLabel}`;
   setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
   lastCompletedTaskType = currentShortcutType || detectTaskType(taskDesc);
   updateChainButtons(lastCompletedTaskType);
-  showStep('step-result');
+  readyToShowResult();
   renderResultRich(currentResult);
 
   // Demo mode banner (#6)
@@ -3676,6 +3676,13 @@ function showStep(id) {
     if (s !== id) { el.style.display = 'none'; return; }
     el.style.display = s === 'step-payment' ? 'flex' : 'block';
   });
+  if (id === 'step-progress') {
+    setTimeout(() => { if (typeof initOfficeRunner === 'function') initOfficeRunner('game-canvas'); }, 100);
+    const overlay = document.getElementById('game-done-overlay');
+    if (overlay) overlay.style.display = 'none';
+  } else {
+    if (typeof destroyOfficeRunner === 'function') destroyOfficeRunner();
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -5884,3 +5891,31 @@ async function submitSupport() {
   btn.disabled = false;
   btn.textContent = currentLang === 'en' ? 'Send →' : 'Absenden →';
 }
+
+// =====================
+// OFFICE RUNNER GAME
+// =====================
+function readyToShowResult() {
+  const overlay = document.getElementById('game-done-overlay');
+  const progressStep = document.getElementById('step-progress');
+  // If progress step is visible and game is running, show overlay instead of jumping away
+  if (overlay && progressStep && progressStep.style.display !== 'none') {
+    overlay.style.display = 'flex';
+    if (window._officeRunnerInstance) window._officeRunnerInstance.state = 'idle';
+  } else {
+    showStep('step-result');
+  }
+}
+
+function showGameResult() {
+  const overlay = document.getElementById('game-done-overlay');
+  if (overlay) overlay.style.display = 'none';
+  showStep('step-result');
+}
+
+function closeGameOverlay() {
+  const overlay = document.getElementById('game-done-overlay');
+  if (overlay) overlay.style.display = 'none';
+  if (window._officeRunnerInstance) window._officeRunnerInstance.start();
+}
+

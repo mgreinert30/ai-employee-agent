@@ -17,6 +17,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
+  <script src="game.js" defer></script>
 </head>
 <body>
 
@@ -1469,6 +1470,25 @@
         <div class="progress-funfact" id="progress-funfact">
           <span class="progress-funfact-icon">💡</span>
           <span id="progress-funfact-text"></span>
+        </div>
+
+        <!-- Office Runner Game -->
+        <div class="game-wrapper" id="game-wrapper">
+          <div class="game-label">🎮 Überbrücke die Wartezeit — spring über die Hindernisse!</div>
+          <div class="game-canvas-container">
+            <canvas id="game-canvas" width="680" height="210"></canvas>
+            <!-- Results-ready overlay -->
+            <div class="game-done-overlay" id="game-done-overlay" style="display:none;">
+              <div class="game-done-box">
+                <div class="game-done-icon">✅</div>
+                <p class="game-done-title">Analyse fertig!</p>
+                <div class="game-done-btns">
+                  <button onclick="showGameResult()" class="btn-primary" style="padding:10px 24px;font-size:14px;">Ergebnis ansehen →</button>
+                  <button onclick="closeGameOverlay()" class="btn-ghost" style="padding:10px 18px;font-size:13px;">Weiterspielen 🎮</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
