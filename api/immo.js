@@ -4,9 +4,9 @@ export const config = {
 };
 
 const MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
+  { name: 'gemini-2.5-flash',      api: 'v1beta' },
+  { name: 'gemini-2.0-flash-lite', api: 'v1beta' },
+  { name: 'gemini-1.5-flash',      api: 'v1'     },
 ];
 
 function buildPrompt(property) {
@@ -210,15 +210,16 @@ export default async function handler(req, res) {
       temperature: 0.2,
       topP: 0.9,
       topK: 40,
+      responseMimeType: 'application/json',
     },
   });
 
   const allErrors = [];
 
-  for (const model of MODELS) {
+  for (const { name: model, api } of MODELS) {
     let geminiRes;
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`;
       geminiRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
