@@ -5895,6 +5895,22 @@ async function submitSupport() {
 // =====================
 // OFFICE RUNNER GAME
 // =====================
+// Auto-init homepage game when canvas scrolls into view
+(function() {
+  if (typeof IntersectionObserver === 'undefined') return;
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting && typeof initOfficeRunner === 'function') {
+        initOfficeRunner('game-canvas-home');
+        observer.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('game-canvas-home');
+    if (el) observer.observe(el);
+  });
+})();
 function readyToShowResult() {
   const overlay = document.getElementById('game-done-overlay');
   const progressStep = document.getElementById('step-progress');
