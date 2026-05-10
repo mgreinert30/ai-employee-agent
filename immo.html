@@ -652,7 +652,21 @@
 
       <div class="form-nav">
         <button class="btn-secondary" onclick="goToStep(3)">← Zurück</button>
-        <button class="btn-submit" onclick="submitForm()">🔍 Analyse starten</button>
+        <button class="btn-submit" onclick="showImmoPrice()">🔍 Analyse starten</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICE STEP -->
+  <div id="immo-price-step" style="display:none;">
+    <div class="price-box">
+      <div class="price-icon">🏠</div>
+      <p class="price-time">KI analysiert deine Immobilie in ca. 20 Sekunden</p>
+      <p class="price-amount">€1,99</p>
+      <p class="price-note">BORIS-Bodenrichtwerte · Mietspiegel · ImmoScout24 · Vollständiger PDF-Bericht<br>Alle Daten werden nach Abschluss gelöscht.</p>
+      <div class="price-buttons">
+        <button onclick="submitForm()" class="btn-submit" style="padding:14px 32px;font-size:16px;">Jetzt bewerten →</button>
+        <button onclick="cancelImmoPrice()" class="btn-secondary" style="padding:14px 24px;">Abbrechen</button>
       </div>
     </div>
   </div>
@@ -1095,7 +1109,26 @@ function collectFormData() {
 }
 
 /* ===== SUBMIT ===== */
+function showImmoPrice() {
+  const stadtEl = document.getElementById('stadt');
+  if (!stadtEl || !stadtEl.value.trim()) {
+    document.getElementById('err-stadt').style.display = 'block';
+    stadtEl.focus();
+    return;
+  }
+  document.getElementById('step-4').style.display = 'none';
+  document.getElementById('step-indicator').style.display = 'none';
+  document.getElementById('immo-price-step').style.display = 'block';
+}
+
+function cancelImmoPrice() {
+  document.getElementById('immo-price-step').style.display = 'none';
+  document.getElementById('step-4').style.display = 'block';
+  document.getElementById('step-indicator').style.display = 'flex';
+}
+
 async function submitForm() {
+  document.getElementById('immo-price-step').style.display = 'none';
   formData = collectFormData();
 
   // Resize images
@@ -1360,7 +1393,7 @@ function renderResults(data, hasImages) {
 /* ===== RESET ===== */
 function resetForm() {
   lastResult = null; formData = {}; modus = 'Kaufen'; moebliert = false; energieklasse = '';
-  ['region','stadt','plz','flaeche','grundstueck','baujahr','renovierung','etagen','etage'].forEach(id => {
+  ['strasse','region','stadt','plz','flaeche','grundstueck','baujahr','renovierung','etagen','etage'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1386,6 +1419,7 @@ function resetForm() {
   });
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('immo-price-step').style.display = 'none';
   document.getElementById('step-indicator').style.display = 'flex';
   for (let i = 1; i <= 4; i++) document.getElementById('step-' + i).style.display = i === 1 ? 'block' : 'none';
   currentStep = 1;
