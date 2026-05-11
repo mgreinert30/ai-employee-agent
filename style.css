@@ -175,7 +175,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .panel-header h3 { font-size: 20px; font-weight: 800; }
 .task-history-item { background: var(--lighter); border: 1px solid rgba(37,99,235,0.08); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-.task-desc { color: var(--dark); font-weight: 600; }
+.task-desc { color: var(--dark); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .task-date { color: var(--gray); font-size: 12px; margin-top: 2px; }
 .task-price { color: var(--blue); font-weight: 800; font-size: 16px; }
 .no-tasks { color: var(--gray); font-size: 14px; text-align: center; padding: 28px 0; }
