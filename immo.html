@@ -677,6 +677,21 @@
         </div>
       </div>
 
+      <div class="form-group">
+        <label>Bekannte Nettomiete pro m² <span class="opt">(optional — fließt in KI-Bewertung ein)</span></label>
+        <div class="form-row">
+          <div class="input-unit-wrap">
+            <input type="number" id="miete-min" min="0" step="0.01" placeholder="13,00" />
+            <span class="input-unit">€/m² min</span>
+          </div>
+          <div class="input-unit-wrap">
+            <input type="number" id="miete-max" min="0" step="0.01" placeholder="17,00" />
+            <span class="input-unit">€/m² max</span>
+          </div>
+        </div>
+        <div class="input-hint">Falls du bereits Mietdaten kennst, nutzt die KI diese als Referenz für die Bewertung.</div>
+      </div>
+
       <div class="form-nav">
         <button class="btn-secondary" onclick="goToStep(2)">← Zurück</button>
         <button class="btn-primary" onclick="goToStep(4)">Weiter →</button>
@@ -1336,6 +1351,8 @@ function collectFormData() {
     etage: document.getElementById('etage').value !== '' ? parseInt(document.getElementById('etage').value) : null,
     heiztechnik: document.getElementById('heiztechnik').value || null,
     moebliert,
+    mieteMinQm: parseFloat(document.getElementById('miete-min').value) || null,
+    mieteMaxQm: parseFloat(document.getElementById('miete-max').value) || null,
   };
 }
 
@@ -1710,7 +1727,7 @@ function renderResults(data, hasImages) {
 /* ===== RESET ===== */
 function resetForm() {
   lastResult = null; formData = {}; modus = 'Kaufen'; moebliert = false; energieklasse = '';
-  ['strasse','region','stadt','plz','flaeche','grundstueck','baujahr','renovierung','etagen','etage'].forEach(id => {
+  ['strasse','region','stadt','plz','flaeche','grundstueck','baujahr','renovierung','etagen','etage','miete-min','miete-max'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });

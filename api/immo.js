@@ -18,6 +18,7 @@ function buildPrompt(property) {
     etagen, etage, heiztechnik, moebliert,
     balkon, garten, garage, aufzug, keller, kueche,
     smarthome, fussboden, dachterrasse, pool,
+    mieteMinQm, mieteMaxQm,
   } = property;
 
   const ausstattungText = Array.isArray(ausstattung) && ausstattung.length > 0
@@ -72,6 +73,7 @@ IMMOBILIEN-DATEN ZUR BEWERTUNG:
 - Fußbodenheizung: ${fussboden ? 'Ja' : 'Nein'}
 - Dachterrasse: ${dachterrasse ? 'Ja' : 'Nein'}
 - Pool: ${pool ? 'Ja' : 'Nein'}
+${(mieteMinQm || mieteMaxQm) ? `- Vom Nutzer angegebene Nettomiete: ${mieteMinQm ? mieteMinQm + ' €/m²' : ''}${mieteMinQm && mieteMaxQm ? ' – ' : ''}${mieteMaxQm ? mieteMaxQm + ' €/m²' : ''} (als Referenz für Mietwert-Berechnung verwenden)` : ''}
 
 BEWERTUNGSAUFGABE:
 Analysiere diese Immobilie auf Basis deines umfassenden Wissens über den deutschen Immobilienmarkt (Stand 2025).
