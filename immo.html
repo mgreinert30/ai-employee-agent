@@ -1043,7 +1043,8 @@
     <!-- 11. Bildanalyse (only if images uploaded) -->
     <div id="bild-section" style="display:none;">
       <div class="card" id="capture-bildanalyse">
-        <div class="section-title">🖼️ Bildanalyse</div>
+        <div class="section-title">🖼️ Hochgeladene Fotos &amp; Bildanalyse</div>
+        <div id="bild-fotos-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;"></div>
         <div class="bild-grid">
           <div class="bild-item"><div class="bild-label">Zustand</div><div class="bild-val" id="bild-zustand">—</div></div>
           <div class="bild-item"><div class="bild-label">Modernität (0–100)</div><div class="bild-val" id="bild-modernitaet">—</div></div>
@@ -1298,6 +1299,7 @@ function previewPhotos(input) {
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
+      uploadedImages.push(e.target.result);
       const img = document.createElement('img');
       img.src = e.target.result;
       img.className = 'photo-thumb';
@@ -1700,13 +1702,18 @@ function renderResults(data, hasImages) {
   document.getElementById('reno-max').textContent = rv.kosten_max > 0 ? fmtE(rv.kosten_max) : '—';
   document.getElementById('reno-empfehlung').textContent = rv.empfehlung || '—';
 
-  // Bildanalyse
+  // Bildanalyse + Fotogalerie
   if (hasImages) {
     document.getElementById('bild-section').style.display = 'block';
     document.getElementById('bild-zustand').textContent = ba.zustand || '—';
     document.getElementById('bild-modernitaet').textContent = ba.modernitaet != null ? ba.modernitaet + '/100' : '—';
     document.getElementById('bild-reno').textContent = ba.renovierungsbedarf || '—';
     document.getElementById('bild-stil').textContent = ba.stilbewertung || '—';
+    // Show uploaded photos
+    const grid = document.getElementById('bild-fotos-grid');
+    grid.innerHTML = uploadedImages.map(src =>
+      `<img src="${src}" style="width:150px;height:110px;object-fit:cover;border-radius:10px;border:2px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.08);" />`
+    ).join('');
   }
 
   // Quellen
@@ -1914,6 +1921,29 @@ async function generatePDF() {
       (mcIst > 0 && mcSoll > 0 && mcKpDiff > 0) ? `Wertsteigerungspotenzial: ${fmtE(mcKpDiff)}` : null,
     ].filter(Boolean).join('\n');
     addSec('MIETEINGABE & KAUFPREISBERECHNUNG', mcText);
+  }
+
+  // Hochgeladene Fotos
+  if (uploadedImages.length > 0) {
+    if (y > 240) { doc.addPage(); y = 18; }
+    doc.setFillColor(248, 250, 252); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
+    doc.setTextColor(37, 99, 235); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text('HOCHGELADENE FOTOS', margin + 4, y + 5.5);
+    y += 14;
+    const cols = Math.min(3, uploadedImages.length);
+    const gap = 4;
+    const imgW = (cW - gap * (cols - 1)) / cols;
+    const imgH = Math.round(imgW * 0.68);
+    for (let i = 0; i < uploadedImages.length; i++) {
+      const col = i % cols;
+      if (col === 0 && i > 0) y += imgH + gap;
+      if (y + imgH > 274) { doc.addPage(); y = 18; }
+      const x = margin + col * (imgW + gap);
+      try {
+        doc.addImage(uploadedImages[i], 'JPEG', x, y, imgW, imgH, undefined, 'FAST');
+      } catch(e) { /* skip broken image */ }
+      if (i === uploadedImages.length - 1) y += imgH + 8;
+    }
   }
 
   // Footer
