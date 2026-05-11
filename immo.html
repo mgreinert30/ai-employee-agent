@@ -317,6 +317,10 @@
     footer a{color:#64748b;text-decoration:none;margin:0 8px;}
     footer a:hover{color:#3b82f6;}
 
+    /* KAUFPREISKALKULATOR TOGGLE BUTTON */
+    .btn-calc-toggle{background:#fff;color:var(--blue);border:2px dashed #bfdbfe;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+    .btn-calc-toggle:hover{background:#eff6ff;border-color:var(--blue);border-style:solid;}
+
     /* MIETEINGABE CALCULATOR */
     .miet-calc-section{background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.08);padding:36px 32px;margin-bottom:40px;border:1.5px solid #bfdbfe;}
     .miet-calc-header{display:flex;gap:16px;align-items:flex-start;margin-bottom:28px;}
@@ -1051,6 +1055,9 @@
       <button class="btn-reset" onclick="resetForm()">🔄 Neue Bewertung</button>
       <button class="btn-delete-immo" onclick="confirmDeleteImmoData()">🗑 Daten löschen</button>
     </div>
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn-calc-toggle" id="btn-calc-toggle" onclick="toggleMietCalc()">🧮 Kaufpreiskalkulator öffnen</button>
+    </div>
 
     <!-- Delete confirm -->
     <div id="immo-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
@@ -1068,7 +1075,7 @@
   </div><!-- /results-section -->
 
   <!-- ══════════ MIETEINGABE FÜR KAUFPREISBERECHNUNG ══════════ -->
-  <div class="miet-calc-section" id="miet-calc-section">
+  <div class="miet-calc-section" id="miet-calc-section" style="display:none;">
     <div class="miet-calc-header">
       <div class="miet-calc-icon">🏘️</div>
       <div>
@@ -1915,6 +1922,16 @@ function executeDeleteImmoData() {
   lastResult = null;
   formData = {};
   resetForm();
+}
+
+/* ===== KAUFPREISKALKULATOR TOGGLE ===== */
+function toggleMietCalc() {
+  const sec = document.getElementById('miet-calc-section');
+  const btn = document.getElementById('btn-calc-toggle');
+  const open = sec.style.display === 'none';
+  sec.style.display = open ? 'block' : 'none';
+  btn.textContent = open ? '✕ Kaufpreiskalkulator schließen' : '🧮 Kaufpreiskalkulator öffnen';
+  if (open) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ===== MIETEINGABE KALKULATOR ===== */
