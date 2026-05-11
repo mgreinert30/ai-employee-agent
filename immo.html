@@ -316,6 +316,36 @@
     footer{background:#0a0f1e;color:#475569;text-align:center;padding:28px 24px;font-size:13px;}
     footer a{color:#64748b;text-decoration:none;margin:0 8px;}
     footer a:hover{color:#3b82f6;}
+
+    /* MIETEINGABE CALCULATOR */
+    .miet-calc-section{background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.08);padding:36px 32px;margin-bottom:40px;border:1.5px solid #bfdbfe;}
+    .miet-calc-header{display:flex;gap:16px;align-items:flex-start;margin-bottom:28px;}
+    .miet-calc-icon{font-size:36px;flex-shrink:0;margin-top:2px;}
+    .miet-calc-title{font-size:20px;font-weight:900;color:var(--dark);margin-bottom:6px;}
+    .miet-calc-sub{font-size:13px;color:var(--gray);line-height:1.65;}
+    .input-unit-wrap{position:relative;display:flex;align-items:center;}
+    .input-unit-wrap input{padding-right:54px;}
+    .input-unit{position:absolute;right:14px;font-size:12px;font-weight:700;color:var(--gray);pointer-events:none;white-space:nowrap;}
+    .input-hint{font-size:12px;color:var(--gray);margin-top:5px;}
+    .mc-divider{height:1px;background:#e2e8f0;margin:24px 0;}
+    .mc-results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+    @media(max-width:560px){.mc-results-grid{grid-template-columns:repeat(2,1fr);}}
+    .mc-result-item{background:#f8fafc;border-radius:12px;padding:16px;}
+    .mc-result-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin-bottom:6px;}
+    .mc-result-val{font-size:20px;font-weight:900;letter-spacing:-.5px;}
+    .mc-result-val.blue{color:var(--blue);}
+    .mc-result-val.teal{color:#0891b2;}
+    .mc-result-val.green{color:var(--green);}
+    .mc-price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    @media(max-width:600px){.mc-price-grid{grid-template-columns:1fr;}}
+    .mc-price-card{border-radius:16px;padding:24px 20px;text-align:center;}
+    .mc-price-ist{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #bfdbfe;}
+    .mc-price-soll{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1.5px solid #bbf7d0;}
+    .mc-price-diff{background:linear-gradient(135deg,#fffbeb,#fef9c3);border:1.5px solid #fde047;}
+    .mc-price-label{font-size:12px;font-weight:700;color:var(--gray);margin-bottom:10px;line-height:1.5;}
+    .mc-price-val{font-size:26px;font-weight:900;color:var(--dark);letter-spacing:-1px;margin-bottom:8px;}
+    .mc-price-val.green{color:var(--green);}
+    .mc-rendite-badge{font-size:12px;font-weight:700;color:var(--gray);background:rgba(255,255,255,.75);border-radius:20px;padding:4px 12px;display:inline-block;}
   </style>
 </head>
 <body>
@@ -1037,6 +1067,107 @@
 
   </div><!-- /results-section -->
 
+  <!-- ══════════ MIETEINGABE FÜR KAUFPREISBERECHNUNG ══════════ -->
+  <div class="miet-calc-section" id="miet-calc-section">
+    <div class="miet-calc-header">
+      <div class="miet-calc-icon">🏘️</div>
+      <div>
+        <div class="miet-calc-title">Mieteingabe für Kaufpreisberechnung</div>
+        <div class="miet-calc-sub">Gib die aktuelle und zukünftig erzielbare Nettomiete pro m² ein. Daraus berechnet die KI die monatliche/jährliche Miete und leitet eine mögliche Kaufpreisspanne ab.</div>
+      </div>
+    </div>
+
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>Wohnfläche <span style="color:var(--red);">*</span></label>
+        <div class="input-unit-wrap">
+          <input type="number" id="mc-flaeche" min="1" step="1" placeholder="95" oninput="calcMiete()" />
+          <span class="input-unit">m²</span>
+        </div>
+        <div class="field-error" id="err-mc-flaeche">Pflichtfeld</div>
+      </div>
+      <div class="form-group">
+        <label>Aktuelle Nettomiete</label>
+        <div class="input-unit-wrap">
+          <input type="number" id="mc-ist" min="0" step="0.01" placeholder="10,50" oninput="calcMiete()" />
+          <span class="input-unit">€/m²</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Zukünftig erzielbare Nettomiete</label>
+        <div class="input-unit-wrap">
+          <input type="number" id="mc-soll" min="0" step="0.01" placeholder="13,20" oninput="calcMiete()" />
+          <span class="input-unit">€/m²</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row" style="max-width:320px;">
+      <div class="form-group">
+        <label>Kaufpreisfaktor / Vervielfältiger</label>
+        <div class="input-unit-wrap">
+          <input type="number" id="mc-faktor" min="1" max="60" step="0.5" value="25" oninput="calcMiete()" />
+          <span class="input-unit">×</span>
+        </div>
+        <div class="input-hint">Typisch: 20–35 je nach Lage und Markt</div>
+      </div>
+    </div>
+
+    <div id="mc-results" style="display:none;">
+      <div class="mc-divider"></div>
+
+      <div class="section-title" style="margin-bottom:16px;">📊 Berechnungsergebnis</div>
+
+      <div class="mc-results-grid">
+        <div class="mc-result-item">
+          <div class="mc-result-label">Ist-Miete monatlich</div>
+          <div class="mc-result-val blue" id="mc-ist-monatlich">—</div>
+        </div>
+        <div class="mc-result-item">
+          <div class="mc-result-label">Ist-Miete jährlich</div>
+          <div class="mc-result-val blue" id="mc-ist-jaehrlich">—</div>
+        </div>
+        <div class="mc-result-item">
+          <div class="mc-result-label">Soll-Miete monatlich</div>
+          <div class="mc-result-val teal" id="mc-soll-monatlich">—</div>
+        </div>
+        <div class="mc-result-item">
+          <div class="mc-result-label">Soll-Miete jährlich</div>
+          <div class="mc-result-val teal" id="mc-soll-jaehrlich">—</div>
+        </div>
+        <div class="mc-result-item">
+          <div class="mc-result-label">Mietsteigerung mtl.</div>
+          <div class="mc-result-val green" id="mc-steigerung-mtl">—</div>
+        </div>
+        <div class="mc-result-item">
+          <div class="mc-result-label">Mietsteigerung jährl.</div>
+          <div class="mc-result-val green" id="mc-steigerung-jhr">—</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-bottom:16px;">💶 Kaufpreisberechnung</div>
+
+      <div class="mc-price-grid">
+        <div class="mc-price-card mc-price-ist">
+          <div class="mc-price-label">Kaufpreis auf Basis<br>aktueller Miete</div>
+          <div class="mc-price-val" id="mc-kp-ist">—</div>
+          <div class="mc-rendite-badge" id="mc-rendite-ist">— Bruttorendite</div>
+        </div>
+        <div class="mc-price-card mc-price-diff">
+          <div class="mc-price-label">Wertsteigerungs-<br>potenzial</div>
+          <div class="mc-price-val green" id="mc-kp-diff">—</div>
+          <div class="mc-rendite-badge" id="mc-rendite-diff">— Mehrertrag/Jahr</div>
+        </div>
+        <div class="mc-price-card mc-price-soll">
+          <div class="mc-price-label">Kaufpreis auf Basis<br>zukünftiger Miete</div>
+          <div class="mc-price-val" id="mc-kp-soll">—</div>
+          <div class="mc-rendite-badge" id="mc-rendite-soll">— Bruttorendite</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════ END MIETEINGABE ══════════ -->
+
 </div><!-- /main-wrap -->
 
 <footer>
@@ -1733,6 +1864,34 @@ async function generatePDF() {
   // Referenzquellen
   addSec('REFERENZQUELLEN', br.referenzquellen || 'Die Bewertung orientiert sich unter anderem an marktüblichen Bewertungsansätzen und Referenzquellen wie BORIS, Gutachterausschüssen, Mietspiegeln, Immobilienportalen und Sprengnetter.');
 
+  // Mieteingabe & Kaufpreisberechnung (nur wenn ausgefüllt)
+  const mcFlaeche = parseFloat(document.getElementById('mc-flaeche').value) || 0;
+  const mcIst = parseFloat(document.getElementById('mc-ist').value) || 0;
+  const mcSoll = parseFloat(document.getElementById('mc-soll').value) || 0;
+  const mcFaktor = parseFloat(document.getElementById('mc-faktor').value) || 0;
+  if (mcFlaeche > 0 && (mcIst > 0 || mcSoll > 0) && mcFaktor > 0) {
+    const mcIstMtl = Math.round(mcFlaeche * mcIst);
+    const mcIstJhr = mcIstMtl * 12;
+    const mcSollMtl = Math.round(mcFlaeche * mcSoll);
+    const mcSollJhr = mcSollMtl * 12;
+    const mcKpIst = mcIst > 0 ? mcIstJhr * mcFaktor : 0;
+    const mcKpSoll = mcSoll > 0 ? mcSollJhr * mcFaktor : 0;
+    const mcKpDiff = mcKpSoll - mcKpIst;
+    const mcRenditeIst = mcKpIst > 0 ? ((mcIstJhr / mcKpIst) * 100).toFixed(2) : 0;
+    const mcRenditeSoll = mcKpSoll > 0 ? ((mcSollJhr / mcKpSoll) * 100).toFixed(2) : 0;
+    const mcText = [
+      `Wohnfläche: ${mcFlaeche} m²`,
+      mcIst > 0 ? `Aktuelle Nettomiete: ${mcIst.toFixed(2)} €/m² → ${fmtE(mcIstMtl)}/Monat · ${fmtE(mcIstJhr)}/Jahr` : null,
+      mcSoll > 0 ? `Zukünftige Nettomiete: ${mcSoll.toFixed(2)} €/m² → ${fmtE(mcSollMtl)}/Monat · ${fmtE(mcSollJhr)}/Jahr` : null,
+      (mcIst > 0 && mcSoll > 0) ? `Mietsteigerungspotenzial: ${fmtE(mcSollMtl - mcIstMtl)}/Monat · ${fmtE(mcSollJhr - mcIstJhr)}/Jahr` : null,
+      `Verwendeter Kaufpreisfaktor: ${mcFaktor}`,
+      mcIst > 0 ? `Kaufpreis (aktuelle Miete): ${fmtE(mcKpIst)} (${mcRenditeIst}% Bruttorendite)` : null,
+      mcSoll > 0 ? `Kaufpreis (zukünftige Miete): ${fmtE(mcKpSoll)} (${mcRenditeSoll}% Bruttorendite)` : null,
+      (mcIst > 0 && mcSoll > 0 && mcKpDiff > 0) ? `Wertsteigerungspotenzial: ${fmtE(mcKpDiff)}` : null,
+    ].filter(Boolean).join('\n');
+    addSec('MIETEINGABE & KAUFPREISBERECHNUNG', mcText);
+  }
+
   // Footer
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
@@ -1756,6 +1915,58 @@ function executeDeleteImmoData() {
   lastResult = null;
   formData = {};
   resetForm();
+}
+
+/* ===== MIETEINGABE KALKULATOR ===== */
+function calcMiete() {
+  const flaeche = parseFloat(document.getElementById('mc-flaeche').value) || 0;
+  const istQm   = parseFloat(document.getElementById('mc-ist').value)     || 0;
+  const sollQm  = parseFloat(document.getElementById('mc-soll').value)    || 0;
+  const faktor  = parseFloat(document.getElementById('mc-faktor').value)  || 0;
+
+  // Validation
+  if (flaeche <= 0 || (istQm <= 0 && sollQm <= 0) || faktor <= 0) {
+    document.getElementById('mc-results').style.display = 'none';
+    return;
+  }
+
+  // Calculations
+  const istMtl  = istQm  > 0 ? Math.round(flaeche * istQm)  : 0;
+  const istJhr  = istMtl * 12;
+  const sollMtl = sollQm > 0 ? Math.round(flaeche * sollQm) : 0;
+  const sollJhr = sollMtl * 12;
+  const stgMtl  = sollMtl - istMtl;
+  const stgJhr  = sollJhr - istJhr;
+  const kpIst   = istJhr  > 0 ? istJhr  * faktor : 0;
+  const kpSoll  = sollJhr > 0 ? sollJhr * faktor : 0;
+  const kpDiff  = kpSoll - kpIst;
+  const rIst    = kpIst  > 0 ? ((istJhr  / kpIst)  * 100).toFixed(2) : null;
+  const rSoll   = kpSoll > 0 ? ((sollJhr / kpSoll) * 100).toFixed(2) : null;
+
+  const e = (v, sign) => {
+    if (!v && v !== 0) return '—';
+    const s = Math.abs(v).toLocaleString('de-DE', {style:'currency',currency:'EUR',maximumFractionDigits:0});
+    return sign && v > 0 ? '+' + s : s;
+  };
+
+  // Miete rows
+  document.getElementById('mc-ist-monatlich').textContent  = istQm  > 0 ? e(istMtl)  : '—';
+  document.getElementById('mc-ist-jaehrlich').textContent  = istQm  > 0 ? e(istJhr)  : '—';
+  document.getElementById('mc-soll-monatlich').textContent = sollQm > 0 ? e(sollMtl) : '—';
+  document.getElementById('mc-soll-jaehrlich').textContent = sollQm > 0 ? e(sollJhr) : '—';
+  const bothRents = istQm > 0 && sollQm > 0;
+  document.getElementById('mc-steigerung-mtl').textContent = bothRents ? e(stgMtl, true) : '—';
+  document.getElementById('mc-steigerung-jhr').textContent = bothRents ? e(stgJhr, true) : '—';
+
+  // Kaufpreis cards
+  document.getElementById('mc-kp-ist').textContent    = kpIst  > 0 ? e(kpIst)  : '—';
+  document.getElementById('mc-kp-soll').textContent   = kpSoll > 0 ? e(kpSoll) : '—';
+  document.getElementById('mc-kp-diff').textContent   = (bothRents && kpDiff > 0) ? e(kpDiff, true) : '—';
+  document.getElementById('mc-rendite-ist').textContent  = rIst  ? rIst  + '% Bruttorendite' : '—';
+  document.getElementById('mc-rendite-soll').textContent = rSoll ? rSoll + '% Bruttorendite' : '—';
+  document.getElementById('mc-rendite-diff').textContent = (bothRents && stgJhr > 0) ? e(stgJhr, true) + '/Jahr' : '—';
+
+  document.getElementById('mc-results').style.display = 'block';
 }
 
 /* ===== INIT ===== */
