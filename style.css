@@ -210,26 +210,18 @@ header { background: #f1f5f9; color: #0f172a; padding: 20px 24px; border-bottom:
    HERO
    ===================== */
 .hero {
-  background: #f1f5f9;
-  padding: 32px 24px 48px;
-  position: relative;
-}
-.hero-card {
   background: linear-gradient(160deg, #020818 0%, #07153d 35%, #0c2a6e 65%, #0a3d82 100%);
-  color: white; text-align: center; padding: 72px 32px 64px;
-  border-radius: 28px; overflow: hidden;
-  position: relative;
-  max-width: 900px; margin: 0 auto;
-  box-shadow: 0 24px 80px rgba(2,8,24,0.35), 0 4px 16px rgba(0,0,0,0.2);
+  color: white; text-align: center; padding: 100px 32px 80px;
+  position: relative; overflow: hidden;
 }
-.hero-card::before {
+.hero::before {
   content: '';
   position: absolute; inset: 0;
   background: radial-gradient(ellipse at 50% -10%, rgba(6,182,212,0.22) 0%, transparent 65%),
               radial-gradient(ellipse at 20% 80%, rgba(37,99,235,0.15) 0%, transparent 50%);
   pointer-events: none;
 }
-.hero-card::after {
+.hero::after {
   content: '';
   position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(6,182,212,0.5), transparent);
@@ -1599,10 +1591,9 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
   to   { opacity: 0.75; transform: translateY(0);    }
 }
 
-.hero-card   { animation: fadeSlideUp      0.55s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
-.hero-chip   { animation: fadeSlideUp      0.65s cubic-bezier(0.16,1,0.3,1) 0.15s both; }
-.hero h1     { animation: fadeSlideUp      0.85s cubic-bezier(0.16,1,0.3,1) 0.27s both; }
-.hero > .hero-card > p { animation: fadeSlideUpMuted 0.75s cubic-bezier(0.16,1,0.3,1) 0.44s both; }
+.hero-chip   { animation: fadeSlideUp      0.65s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+.hero h1     { animation: fadeSlideUp      0.85s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+.hero > p    { animation: fadeSlideUpMuted 0.75s cubic-bezier(0.16,1,0.3,1) 0.44s both; }
 .hero-badges { animation: fadeSlideUp      0.65s cubic-bezier(0.16,1,0.3,1) 0.60s both; }
 .hero-agents { animation: fadeSlideUp      0.60s cubic-bezier(0.16,1,0.3,1) 0.72s both; }
 .hero-ctas   { animation: fadeSlideUp      0.60s cubic-bezier(0.16,1,0.3,1) 0.84s both; }
