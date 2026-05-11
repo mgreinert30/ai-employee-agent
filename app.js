@@ -3674,7 +3674,7 @@ function showStep(id) {
   ALL_STEPS.forEach(s => {
     const el = document.getElementById(s);
     if (s !== id) { el.style.display = 'none'; return; }
-    el.style.display = 'block';
+    el.style.display = s === 'step-payment' ? 'flex' : 'block';
   });
   if (id === 'step-progress') {
     setTimeout(() => { if (typeof initOfficeRunner === 'function') initOfficeRunner('game-canvas'); }, 100);
