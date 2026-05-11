@@ -282,6 +282,21 @@
     .bild-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin-bottom:6px;}
     .bild-val{font-size:15px;font-weight:700;color:var(--dark);}
 
+    /* NETTOMIETE */
+    .nettomiete-card{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border:1.5px solid #bfdbfe;border-radius:16px;padding:24px 28px;margin-bottom:20px;}
+    .nettomiete-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+    .nettomiete-icon{font-size:28px;}
+    .nettomiete-title{font-size:15px;font-weight:800;color:var(--dark);}
+    .nettomiete-sub{font-size:12px;color:var(--gray);margin-top:2px;}
+    .nettomiete-body{display:flex;flex-direction:column;gap:8px;}
+    .nettomiete-main{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;}
+    .nettomiete-value{font-size:26px;font-weight:900;color:var(--blue);letter-spacing:-0.5px;}
+    .nettomiete-qm{font-size:14px;color:#475569;font-weight:600;}
+    .nettomiete-spanne{font-size:13px;color:#334155;background:#fff;border-radius:8px;padding:8px 14px;display:flex;gap:8px;align-items:center;}
+    .nettomiete-spanne-label{font-weight:700;color:var(--gray);}
+    .nettomiete-hinweis{font-size:12px;color:#64748b;line-height:1.5;font-style:italic;}
+    /* DISCLAIMER */
+    .immo-disclaimer{background:#fef9c3;border:1px solid #fde047;border-radius:12px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#713f12;line-height:1.6;}
     /* QUELLEN */
     .quellen-card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.06);padding:24px 28px;margin-bottom:20px;}
     .quellen-title{font-size:13px;color:var(--gray);margin-bottom:12px;}
@@ -857,6 +872,28 @@
       </div>
     </div>
 
+    <!-- 3b. Zu erzielende Nettomiete -->
+    <div class="nettomiete-card" id="capture-nettomiete">
+      <div class="nettomiete-header">
+        <span class="nettomiete-icon">🏠</span>
+        <div>
+          <div class="nettomiete-title">Zu erzielende Nettomiete</div>
+          <div class="nettomiete-sub">Realistische Kaltmiete bei Neuvermietung</div>
+        </div>
+      </div>
+      <div class="nettomiete-body">
+        <div class="nettomiete-main">
+          <div class="nettomiete-value">ca. <span id="res-nettomiete-monatlich">—</span> monatlich</div>
+          <div class="nettomiete-qm">Entspricht ca. <strong id="res-nettomiete-qm">—</strong> €/m²</div>
+        </div>
+        <div class="nettomiete-spanne">
+          <span class="nettomiete-spanne-label">Realistische Spanne:</span>
+          <span id="res-nettomiete-spanne">—</span>
+        </div>
+        <div class="nettomiete-hinweis" id="res-nettomiete-hinweis">—</div>
+      </div>
+    </div>
+
     <!-- 4. Lage-Analyse -->
     <div class="card" id="capture-lage">
       <div class="section-title">📍 Lage-Analyse</div>
@@ -971,6 +1008,11 @@
     <div class="quellen-card" id="capture-quellen">
       <div class="quellen-title">Diese Bewertung basiert auf Daten von:</div>
       <div class="quellen-badges" id="quellen-badges"></div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="immo-disclaimer">
+      ⚠️ <strong>Rechtlicher Hinweis:</strong> Diese Bewertung ist eine KI-gestützte Ersteinschätzung und ersetzt kein offizielles Verkehrswertgutachten durch einen zertifizierten Sachverständigen gemäß § 194 BauGB. Die Angaben sind ohne Gewähr und dienen ausschließlich der Orientierung.
     </div>
 
     <!-- Export -->
@@ -1370,6 +1412,13 @@ function renderResults(data, hasImages) {
   document.getElementById('res-miete-qm').textContent = qmRange;
   document.getElementById('res-rendite-badge').textContent = mv.bruttoRendite ? `${mv.bruttoRendite}% Rendite` : '—% Rendite';
 
+  // Nettomiete
+  const nm = data.nettomiete || {};
+  document.getElementById('res-nettomiete-monatlich').textContent = nm.monatlich ? fmtE(nm.monatlich) : '—';
+  document.getElementById('res-nettomiete-qm').textContent = nm.qmNetto ? fmt(nm.qmNetto) : '—';
+  document.getElementById('res-nettomiete-spanne').textContent = (nm.spanneMin && nm.spanneMax) ? `${fmtE(nm.spanneMin)} – ${fmtE(nm.spanneMax)}` : '—';
+  document.getElementById('res-nettomiete-hinweis').textContent = nm.hinweis || '';
+
   // Lage details
   const lageGrid = document.getElementById('lage-grid');
   const lageItems = [
@@ -1594,6 +1643,7 @@ async function generatePDF() {
     'capture-value-card',
     'capture-scores',
     'capture-rent',
+    'capture-nettomiete',
     'capture-lage',
     'capture-prognose',
     'capture-market',
@@ -1656,6 +1706,20 @@ async function generatePDF() {
   addSec('EMPFEHLUNG', br.empfehlung);
   addList('RISIKEN', data.risiken, 153, 27, 27);
   addList('CHANCEN', data.chancen, 6, 95, 70);
+
+  // Nettomiet-Erwartung
+  if (nm && nm.monatlich) {
+    const nmText =
+      `Zu erzielende Nettokaltmiete: ca. ${fmtE(nm.monatlich)} monatlich\n` +
+      `Nettomiete pro m²: ca. ${fmt(nm.qmNetto)} €/m²\n` +
+      `Realistische Spanne: ${fmtE(nm.spanneMin)} – ${fmtE(nm.spanneMax)}\n` +
+      (nm.faktoren ? `Berücksichtigte Faktoren: ${nm.faktoren}\n` : '') +
+      (nm.hinweis ? nm.hinweis : '');
+    addSec('NETTOMIET-ERWARTUNG', nmText);
+  }
+
+  // Referenzquellen
+  addSec('REFERENZQUELLEN', br.referenzquellen || 'Die Bewertung orientiert sich unter anderem an marktüblichen Bewertungsansätzen und Referenzquellen wie BORIS, Gutachterausschüssen, Mietspiegeln, Immobilienportalen und Sprengnetter.');
 
   // Footer
   const totalPages = doc.getNumberOfPages();
