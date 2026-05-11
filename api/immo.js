@@ -4,9 +4,10 @@ export const config = {
 };
 
 const MODELS = [
-  { name: 'gemini-2.5-flash',      api: 'v1beta' },
-  { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
-  { name: 'gemini-2.5-pro',        api: 'v1beta' },
+  { name: 'gemini-2.5-flash',      api: 'v1beta', thinkingBudget: 0   },
+  { name: 'gemini-2.5-flash-lite', api: 'v1beta', thinkingBudget: 0   },
+  { name: 'gemini-2.5-pro',        api: 'v1beta', thinkingBudget: 1024 },
+  { name: 'gemini-1.5-flash',      api: 'v1beta', thinkingBudget: null },
 ];
 
 function buildPrompt(property) {
@@ -271,32 +272,44 @@ export default async function handler(req, res) {
     : [{ text: prompt }];
 
   const allErrors = [];
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  for (const { name: model, api } of MODELS) {
+  for (const { name: model, api, thinkingBudget } of MODELS) {
+    const genConfig = {
+      maxOutputTokens: 4096,
+      temperature: 0.2,
+      topP: 0.9,
+      topK: 40,
+    };
+    if (thinkingBudget !== null) {
+      genConfig.thinkingConfig = { thinkingBudget };
+    }
     const geminiBody = JSON.stringify({
       contents: [{ parts }],
-      generationConfig: {
-        maxOutputTokens: 4096,
-        temperature: 0.2,
-        topP: 0.9,
-        topK: 40,
-        // Disable thinking tokens — they corrupt JSON output in 2.5 models
-        ...(model.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-      },
+      generationConfig: genConfig,
     });
 
+    const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`;
     let geminiRes;
-    try {
-      const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`;
-      geminiRes = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: geminiBody,
-      });
-    } catch (fetchErr) {
-      allErrors.push(`${model}: Netzwerkfehler — ${fetchErr.message}`);
-      continue;
+
+    // Retry up to 2 times on 503 (transient overload)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        geminiRes = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: geminiBody,
+        });
+      } catch (fetchErr) {
+        allErrors.push(`${model}: Netzwerkfehler — ${fetchErr.message}`);
+        geminiRes = null;
+        break;
+      }
+      if (geminiRes.status !== 503) break;
+      if (attempt === 0) await sleep(2000);
     }
+
+    if (!geminiRes) continue;
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text().catch(() => '');
