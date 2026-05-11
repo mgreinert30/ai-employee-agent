@@ -25,10 +25,12 @@ function buildPrompt(property) {
     ? ausstattung.join(', ')
     : 'keine besonderen Merkmale';
 
-  return `Du bist ein führender KI-Immobiliengutachter in Deutschland mit umfassendem Wissen über Bodenrichtwerte (BORIS), Mietspiegel, Gutachterausschuss-Berichte, Bundesbank-Immobilienpreisindikator, Destatis-Statistiken, BBSR/INKAR Regionaldaten, Sprengnetter-Bewertungsansätze und aktuelle Marktdaten von ImmoScout24, Immowelt und Immonet.
+  return `Du bist ein führender KI-Immobiliengutachter in Deutschland mit umfassendem Wissen über Immobilienrichtwerte (BORIS-Immobilienrichtwertkarte), Mietspiegel, Gutachterausschuss-Berichte, Bundesbank-Immobilienpreisindikator, Destatis-Statistiken, BBSR/INKAR Regionaldaten, Sprengnetter-Bewertungsansätze und aktuelle Marktdaten von ImmoScout24, Immowelt und Immonet.
+
+WICHTIG: Verwende ausschließlich die IMMOBILIENRICHTWERTE (Kaufpreissammlungen der Gutachterausschüsse — nicht die Bodenrichtwerte). Immobilienrichtwerte sind die amtlichen Durchschnittskaufpreise für bebaute Grundstücke nach Lage, Gebäudeart und Baujahr — also direkte Vergleichswerte für Immobilien.
 
 Dein Wissen umfasst folgende deutsche Immobiliendatenquellen:
-- BORIS Deutschland (Bodenrichtwerte) — offizielle Bodenrichtwerte der Bundesländer
+- BORIS Deutschland (Immobilienrichtwerte) — amtliche Immobilienrichtwerte der Gutachterausschüsse (Kaufpreissammlungen für bebaute Grundstücke)
 - Gutachterausschüsse (Grundstücksmarktberichte) — offizielle Marktberichte der regionalen Ausschüsse
 - Mietspiegel der jeweiligen Stadt — qualifizierte und einfache Mietspiegel (Tabellenwerte nach Lage/Baujahr/Ausstattung)
 - Destatis (Statistisches Bundesamt) — Immobilienpreisindizes, Baufertigstellungen
@@ -80,7 +82,7 @@ Analysiere diese Immobilie auf Basis deines umfassenden Wissens über den deutsc
 
 LAGEANALYSE (sehr wichtig):
 Die Bewertungsadresse lautet: ${strasse ? strasse + ', ' : ''}${plz ? plz + ' ' : ''}${stadt || ''}.
-Beschreibe die Mikrolage dieser EXAKTEN Adresse präzise: Ist sie in der Innenstadt, am Wasser (Fluss, See, Meer, Kanal), in einer Villengegend, am Stadtrand, in einem Gewerbegebiet, neben Grünflächen, in einer Einkaufsstraße? Nenne, was sich konkret in der unmittelbaren Umgebung dieser Adresse befindet. Verwende den BORIS-Bodenrichtwert für exakt diese PLZ ${plz || ''} / Straße${strasse ? ' "' + strasse + '"' : ''}, nicht nur den Stadtdurchschnitt.
+Beschreibe die Mikrolage dieser EXAKTEN Adresse präzise: Ist sie in der Innenstadt, am Wasser (Fluss, See, Meer, Kanal), in einer Villengegend, am Stadtrand, in einem Gewerbegebiet, neben Grünflächen, in einer Einkaufsstraße? Nenne, was sich konkret in der unmittelbaren Umgebung dieser Adresse befindet. Verwende den BORIS-Immobilienrichtwert (amtlicher Kaufpreis-Richtwert für bebaute Grundstücke) für exakt diese PLZ ${plz || ''} / Straße${strasse ? ' "' + strasse + '"' : ''}, nicht nur den Stadtdurchschnitt. Keine Bodenrichtwerte — nur Immobilienrichtwerte.
 
 MIETPREISE & ZU ERZIELENDE NETTOMIETE (sehr wichtig):
 Berechne die zu erzielende Nettokaltmiete (monatlich und pro m²) auf Basis des Mietspiegels für diese exakte Lage, das Baujahr, die Ausstattungsqualität und die Etage. Berücksichtige dabei alle wertsteigernden Merkmale: Balkon (${balkon ? 'vorhanden' : 'nicht vorhanden'}), Garten (${garten ? 'vorhanden' : 'nicht vorhanden'}), Aufzug (${aufzug ? 'vorhanden' : 'nicht vorhanden'}), Garage/Stellplatz (${garage ? 'vorhanden' : 'nicht vorhanden'}), Einbauküche (${kueche ? 'vorhanden' : 'nicht vorhanden'}), Energieklasse (${energieklasse || 'unbekannt'}). Gib eine realistische Mietspanne an (Untergrenze/Mittellage/Obergrenze).
@@ -89,7 +91,7 @@ VERGLEICHSOBJEKTE (sehr wichtig):
 Die Immobilie befindet sich in: ${strasse ? '"' + strasse + '", ' : ''}${plz ? plz + ' ' : ''}${stadt || ''}.
 Nenne ausschließlich Vergleichsobjekte, die sich auf der GLEICHEN STRASSE ("${strasse || 'angegebene Straße'}") oder im Umkreis von maximal 500 Metern befinden. Erfinde KEINE Straßennamen. Nutze ausschließlich echte Straßen in ${stadt || 'der angegebenen Stadt'} in der Nähe der angegebenen Adresse. Gib für jedes Objekt die konkrete Entfernung an (z.B. "gleiche Straße", "150m nördlich", "320m entfernt").
 
-Beziehe alle relevanten Datenquellen ein: BORIS-Bodenrichtwerte für exakt diese PLZ/Straße, Mietspiegel (Tabellenwerte), aktuelle ImmoScout24/Immowelt-Vergleichspreise und den Bundesbank-Immobilienpreisindikator.
+Beziehe alle relevanten Datenquellen ein: BORIS-Immobilienrichtwerte (Kaufpreissammlungen) für exakt diese PLZ/Straße, Mietspiegel (Tabellenwerte), aktuelle ImmoScout24/Immowelt-Vergleichspreise und den Bundesbank-Immobilienpreisindikator.
 Berücksichtige: Makrolage (Stadtgröße, Wirtschaftsstärke), Mikrolage (Stadtteil, Wasserlagen, Parknähe, Infrastruktur), Objekteigenschaften (Baujahr, Zustand, Ausstattung, Energieklasse) und aktuelle Marktdynamik.
 ${ausstattung && ausstattung.length > 0 ? `Berücksichtige bei der Bewertung besonders diese Ausstattungsmerkmale: ${ausstattungText}.` : ''}
 
@@ -188,15 +190,15 @@ Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein Markdown, keine Cod
   },
   "bericht": {
     "zusammenfassung": "<2-3 Sätze: Gesamtbewertung der Immobilie>",
-    "lageAnalyse": "<detaillierte Analyse: Makrolage (Stadt, Wirtschaft), Mikrolage (Stadtteil, Straße, unmittelbare Umgebung: Wasserlage/Innenstadt/Villenviertel/Grünfläche/etc.), Infrastruktur, ÖPNV, BORIS-Bodenrichtwert für genau diese PLZ/Lage>",
-    "marktAnalyse": "<aktuelle Marktlage: BORIS-Wert für diese PLZ, Mietspiegel-Tabellenwerte (min/max/m²) für diese Lage und Ausstattungsklasse, aktuelle ImmoScout24/Immowelt-Vergleichspreise in 500m Umkreis, Bundesbank-Indikator, Angebot/Nachfrage>",
+    "lageAnalyse": "<detaillierte Analyse: Makrolage (Stadt, Wirtschaft), Mikrolage (Stadtteil, Straße, unmittelbare Umgebung: Wasserlage/Innenstadt/Villenviertel/Grünfläche/etc.), Infrastruktur, ÖPNV, BORIS-Immobilienrichtwert (amtlicher Kaufpreis-Richtwert) für genau diese PLZ/Lage>",
+    "marktAnalyse": "<aktuelle Marktlage: BORIS-Immobilienrichtwert für diese PLZ, Mietspiegel-Tabellenwerte (min/max/m²) für diese Lage und Ausstattungsklasse, aktuelle ImmoScout24/Immowelt-Vergleichspreise in 500m Umkreis, Bundesbank-Indikator, Angebot/Nachfrage>",
     "zustandsBewertung": "<Baujahr, Zustand, Ausstattungsqualität, Energieklasse, technische Einschätzung>",
     "investitionsAnalyse": "<Renditeberechnung auf Basis der zu erzielenden Nettomiete, Cashflow-Einschätzung, Finanzierungsüberlegungen, Sprengnetter-Vergleichswerte>",
     "empfehlung": "<konkrete Handlungsempfehlung: Kaufen/Verkaufen/Halten/Mieten + Begründung + Verhandlungsspielraum>",
     "referenzquellen": "Die Bewertung orientiert sich unter anderem an marktüblichen Bewertungsansätzen und Referenzquellen wie BORIS, Gutachterausschüssen, Mietspiegeln, Immobilienportalen und Sprengnetter."
   },
   "quellen": [
-    "BORIS Deutschland",
+    "BORIS Immobilienrichtwerte",
     "Mietspiegel ${stadt || '[Stadt]'}",
     "ImmoScout24 Marktdaten",
     "Immowelt Angebotspreise",
