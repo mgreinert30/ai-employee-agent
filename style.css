@@ -795,6 +795,7 @@ textarea { resize: vertical; }
 .price-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* PAYMENT BOX */
+#step-price { display: flex; justify-content: center; padding: 32px 16px; }
 #step-payment { min-height: calc(100vh - 120px); display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
 .payment-box { background: white; border-radius: 18px; padding: 42px; box-shadow: var(--shadow-lg); border: 1px solid rgba(37,99,235,0.08); width: 100%; max-width: 520px; }
 .payment-box h3 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
