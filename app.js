@@ -5914,9 +5914,11 @@ async function submitSupport() {
 function readyToShowResult() {
   const overlay = document.getElementById('game-done-overlay');
   const progressStep = document.getElementById('step-progress');
+  const resultBtnRow = document.getElementById('game-result-btn-row');
   // If progress step is visible and game is running, show overlay instead of jumping away
   if (overlay && progressStep && progressStep.style.display !== 'none') {
     overlay.style.display = 'flex';
+    if (resultBtnRow) resultBtnRow.style.display = 'block';
     if (window._officeRunnerInstance) window._officeRunnerInstance.state = 'idle';
   } else {
     showStep('step-result');
