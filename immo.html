@@ -1862,34 +1862,59 @@ async function generatePDF() {
 
   // Sections helper
   function addSec(title, text) {
-    if (y > 255) { doc.addPage(); y = 18; }
-    doc.setFillColor(248, 250, 252); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
-    doc.setTextColor(37, 99, 235); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.text(title, margin + 4, y + 5.5);
-    y += 12;
-    if (!text) return;
-    doc.setTextColor(30, 30, 30); doc.setFontSize(9.5); doc.setFont('helvetica', 'normal');
-    const lines = doc.splitTextToSize(text, cW);
-    lines.forEach(line => {
-      if (y > 274) { doc.addPage(); y = 18; }
-      doc.text(line, margin, y); y += 5.5;
-    });
-    y += 4;
+    const lines = text ? doc.splitTextToSize(text, cW - 14) : [];
+    const contentH = lines.length > 0 ? lines.length * 5.5 + 6 : 0;
+    const boxH = 10 + contentH + 4;
+    if (y + boxH > 274) { doc.addPage(); y = 18; }
+    // Card box
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(219, 234, 254);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(margin, y, cW, boxH, 2.5, 2.5, 'FD');
+    // Blue left accent bar
+    doc.setFillColor(37, 99, 235);
+    doc.roundedRect(margin, y, 3, boxH, 1.5, 1.5, 'F');
+    doc.rect(margin + 1.5, y, 1.5, boxH, 'F');
+    // Title
+    doc.setFillColor(239, 246, 255);
+    doc.rect(margin + 3, y, cW - 3, 10, 'F');
+    doc.setTextColor(37, 99, 235); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+    doc.text(title, margin + 7, y + 7);
+    y += 13;
+    if (!text) { y += 2; return; }
+    doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    lines.forEach(line => { doc.text(line, margin + 7, y); y += 5.5; });
+    y += 8;
   }
   function addList(title, items, r, g, b) {
-    if (y > 255) { doc.addPage(); y = 18; }
-    doc.setFillColor(248, 250, 252); doc.roundedRect(margin, y, cW, 8, 2, 2, 'F');
-    doc.setTextColor(r, g, b); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.text(title, margin + 4, y + 5.5); y += 12;
-    (items || []).forEach(item => {
-      if (y > 274) { doc.addPage(); y = 18; }
+    const allLines = (items || []).map(item => {
       const txt = typeof item === 'object' ? `${item.titel || ''}: ${item.beschreibung || ''}` : item;
-      doc.setTextColor(r, g, b); doc.setFontSize(8); doc.text('•', margin + 2, y);
-      doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(txt, cW - 8);
-      doc.text(lines, margin + 8, y); y += lines.length * 5.2 + 2;
+      return doc.splitTextToSize(txt, cW - 16);
     });
-    y += 4;
+    const contentH = allLines.reduce((s, l) => s + l.length * 5.2 + 2, 0);
+    const boxH = 10 + contentH + 6;
+    if (y + boxH > 274) { doc.addPage(); y = 18; }
+    // Card box
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(r === 153 ? 254 : 209, r === 153 ? 202 : 250, r === 153 ? 202 : 237);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(margin, y, cW, boxH, 2.5, 2.5, 'FD');
+    // Colored left accent
+    doc.setFillColor(r, g, b);
+    doc.roundedRect(margin, y, 3, boxH, 1.5, 1.5, 'F');
+    doc.rect(margin + 1.5, y, 1.5, boxH, 'F');
+    // Title background
+    doc.setFillColor(r === 153 ? 254 : 240, r === 153 ? 242 : 253, r === 153 ? 242 : 244);
+    doc.rect(margin + 3, y, cW - 3, 10, 'F');
+    doc.setTextColor(r, g, b); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+    doc.text(title, margin + 7, y + 7); y += 13;
+    allLines.forEach((lines, i) => {
+      if (y > 274) { doc.addPage(); y = 18; }
+      doc.setFillColor(r, g, b); doc.setFontSize(8); doc.text('•', margin + 7, y);
+      doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal');
+      doc.text(lines, margin + 12, y); y += lines.length * 5.2 + 2;
+    });
+    y += 6;
   }
 
   addSec('ZUSAMMENFASSUNG', br.zusammenfassung);
