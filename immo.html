@@ -1849,15 +1849,22 @@ async function generatePDF() {
     'capture-quellen',
   ];
 
+  const pad = 4; // inner padding inside card border
   for (const id of captures) {
     const el = document.getElementById(id);
-    // skip hidden elements (e.g. bild-section when no images)
     if (!el || el.closest('[style*="display:none"]') || el.style.display === 'none') continue;
-    const img = await captureEl(id, cW);
+    const img = await captureEl(id, cW - pad * 2);
     if (!img) continue;
-    if (y + img.h > 270) { doc.addPage(); y = 18; }
-    doc.addImage(img.data, 'PNG', margin, y, img.w, img.h);
-    y += img.h + 6;
+    const boxH = img.h + pad * 2;
+    if (y + boxH > 272) { doc.addPage(); y = 18; }
+    // Card border
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(219, 234, 254);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(margin, y, cW, boxH, 3, 3, 'FD');
+    // Image inside card
+    doc.addImage(img.data, 'PNG', margin + pad, y + pad, img.w, img.h);
+    y += boxH + 5;
   }
 
   // Sections helper
