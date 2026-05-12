@@ -4767,6 +4767,7 @@ async function extractPDFText(file) {
 // Detect document type for tailored prompt (#1)
 function detectDocType(filename, taskDesc) {
   const t = (filename + ' ' + taskDesc).toLowerCase();
+  if (/(versicherung|versicherer|insurance|solvency|rückversicherung|rueckversicherung|combined.ratio|schaden.kosten|schadenquote|prämieneinnahmen|praemieneinnahmen|beitragseinnahmen|haftpflicht|lebensversicherung|krankenversicherung|sachversicherung|öffentliche.versicherung|sparkassen.versicherung)/.test(t)) return 'versicherungsbericht';
   if (/(geschäftsbericht|jahresbericht|annual.?report|geschaeftsbericht|quartalsbericht|konzernbericht|quarterly|q[1-4]\s*20\d\d|halbjahresbericht|interim.?report)/.test(t)) return 'geschaeftsbericht';
   if (/(vertrag|contract|agreement|vereinbarung|lizenz|mietvertrag|kaufvertrag|dienstleistungsvertrag|nda|terms.of)/.test(t)) return 'vertrag';
   if (/(jahresabschluss|bilanz|gewinn.verlust|balance.sheet|income.statement|ifrs|gaap|buchführung|buchfuehrung|cashflow|p&l)/.test(t)) return 'jahresabschluss';
@@ -4799,6 +4800,50 @@ function buildPrompt(taskDesc, businessDetails, profession, docText, docType, an
 
   // Doc-type specific section templates (#1, #4)
   const docTypeSections = {
+    versicherungsbericht: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle zentralen Kennzahlen: Beitragseinnahmen, Combined Ratio, Schadenquote, Kostenquote, Solvency-II-Quote, Eigenkapital, Kapitalanlageergebnis, Jahresüberschuss — je als "Bezeichnung: Wert (Vorjahr: X)" auf einer Zeile.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Kompaktes Fazit: Wie läuft der Versicherer? Profitabilität, Wachstum, Kapitalstärke — wichtigste Botschaften des Berichts in 3–5 Sätzen.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KAPITALANLAGE-RISIKEN (DETAILLIERT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Echte Bewertung der Kapitalanlagerisiken: Zinsänderungsrisiko, Kreditausfallrisiko, Marktpreisrisiko, Konzentrationsrisiko, Immobilienrisiko. Welche Anlageklassen dominieren das Portfolio? Wie hoch ist die Durationsanfälligkeit? Gibt es Klumpenrisiken? Konkrete Zahlen aus dem Bericht nennen und kritisch bewerten.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOLVENCY-II-QUOTE — ANALYSE & BEWERTUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Solvency-II-Bedeckungsquote: aktueller Wert, Vorjahresvergleich, Mindestanforderung (100%), regulatorisches Ziel des Unternehmens. Wie groß ist der Puffer? Welche Faktoren beeinflussen die Quote? Ist die Kapitalausstattung komfortabel oder angespannt? Konkrete Einschätzung mit Zahlenbelegen.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RÜCKVERSICHERUNGSSTRATEGIE — KRITISCHE EINSCHÄTZUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Rückversicherungsabgaben im Verhältnis zu Beitragseinnahmen: Ist die Abgabenquote branchenüblich oder auffällig hoch/niedrig? Welche Risiken werden retrozediert? Ist die Strategie (Kostensenkung vs. Risikoabsicherung) erkennbar? Bewertung: strategisch sinnvoll, zu teuer oder zu wenig Schutz?]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WETTBEWERBSPOSITION UNTER ÖFFENTLICHEN VERSICHERERN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Einordnung gegenüber anderen öffentlich-rechtlichen Versicherern (Sparkassen-Versicherungen, Provinzial, SV SparkassenVersicherung, LVM, öffentliche Versicherer der Länder): Combined Ratio-Vergleich, Marktanteilstrends, Beitragsvolumen, regionale Stärke. Wo steht das Unternehmen im Vergleich zur Peer-Group?]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCHADEN- & KOSTENENTWICKLUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Schadenquote, Kostenquote, Combined Ratio im Jahresvergleich. Treiber der Schadenentwicklung (Elementarschäden, Großschadenereignisse, Inflation). Kostensenkungspotenziale.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RISIKEN & CHANCEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Alle genannten Risiken (Regulatorik, Klimarisiken, Zinsumfeld, Cyber, Inflation) und Chancen — quantifiziert wo möglich, mit Seitenreferenz.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUSBLICK & HANDLUNGSEMPFEHLUNGEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Prognose des Unternehmens + konkrete Empfehlungen für Management/Investoren/Aufsicht.]`,
     geschaeftsbericht: isDE
       ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KENNZAHLEN AUF EINEN BLICK
