@@ -3,12 +3,12 @@ export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 };
 
-// Model priority list — self-healing: deprecated models 404 and the next one is tried automatically
+// PDF-Analyse: gemini-1.5-flash as primary (stable, no 503/404 issues, excellent for docs)
 const MODELS = [
-  'gemini-2.5-flash',       // primary: latest, fastest
-  'gemini-2.0-flash',       // fallback 1
-  'gemini-2.0-flash-lite',  // fallback 2
-  'gemini-1.5-flash',       // fallback 3: older but widely available
+  'gemini-1.5-flash',       // primary: stable, reliable, great for PDF/doc analysis
+  'gemini-1.5-pro',         // fallback 1: more capable, same stable generation
+  'gemini-2.5-flash-lite',  // fallback 2: newer but lighter
+  'gemini-2.5-flash',       // fallback 3: newest, may have 503 under high load
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
