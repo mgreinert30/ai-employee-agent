@@ -668,7 +668,7 @@ async function runChain(prefix) {
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    currentResult = data.result || '';
+    currentResult = stripCodeFences(data.result || '');
   } catch (err) {
     currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
   }
@@ -2444,6 +2444,12 @@ function stripLeadingSymbol(s) {
 }
 
 // ── Rich HTML result renderer (on-screen) ──────────────────────────────────
+function stripCodeFences(text) {
+  if (!text) return text;
+  // Remove markdown code blocks like ```json ... ``` or ``` ... ```
+  return text.replace(/^```[a-z]*\n?/gim, '').replace(/^```$/gim, '').trim();
+}
+
 function renderResultRich(text) {
   const container = document.getElementById('result-content');
   if (!container) return;
