@@ -4800,109 +4800,168 @@ function buildPrompt(taskDesc, businessDetails, profession, docText, docType, an
 
   // Doc-type specific section templates (#1, #4)
   const docTypeSections = {
-    versicherungsbericht: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KENNZAHLEN AUF EINEN BLICK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle zentralen Kennzahlen: Beitragseinnahmen, Combined Ratio, Schadenquote, Kostenquote, Solvency-II-Quote, Eigenkapital, Kapitalanlageergebnis, Jahresüberschuss — je als "Bezeichnung: Wert (Vorjahr: X)" auf einer Zeile.]
+    versicherungsbericht: `AUFGABE:
+Analysiere den hochgeladenen Versicherungsbericht vollständig und erstelle eine professionelle Tiefenanalyse auf dem Niveau eines Senior-Unternehmensberaters, Investment-Analysten und Wirtschaftsprüfers.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTIVE SUMMARY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Kompaktes Fazit: Wie läuft der Versicherer? Profitabilität, Wachstum, Kapitalstärke — wichtigste Botschaften des Berichts in 3–5 Sätzen.]
+WICHTIG:
+Du darfst den Bericht NICHT nur zusammenfassen.
+Du musst:
+- Zusammenhänge erkennen
+- Widersprüche identifizieren
+- Risiken interpretieren
+- versteckte Schwächen offenlegen
+- strategische Implikationen ableiten
+- Management-Narrative kritisch hinterfragen
+- Zahlen logisch miteinander verbinden
+- die wirtschaftliche Realität hinter den Aussagen erkennen
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KAPITALANLAGE-RISIKEN (DETAILLIERT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Echte Bewertung der Kapitalanlagerisiken: Zinsänderungsrisiko, Kreditausfallrisiko, Marktpreisrisiko, Konzentrationsrisiko, Immobilienrisiko. Welche Anlageklassen dominieren das Portfolio? Wie hoch ist die Durationsanfälligkeit? Gibt es Klumpenrisiken? Konkrete Zahlen aus dem Bericht nennen und kritisch bewerten.]
+ARBEITSWEISE:
+1. Lies ALLE Seiten vollständig.
+2. Nutze Tabellen, Grafiken, Kennzahlen und Fließtexte gleichermaßen.
+3. Jede Aussage MUSS mit Seitenzahl belegt werden.
+4. Erkenne implizite Risiken und nicht nur explizit genannte Risiken.
+5. Analysiere die Qualität der Gewinne: stammen Gewinne aus Kerngeschäft? Kapitalanlagen? Einmaleffekten? Bilanzierungseffekten?
+6. Identifiziere: operative Stärke, strukturelle Schwächen, Bilanzrisiken, Abhängigkeiten, Management-Risiken, Digitalisierungschancen, regulatorische Risiken.
+7. Vergleiche Kennzahlen mit Branchenniveau (öffentliche Versicherer, Sparkassen-Versicherungen, Provinzial, LVM).
+8. Bewerte kritisch: Combined Ratio, Eigenkapitalentwicklung, Rückstellungen, Kapitalanlageergebnis, Solvency-II-Quote, Schadenquote, Kostenquote, Vertragsentwicklung, Rückversicherungsabgaben.
+9. Erstelle KEINE PR-Zusammenfassung.
+10. Schreibe wie ein unabhängiger Analyst für institutionelle Investoren.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOLVENCY-II-QUOTE — ANALYSE & BEWERTUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Solvency-II-Bedeckungsquote: aktueller Wert, Vorjahresvergleich, Mindestanforderung (100%), regulatorisches Ziel des Unternehmens. Wie groß ist der Puffer? Welche Faktoren beeinflussen die Quote? Ist die Kapitalausstattung komfortabel oder angespannt? Konkrete Einschätzung mit Zahlenbelegen.]
+AUSGABESTRUKTUR:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RÜCKVERSICHERUNGSSTRATEGIE — KRITISCHE EINSCHÄTZUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Rückversicherungsabgaben im Verhältnis zu Beitragseinnahmen: Ist die Abgabenquote branchenüblich oder auffällig hoch/niedrig? Welche Risiken werden retrozediert? Ist die Strategie (Kostensenkung vs. Risikoabsicherung) erkennbar? Bewertung: strategisch sinnvoll, zu teuer oder zu wenig Schutz?]
+# TITELSEITE
+- Dokumentname, Datum, Analyse-Tiefe
+- Gesamtbewertung, Risiko-Score (1–10), Stabilitäts-Score (1–10)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WETTBEWERBSPOSITION UNTER ÖFFENTLICHEN VERSICHERERN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Einordnung gegenüber anderen öffentlich-rechtlichen Versicherern (Sparkassen-Versicherungen, Provinzial, SV SparkassenVersicherung, LVM, öffentliche Versicherer der Länder): Combined Ratio-Vergleich, Marktanteilstrends, Beitragsvolumen, regionale Stärke. Wo steht das Unternehmen im Vergleich zur Peer-Group?]
+# EXECUTIVE SUMMARY
+- Wichtigste Erkenntnisse, kritischste Risiken, wichtigste Chancen
+- Gesamturteil in maximal 10 Punkten
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SCHADEN- & KOSTENENTWICKLUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Schadenquote, Kostenquote, Combined Ratio im Jahresvergleich. Treiber der Schadenentwicklung (Elementarschäden, Großschadenereignisse, Inflation). Kostensenkungspotenziale.]
+# KENNZAHLEN-DASHBOARD
+Tabelle mit: Beitragseinnahmen, Wachstum, Combined Ratio, Schadenquote, Kostenquote, Kapitalanlageergebnis, Jahresüberschuss, Eigenkapital, Solvency-II-Quote, Verträge, Mitarbeiter, Veränderung zum Vorjahr
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISIKEN & CHANCEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle genannten Risiken (Regulatorik, Klimarisiken, Zinsumfeld, Cyber, Inflation) und Chancen — quantifiziert wo möglich, mit Seitenreferenz.]
+# STRATEGISCHE ANALYSE
+## Was kommuniziert das Management offiziell?
+## Was zeigen die Zahlen tatsächlich?
+## Wo bestehen Widersprüche?
+## Welche Risiken werden unterschätzt oder nicht erwähnt?
+## Welche Kennzahlen sind auffällig?
+## Welche Segmente sind stark / verschlechtern sich?
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AUSBLICK & HANDLUNGSEMPFEHLUNGEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Prognose des Unternehmens + konkrete Empfehlungen für Management/Investoren/Aufsicht.]`,
-    geschaeftsbericht: isDE
-      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KENNZAHLEN AUF EINEN BLICK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle wichtigen Zahlen als: Bezeichnung: Wert (z.B. Umsatz 2024: €1,2 Mrd. | Wachstum: +12% | EBITDA-Marge: 18%). JEDE Zeile = eine Kennzahl.]
+# ERTRAGSQUALITÄT
+Bewerte: operative Profitabilität, Abhängigkeit von Kapitalanlagen, Nachhaltigkeit der Gewinne, Cashflow-Qualität, Stabilität des Geschäftsmodells
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTIVE SUMMARY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Kompaktes Fazit: Wie läuft das Unternehmen? Was sind die wichtigsten Botschaften des Berichts?]
+# RISIKOANALYSE
+Bewerte einzeln mit Beschreibung, Ursache, Auswirkungen, Eintrittswahrscheinlichkeit, Schadenspotenzial, Managementqualität:
+- Kapitalmarkt- & Zinsrisiken
+- Versicherungstechnische Risiken (Schäden, Naturkatastrophen, Inflation)
+- Solvency-II-Risiken & Kapitalausstattung
+- Rückversicherungsabhängigkeit
+- IT- & Cyberrisiken
+- Regulatorische Risiken
+- Klimarisiken
+- Reputationsrisiken
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-JAHRESVERGLEICH & ENTWICKLUNG
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Vergleich mit Vorjahr: Was ist besser geworden, was schlechter? Konkrete Zahlen und Prozent-Veränderungen nennen, inkl. Seitenreferenz (laut Seite X).]
+# ANOMALIEN & RED FLAGS
+Liste explizit: ungewöhnliche Entwicklungen, Bilanzauffälligkeiten, Gewinntreiber mit Risikocharakter, problematische Trends, mögliche Schönfärbungen, kritische Abhängigkeiten
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SEGMENTANALYSE & MARKTPOSITION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Welche Bereiche/Segmente laufen gut, welche schwächeln? Marktposition und Wettbewerbsstellung.]
+# WETTBEWERBSFÄHIGKEIT
+Bewerte: Marktposition vs. Peer-Group (Sparkassen-Versicherungen, Provinzial, SV, LVM), Digitalisierung, Vertrieb, Innovation, Combined Ratio vs. Branche, Skalierbarkeit
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISIKEN & CHANCEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Alle genannten Risiken und Chancen — quantifiziert wo möglich, mit Seitenreferenz.]
+# ZUKUNFTSPROGNOSE
+- 12 Monate / 3 Jahre
+- Best Case / Base Case / Worst Case
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-AUSBLICK & HANDLUNGSEMPFEHLUNGEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Prognose des Unternehmens für die Zukunft + konkrete Empfehlungen für Investoren/Management]`
-      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-KEY METRICS AT A GLANCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[All key numbers as: Label: Value (e.g. Revenue 2024: €1.2bn | Growth: +12% | EBITDA margin: 18%). ONE metric per line.]
+# HANDLUNGSEMPFEHLUNGEN
+Konkrete Empfehlungen: kurzfristig, mittelfristig, strategisch
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-EXECUTIVE SUMMARY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Compact conclusion: How is the company performing? What are the report's key messages?]
+# ABSCHLUSSBEWERTUNG
+Gesamturteil, finanzielle Stabilität, Zukunftsfähigkeit, wichtigste Warnsignale, wichtigste Chancen
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-YEAR-ON-YEAR COMPARISON & TRENDS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Compare to prior year: what improved, what declined? Specific numbers and % changes, with page references (see page X).]
+STIL: analytisch, sachlich, professionell, kritisch — keine Werbung, keine Floskeln, keine Wiederholungen
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SEGMENT ANALYSIS & MARKET POSITION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Which segments are performing well, which are struggling? Market and competitive position.]
+ZIEL: Die Analyse soll besser sein als eine typische Big-4-Berater-Zusammenfassung und einem institutionellen Investor echten Mehrwert liefern.`,
+    geschaeftsbericht: `AUFGABE:
+Analysiere den hochgeladenen Geschäftsbericht vollständig und erstelle eine professionelle Tiefenanalyse auf dem Niveau eines Senior-Unternehmensberaters, Investment-Analysten und Wirtschaftsprüfers.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-RISKS & OPPORTUNITIES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[All stated risks and opportunities — quantified where possible, with page reference.]
+WICHTIG:
+Du darfst den Bericht NICHT nur zusammenfassen.
+Du musst:
+- Zusammenhänge erkennen
+- Widersprüche identifizieren
+- Risiken interpretieren
+- versteckte Schwächen offenlegen
+- strategische Implikationen ableiten
+- Management-Narrative kritisch hinterfragen
+- Zahlen logisch miteinander verbinden
+- die wirtschaftliche Realität hinter den Aussagen erkennen
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTLOOK & RECOMMENDATIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Company's own forecast + concrete recommendations for investors/management]`,
+ARBEITSWEISE:
+1. Lies ALLE Seiten vollständig.
+2. Nutze Tabellen, Grafiken, Kennzahlen und Fließtexte gleichermaßen.
+3. Jede Aussage MUSS mit Seitenzahl belegt werden.
+4. Erkenne implizite Risiken und nicht nur explizit genannte Risiken.
+5. Analysiere die Qualität der Gewinne: stammen Gewinne aus Kerngeschäft? Kapitalanlagen? Einmaleffekten? Bilanzierungseffekten?
+6. Identifiziere: operative Stärke, strukturelle Schwächen, Bilanzrisiken, Abhängigkeiten, Management-Risiken, Digitalisierungschancen, regulatorische Risiken.
+7. Vergleiche Kennzahlen mit Branchenniveau, wenn möglich.
+8. Bewerte kritisch: Umsatzentwicklung, Eigenkapitalentwicklung, Rückstellungen, EBITDA/EBIT, Verschuldungsgrad, Kostenstruktur, Wachstumstreiber, Segmentergebnisse, Cashflow-Qualität.
+9. Erstelle KEINE PR-Zusammenfassung.
+10. Schreibe wie ein unabhängiger Analyst für institutionelle Investoren.
+
+AUSGABESTRUKTUR:
+
+# TITELSEITE
+- Dokumentname, Datum, Analyse-Tiefe
+- Gesamtbewertung, Risiko-Score (1–10), Stabilitäts-Score (1–10)
+
+# EXECUTIVE SUMMARY
+- Wichtigste Erkenntnisse, kritischste Risiken, wichtigste Chancen
+- Gesamturteil in maximal 10 Punkten
+
+# KENNZAHLEN-DASHBOARD
+Tabelle mit: Umsatz, Wachstum, EBITDA-Marge, EBIT, Jahresüberschuss, Cashflow, Eigenkapital, Verschuldungsgrad, Mitarbeiter, Veränderung zum Vorjahr
+
+# STRATEGISCHE ANALYSE
+## Was kommuniziert das Management offiziell?
+## Was zeigen die Zahlen tatsächlich?
+## Wo bestehen Widersprüche?
+## Welche Risiken werden unterschätzt oder nicht erwähnt?
+## Welche Kennzahlen sind auffällig?
+## Welche Segmente sind stark / verschlechtern sich?
+
+# ERTRAGSQUALITÄT
+Bewerte: operative Profitabilität, Abhängigkeit von Sondereffekten, Nachhaltigkeit der Gewinne, Cashflow-Qualität, Stabilität des Geschäftsmodells
+
+# RISIKOANALYSE
+Bewerte einzeln mit Beschreibung, Ursache, Auswirkungen, Eintrittswahrscheinlichkeit, Schadenspotenzial, Managementqualität:
+- Marktrisiken
+- Operative Risiken
+- IT- & Cyberrisiken
+- Regulatorische Risiken
+- Reputationsrisiken
+- Finanzrisiken (Liquidität, Verschuldung)
+- Abhängigkeiten (Kunden, Lieferanten, Märkte)
+- Management-Risiken
+
+# ANOMALIEN & RED FLAGS
+Liste explizit: ungewöhnliche Entwicklungen, Bilanzauffälligkeiten, Gewinntreiber mit Risikocharakter, problematische Trends, mögliche Schönfärbungen, kritische Abhängigkeiten
+
+# WETTBEWERBSFÄHIGKEIT
+Bewerte: Marktposition, Digitalisierung, Vertrieb, Innovation, Kostenstruktur, Skalierbarkeit
+
+# ZUKUNFTSPROGNOSE
+- 12 Monate / 3 Jahre
+- Best Case / Base Case / Worst Case
+
+# HANDLUNGSEMPFEHLUNGEN
+Konkrete Empfehlungen: kurzfristig, mittelfristig, strategisch
+
+# ABSCHLUSSBEWERTUNG
+Gesamturteil, finanzielle Stabilität, Zukunftsfähigkeit, wichtigste Warnsignale, wichtigste Chancen
+
+STIL: analytisch, sachlich, professionell, kritisch — keine Werbung, keine Floskeln, keine Wiederholungen
+
+ZIEL: Die Analyse soll besser sein als eine typische Big-4-Berater-Zusammenfassung und einem institutionellen Investor echten Mehrwert liefern.`,
 
     vertrag: isDE
       ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
