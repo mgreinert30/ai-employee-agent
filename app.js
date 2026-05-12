@@ -833,7 +833,7 @@ async function startCalendarTask(token) {
     const res = await fetchWithTimeout('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    currentResult = data.result;
+    currentResult = stripCodeFences(data.result || '');
   } catch (err) {
     currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
   }
@@ -1338,7 +1338,7 @@ async function startOutlookTask() {
     const res = await fetchWithTimeout('/api/analyse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    currentResult = data.result;
+    currentResult = stripCodeFences(data.result || '');
   } catch (err) {
     currentResult = (de ? 'Fehler bei der KI-Analyse: ' : 'AI analysis error: ') + err.message;
   }
@@ -5657,6 +5657,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   clearTimeout(idleTimer);
   if (!result) result = chunks.join('');
   if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
+  result = stripCodeFences(result);
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
 
   // Fire-and-forget: extract non-sensitive insights and store server-side
