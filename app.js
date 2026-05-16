@@ -4800,102 +4800,87 @@ function buildPrompt(taskDesc, businessDetails, profession, docText, docType, an
 
   // Doc-type specific section templates (#1, #4)
   const docTypeSections = {
-    versicherungsbericht: `# TITELSEITE
-- Dokumentname, Datum, Analyse-Tiefe
-- Gesamtbewertung, Risiko-Score (1–10), Stabilitäts-Score (1–10)
+    versicherungsbericht: `# EXECUTIVE SUMMARY
+Kurze, klare Zusammenfassung der wichtigsten Erkenntnisse.
 
-# EXECUTIVE SUMMARY
-- Wichtigste Erkenntnisse, kritischste Risiken, wichtigste Chancen
-- Gesamturteil in maximal 10 Punkten
+# KENNZAHLEN AUF EINEN BLICK
+Erstelle eine lesbare Tabelle mit den Spalten: Kennzahl | 2024 | 2023 | Veränderung | Bewertung
+Pflicht-Kennzahlen: Beitragseinnahmen, Wachstum, Combined Ratio, Schadenquote, Kostenquote, Kapitalanlageergebnis, Jahresüberschuss, Eigenkapital, Solvency-II-Quote, Verträge, Mitarbeiter
 
-# KENNZAHLEN-DASHBOARD
-Tabelle mit: Beitragseinnahmen, Wachstum, Combined Ratio, Schadenquote, Kostenquote, Kapitalanlageergebnis, Jahresüberschuss, Eigenkapital, Solvency-II-Quote, Verträge, Mitarbeiter, Veränderung zum Vorjahr
+# HAUPTERKENNTNISSE
+Analysiere die wichtigsten wirtschaftlichen Entwicklungen:
+- Wachstum & Beitragseinnahmen
+- Profitabilität & Combined Ratio
+- Kapitalanlageergebnis
+- Schaden- & Unfallversicherung
+- Lebensversicherung
+- Eigenkapital & Rückstellungen
+- Solvenz (Solvency-II-Quote)
+- Rückversicherungsstrategie
+- Risiken
 
-# STRATEGISCHE ANALYSE
-## Was kommuniziert das Management offiziell?
-## Was zeigen die Zahlen tatsächlich?
-## Wo bestehen Widersprüche?
-## Welche Risiken werden unterschätzt oder nicht erwähnt?
-## Welche Kennzahlen sind auffällig?
-## Welche Segmente sind stark / verschlechtern sich?
+# KRITISCHE ANALYSE
+- Welche Zahlen positiv wirken, aber kritisch sind
+- Welche Entwicklungen nur scheinbar positiv sind
+- Wo Abhängigkeiten bestehen (z.B. von Kapitalanlagen)
+- Wo versteckte Risiken liegen
+- Welche Management-Aussagen den Zahlen widersprechen
 
-# ERTRAGSQUALITÄT
-Bewerte: operative Profitabilität, Abhängigkeit von Kapitalanlagen, Nachhaltigkeit der Gewinne, Cashflow-Qualität, Stabilität des Geschäftsmodells
+# RED FLAGS
+Liste auffällige Punkte, Widersprüche und Risiken — je Punkt mit Seitenreferenz (laut Seite X).
 
-# RISIKOANALYSE
-Bewerte einzeln mit Beschreibung, Ursache, Auswirkungen, Eintrittswahrscheinlichkeit, Schadenspotenzial, Managementqualität:
-- Kapitalmarkt- & Zinsrisiken
-- Versicherungstechnische Risiken (Schäden, Naturkatastrophen, Inflation)
-- Solvency-II-Risiken & Kapitalausstattung
-- Rückversicherungsabhängigkeit
-- IT- & Cyberrisiken
-- Regulatorische Risiken
-- Klimarisiken
-- Reputationsrisiken
-
-# ANOMALIEN & RED FLAGS
-Liste explizit: ungewöhnliche Entwicklungen, Bilanzauffälligkeiten, Gewinntreiber mit Risikocharakter, problematische Trends, mögliche Schönfärbungen, kritische Abhängigkeiten
-
-# WETTBEWERBSFÄHIGKEIT
-Bewerte: Marktposition vs. Peer-Group (Sparkassen-Versicherungen, Provinzial, SV, LVM), Digitalisierung, Vertrieb, Innovation, Combined Ratio vs. Branche, Skalierbarkeit
-
-# ZUKUNFTSPROGNOSE
-- 12 Monate / 3 Jahre
-- Best Case / Base Case / Worst Case
+# CHANCEN
+Liste die wichtigsten strategischen Chancen auf.
 
 # HANDLUNGSEMPFEHLUNGEN
-Konkrete Empfehlungen: kurzfristig, mittelfristig, strategisch
+Konkrete Empfehlungen für Management, Strategie und Risikosteuerung — kurzfristig, mittelfristig, strategisch.
 
-# ABSCHLUSSBEWERTUNG
-Gesamturteil, finanzielle Stabilität, Zukunftsfähigkeit, wichtigste Warnsignale, wichtigste Chancen`,
-    geschaeftsbericht: `# TITELSEITE
-- Dokumentname, Datum, Analyse-Tiefe
-- Gesamtbewertung, Risiko-Score (1–10), Stabilitäts-Score (1–10)
+# GESAMTURTEIL
+Klare Bewertung:
+- Finanzielle Stabilität
+- Operative Stärke
+- Risikoprofil
+- Zukunftsfähigkeit`,
+    geschaeftsbericht: `# EXECUTIVE SUMMARY
+Kurze, klare Zusammenfassung der wichtigsten Erkenntnisse.
 
-# EXECUTIVE SUMMARY
-- Wichtigste Erkenntnisse, kritischste Risiken, wichtigste Chancen
-- Gesamturteil in maximal 10 Punkten
+# KENNZAHLEN AUF EINEN BLICK
+Erstelle eine lesbare Tabelle mit den Spalten: Kennzahl | 2024 | 2023 | Veränderung | Bewertung
+Pflicht-Kennzahlen: Umsatz, Wachstum, EBITDA-Marge, EBIT, Jahresüberschuss, Cashflow, Eigenkapital, Verschuldungsgrad, Mitarbeiter
 
-# KENNZAHLEN-DASHBOARD
-Tabelle mit: Umsatz, Wachstum, EBITDA-Marge, EBIT, Jahresüberschuss, Cashflow, Eigenkapital, Verschuldungsgrad, Mitarbeiter, Veränderung zum Vorjahr
+# HAUPTERKENNTNISSE
+Analysiere die wichtigsten wirtschaftlichen Entwicklungen:
+- Umsatz & Wachstum
+- Profitabilität (EBITDA/EBIT)
+- Cashflow-Qualität
+- Segmentergebnisse & Marktposition
+- Eigenkapital & Verschuldung
+- Rückstellungen & Bilanzstruktur
+- Strategie & Investitionen
+- Risiken
 
-# STRATEGISCHE ANALYSE
-## Was kommuniziert das Management offiziell?
-## Was zeigen die Zahlen tatsächlich?
-## Wo bestehen Widersprüche?
-## Welche Risiken werden unterschätzt oder nicht erwähnt?
-## Welche Kennzahlen sind auffällig?
-## Welche Segmente sind stark / verschlechtern sich?
+# KRITISCHE ANALYSE
+- Welche Zahlen positiv wirken, aber kritisch sind
+- Welche Entwicklungen nur scheinbar positiv sind
+- Wo Abhängigkeiten bestehen
+- Wo versteckte Risiken liegen
+- Welche Management-Aussagen den Zahlen widersprechen
 
-# ERTRAGSQUALITÄT
-Bewerte: operative Profitabilität, Abhängigkeit von Sondereffekten, Nachhaltigkeit der Gewinne, Cashflow-Qualität, Stabilität des Geschäftsmodells
+# RED FLAGS
+Liste auffällige Punkte, Widersprüche und Risiken — je Punkt mit Seitenreferenz (laut Seite X).
 
-# RISIKOANALYSE
-Bewerte einzeln mit Beschreibung, Ursache, Auswirkungen, Eintrittswahrscheinlichkeit, Schadenspotenzial, Managementqualität:
-- Marktrisiken
-- Operative Risiken
-- IT- & Cyberrisiken
-- Regulatorische Risiken
-- Reputationsrisiken
-- Finanzrisiken (Liquidität, Verschuldung)
-- Abhängigkeiten (Kunden, Lieferanten, Märkte)
-- Management-Risiken
-
-# ANOMALIEN & RED FLAGS
-Liste explizit: ungewöhnliche Entwicklungen, Bilanzauffälligkeiten, Gewinntreiber mit Risikocharakter, problematische Trends, mögliche Schönfärbungen, kritische Abhängigkeiten
-
-# WETTBEWERBSFÄHIGKEIT
-Bewerte: Marktposition, Digitalisierung, Vertrieb, Innovation, Kostenstruktur, Skalierbarkeit
-
-# ZUKUNFTSPROGNOSE
-- 12 Monate / 3 Jahre
-- Best Case / Base Case / Worst Case
+# CHANCEN
+Liste die wichtigsten strategischen Chancen auf.
 
 # HANDLUNGSEMPFEHLUNGEN
-Konkrete Empfehlungen: kurzfristig, mittelfristig, strategisch
+Konkrete Empfehlungen für Management, Strategie und Risikosteuerung — kurzfristig, mittelfristig, strategisch.
 
-# ABSCHLUSSBEWERTUNG
-Gesamturteil, finanzielle Stabilität, Zukunftsfähigkeit, wichtigste Warnsignale, wichtigste Chancen`,
+# GESAMTURTEIL
+Klare Bewertung:
+- Finanzielle Stabilität
+- Operative Stärke
+- Risikoprofil
+- Zukunftsfähigkeit`,
 
     vertrag: isDE
       ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -5091,19 +5076,25 @@ NEXT STEPS
   // Analyst-level methodology instructions injected before KERNREGELN for specific doc types
   const docTypeInstructions = {
     versicherungsbericht: `
+WICHTIGE AUSGABEREGEL:
+Gib niemals Rohdaten, JSON, Code, Arrays, Metadaten oder interne Zwischenschritte aus. Wandle alle Daten immer in fertigen Fließtext und sauber formatierte Tabellen um. SELBSTKONTROLLE vor der Ausgabe: Enthält die Antwort { } oder [ ] mit Datenstrukturen? Technische Begriffe wie type, page, data, category? Sieht irgendein Teil wie Code aus? Falls ja: nicht ausgeben, in Berichtstext umwandeln.
+
 ANALYSE-TIEFE — VERSICHERUNGSBERICHT (PFLICHT):
 Du darfst den Bericht NICHT nur zusammenfassen. Du musst: Zusammenhänge erkennen, Widersprüche identifizieren, Risiken interpretieren, versteckte Schwächen offenlegen, Management-Narrative kritisch hinterfragen, Zahlen logisch verbinden.
 Analysiere Gewinnqualität: Kerngeschäft? Kapitalanlagen? Einmaleffekte? Bilanzierungseffekte?
 Bewerte kritisch: Combined Ratio, Eigenkapitalentwicklung, Solvency-II-Quote, Kapitalanlageergebnis, Schadenquote, Kostenquote, Rückversicherungsabgaben, Vertragsentwicklung.
 Vergleiche mit Peer-Group: Sparkassen-Versicherungen, Provinzial, SV SparkassenVersicherung, LVM.
-Schreibe wie ein unabhängiger Analyst für institutionelle Investoren. Ziel: besser als eine Big-4-Zusammenfassung.
+Jede wichtige Aussage mit Seitenzahl belegen. Zahlen interpretieren, nicht nur wiederholen. Schreibe wie ein erfahrener Unternehmensberater.
 `,
     geschaeftsbericht: `
+WICHTIGE AUSGABEREGEL:
+Gib niemals Rohdaten, JSON, Code, Arrays, Metadaten oder interne Zwischenschritte aus. Wandle alle Daten immer in fertigen Fließtext und sauber formatierte Tabellen um. SELBSTKONTROLLE vor der Ausgabe: Enthält die Antwort { } oder [ ] mit Datenstrukturen? Technische Begriffe wie type, page, data, category? Sieht irgendein Teil wie Code aus? Falls ja: nicht ausgeben, in Berichtstext umwandeln.
+
 ANALYSE-TIEFE — GESCHÄFTSBERICHT (PFLICHT):
 Du darfst den Bericht NICHT nur zusammenfassen. Du musst: Zusammenhänge erkennen, Widersprüche identifizieren, Risiken interpretieren, versteckte Schwächen offenlegen, Management-Narrative kritisch hinterfragen, Zahlen logisch verbinden.
 Analysiere Gewinnqualität: Kerngeschäft? Kapitalanlagen? Einmaleffekte? Bilanzierungseffekte?
 Bewerte kritisch: Umsatzentwicklung, EBITDA/EBIT, Eigenkapitalentwicklung, Cashflow-Qualität, Verschuldungsgrad, Kostenstruktur, Wachstumstreiber, Segmentergebnisse.
-Schreibe wie ein unabhängiger Analyst für institutionelle Investoren. Ziel: besser als eine Big-4-Zusammenfassung.
+Jede wichtige Aussage mit Seitenzahl belegen. Zahlen interpretieren, nicht nur wiederholen. Schreibe wie ein erfahrener Unternehmensberater.
 `,
   };
 
