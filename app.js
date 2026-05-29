@@ -352,6 +352,7 @@ function injectOwnerDashboardHTML() {
       <div class="owner-tabs">
         <button class="owner-tab active" onclick="ownerTab('overview')" id="otab-overview">📊 Übersicht</button>
         <button class="owner-tab" onclick="ownerTab('reviews')" id="otab-reviews">⭐ Bewertungen</button>
+        <button class="owner-tab" onclick="ownerTab('learning')" id="otab-learning">🧠 KI-Lernen</button>
         <button class="owner-tab" onclick="ownerTab('settings')" id="otab-settings">⚙️ Einstellungen</button>
       </div>
       <div id="owner-tab-overview" class="owner-tab-content">
@@ -363,6 +364,34 @@ function injectOwnerDashboardHTML() {
         </div>
         <h4 class="section-mini-title">Letzte Transaktionen</h4>
         <div id="recent-transactions"><p class="empty-state">Noch keine Transaktionen.</p></div>
+      </div>
+      <div id="owner-tab-learning" class="owner-tab-content" style="display:none;">
+        <p class="owner-tab-hint">Die KI lernt nach jeder Aufgabe anonym. Kein Personenbezug — nur abstrakte Qualitätsmuster.</p>
+        <div id="learning-stats-box"><p style="color:var(--gray);font-size:13px;">Lädt...</p></div>
+        <div style="border:1.5px solid rgba(74,222,128,0.3);border-radius:12px;padding:20px;background:rgba(74,222,128,0.05);margin-bottom:16px;">
+          <h4 style="color:#4ade80;margin-bottom:8px;">🔒 Datenschutz-Garantien</h4>
+          <ul style="font-size:13px;color:var(--gray);padding-left:18px;margin:0;line-height:1.9;">
+            <li>Keine Namen, E-Mails, Telefonnummern oder Adressen gespeichert</li>
+            <li>Keine vollständigen Gespräche, Nutzereingaben oder Kundendaten</li>
+            <li>Nur anonyme, abstrakte Qualitätsmuster und allgemeine Regeln</li>
+            <li>Privacy-Filter prüft jedes Signal vor der Speicherung serverseitig</li>
+            <li>Alle Lerndaten können jederzeit vollständig gelöscht werden</li>
+          </ul>
+        </div>
+        <div style="border:1.5px solid rgba(37,99,235,0.35);border-radius:12px;padding:20px;background:rgba(37,99,235,0.06);margin-bottom:16px;">
+          <h4 style="color:#60a5fa;margin-bottom:8px;">📖 Was wird gelernt?</h4>
+          <ul style="font-size:13px;color:var(--gray);padding-left:18px;margin:0;line-height:1.9;">
+            <li><strong style="color:#e2e8f0;">Erkenntnisse</strong> — Allgemeine Muster aus erfolgreichen Analysen</li>
+            <li><strong style="color:#e2e8f0;">Lernsignale</strong> — Anonyme Qualitätsbewertungen (Erfolg / Teilweise / Fehlschlag + Fehlertyp)</li>
+            <li><strong style="color:#e2e8f0;">Verhaltensregeln</strong> — Automatisch aus Mustern abgeleitete Verbesserungsregeln</li>
+          </ul>
+        </div>
+        <div style="border:1.5px solid rgba(239,68,68,0.35);border-radius:12px;padding:20px;background:rgba(239,68,68,0.05);">
+          <h4 style="color:#f87171;margin-bottom:6px;">🗑 Lerndaten zurücksetzen</h4>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">Löscht alle gespeicherten Erkenntnisse, Lernsignale und Verhaltensregeln unwiderruflich.</p>
+          <button onclick="resetAllLearningData()" style="background:rgba(239,68,68,0.15);border:1.5px solid rgba(239,68,68,0.5);color:#f87171;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">🗑 Alle Lerndaten löschen</button>
+          <p id="learning-reset-status" style="display:none;margin-top:10px;font-size:13px;color:#4ade80;"></p>
+        </div>
       </div>
       <div id="owner-tab-reviews" class="owner-tab-content" style="display:none;">
         <p class="owner-tab-hint">Wähle bis zu 6 Bewertungen aus, die auf der Startseite angezeigt werden.</p>
@@ -413,13 +442,14 @@ function openOwnerDashboard() {
   ownerTab('overview');
   loadOwnerPaypal();
   loadBrandColorsIntoUI();
+  loadLearningStats();
 }
 
 function closeOwnerDashboard() { document.getElementById('owner-dashboard-overlay').classList.add('hidden'); }
 function handleOwnerLogout() { closeOwnerDashboard(); }
 
 function ownerTab(tab) {
-  ['overview', 'reviews', 'settings'].forEach(t => {
+  ['overview', 'reviews', 'learning', 'settings'].forEach(t => {
     document.getElementById(`owner-tab-${t}`).style.display = t === tab ? 'block' : 'none';
     document.getElementById(`otab-${t}`).classList.toggle('active', t === tab);
   });
@@ -511,39 +541,158 @@ function submitReview() {
 }
 
 // =====================
-// #4 FEEDBACK-LERNEN
+// PRIVACY-PRESERVING LEARNING SYSTEM
 // =====================
+
+// ── Client-side Privacy Filter ────────────────────────────────────────────────
+const CLIENT_PII_PATTERNS = [
+  /\b[A-ZÄÖÜ][a-zäöü]{1,20}\s+[A-ZÄÖÜ][a-zäöü]{1,20}\b/,
+  /\b[\w.+-]+@[\w-]+\.[a-z]{2,}\b/i,
+  /\b\+?[\d][\d\s\-\(\)]{6,14}[\d]\b/,
+  /\b\d{4,5}\b/,
+  /\b(Herr|Frau|Mr\.?|Mrs\.?|Dr\.?|Prof\.?)\s+[A-ZÄÖÜ]/,
+];
+function clientPassesPII(text) {
+  if (!text || text.length > 250) return false;
+  return !CLIENT_PII_PATTERNS.some(p => p.test(text));
+}
+
+// ── Evaluation Engine ─────────────────────────────────────────────────────────
+function evaluateResult(result, analysisLength) {
+  if (!result) return { outcome: 'failed', quality_score: 1, issue_type: 'no_output' };
+  const wordCount = result.trim().split(/\s+/).length;
+  const minWords  = { short: 350, medium: 2000, long: 5000 };
+  const min = minWords[analysisLength] || 2000;
+  let outcome = 'successful', issue_type = null, quality_score = 5;
+  if (wordCount < min * 0.3)       { outcome = 'failed';               issue_type = 'too_short';              quality_score = 1; }
+  else if (wordCount < min * 0.6)  { outcome = 'partially_successful'; issue_type = 'below_expected_length';  quality_score = 2; }
+  else if (wordCount < min * 0.85) { outcome = 'partially_successful'; issue_type = 'slightly_short';         quality_score = 3; }
+  const hasCharts  = /\[CHART:/i.test(result);
+  const hasTables  = /\|.+\|/.test(result);
+  const hasSections = (result.match(/^#{1,3}\s/m) || []).length >= 2;
+  if (analysisLength === 'long'   && !hasCharts) { issue_type = issue_type || 'missing_charts'; quality_score = Math.min(quality_score, 3); if (outcome === 'successful') outcome = 'partially_successful'; }
+  if (analysisLength === 'medium' && !hasCharts) { issue_type = issue_type || 'missing_charts'; quality_score = Math.min(quality_score, 4); }
+  if (!hasTables && analysisLength !== 'short')  { issue_type = issue_type || 'missing_tables'; quality_score = Math.min(quality_score, 4); }
+  if (!hasSections)                              { issue_type = issue_type || 'poor_structure';  quality_score = Math.min(quality_score, 3); }
+  return { outcome, quality_score, issue_type };
+}
+
+// ── Improvement Rule Deriver ──────────────────────────────────────────────────
+const IMPROVEMENT_RULES = {
+  too_short:             'Extend analysis output to meet minimum length requirements for the selected depth',
+  below_expected_length: 'Increase depth and detail to fully fill the requested analysis scope',
+  slightly_short:        'Add more supporting detail and context to sections',
+  missing_charts:        'Always include charts when quantitative data is present in the document',
+  missing_tables:        'Use Markdown tables for all comparisons, data series and structured information',
+  poor_structure:        'Ensure analysis has at least 3 clearly labelled sections with headings',
+  no_output:             'Check model availability and retry with fallback model',
+};
+function deriveImprovementRule(issue_type, taskCategory) {
+  const base = IMPROVEMENT_RULES[issue_type];
+  return base ? `${taskCategory}: ${base}` : null;
+}
+
+// ── Learning Signal Sender ─────────────────────────────────────────────────────
+function sendLearningSignal(taskCategory, evaluation, strategy) {
+  const improvement_rule = deriveImprovementRule(evaluation.issue_type, taskCategory);
+  if (improvement_rule && !clientPassesPII(improvement_rule)) return;
+  const signal = {
+    task_category: taskCategory,
+    outcome:       evaluation.outcome,
+    issue_type:    evaluation.issue_type || null,
+    improvement_rule,
+    strategy:      strategy || null,
+    quality_score: evaluation.quality_score,
+    contains_personal_data: false,
+  };
+  fetch('/api/learn?action=signal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ signal }),
+  }).catch(() => {});
+}
+
+// ── Feedback → Local Learning ─────────────────────────────────────────────────
 function saveFeedbackToLearning(text) {
   if (!text || text.trim().length < 5) return;
+  if (!clientPassesPII(text.trim())) return;
   const notes = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
-  notes.push(text.trim().slice(0, 300));
-  if (notes.length > 5) notes.shift();
+  notes.push(text.trim().slice(0, 200));
+  if (notes.length > 8) notes.shift();
   localStorage.setItem('ai_improvement_notes', JSON.stringify(notes));
 }
 
-// Cached server learnings — refreshed once per session per task type
+// ── Reset Learning Data ────────────────────────────────────────────────────────
+async function resetAllLearningData() {
+  if (!confirm(currentLang === 'de'
+    ? 'Alle gespeicherten Lernsignale, Erkenntnisse und Verhaltensregeln löschen?'
+    : 'Delete all stored learning signals, insights and behaviour rules?')) return;
+  localStorage.removeItem('ai_improvement_notes');
+  const el = document.getElementById('learning-reset-status');
+  try {
+    const r = await fetch('/api/learn', { method: 'DELETE' });
+    const d = await r.json();
+    if (el) { el.textContent = d.reset ? '✓ Alle Lerndaten gelöscht.' : '⚠ Server-Reset fehlgeschlagen (lokal gelöscht).'; el.style.display = 'block'; }
+  } catch (_) {
+    if (el) { el.textContent = '✓ Lokale Lerndaten gelöscht (Server nicht erreichbar).'; el.style.display = 'block'; }
+  }
+}
+
+// ── Learning Stats ─────────────────────────────────────────────────────────────
+async function loadLearningStats() {
+  const el = document.getElementById('learning-stats-box');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/learn?action=stats');
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="stat-card"><div class="stat-value">${d.insights || 0}</div><div class="stat-label">Erkenntnisse</div></div>
+      <div class="stat-card"><div class="stat-value">${d.signals  || 0}</div><div class="stat-label">Lernsignale</div></div>
+      <div class="stat-card highlight"><div class="stat-value">${d.rules   || 0}</div><div class="stat-label">Verhaltensregeln</div></div>
+    </div>`;
+  } catch (_) {
+    el.innerHTML = `<p style="color:var(--gray);font-size:13px;">Keine Datenbankverbindung.</p>`;
+  }
+}
+
+// ── Server Learnings & Behavior Rules Cache ───────────────────────────────────
 const _serverLearningsCache = {};
+const _behaviorRulesCache   = {};
+
 async function prefetchServerLearnings(taskType) {
   if (_serverLearningsCache[taskType] !== undefined) return;
   _serverLearningsCache[taskType] = [];
+  _behaviorRulesCache[taskType]   = [];
   try {
-    const r = await fetch(`/api/learn?type=${encodeURIComponent(taskType)}`);
-    if (r.ok) {
-      const d = await r.json();
-      _serverLearningsCache[taskType] = (d.learnings || []).map(l => l.insight).filter(Boolean);
-    }
+    const [rIns, rRules] = await Promise.all([
+      fetch(`/api/learn?type=${encodeURIComponent(taskType)}`),
+      fetch(`/api/learn?action=rules&type=${encodeURIComponent(taskType)}`),
+    ]);
+    if (rIns.ok)   { const d = await rIns.json();   _serverLearningsCache[taskType] = (d.learnings || []).map(l => l.insight).filter(Boolean); }
+    if (rRules.ok) { const d = await rRules.json(); _behaviorRulesCache[taskType]   = (d.rules     || []).filter(Boolean); }
   } catch (_) {}
 }
 
 function getLearningContext(isDE, taskType) {
-  const local  = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
-  const server = taskType ? (_serverLearningsCache[taskType] || []) : [];
-  const all    = [...new Set([...server, ...local])];
-  if (!all.length) return '';
-  return (isDE
-    ? '\nGELERNTE ERKENNTNISSE (aus früheren Analysen — bitte berücksichtigen):\n'
-    : '\nLEARNED INSIGHTS (from previous analyses — please apply):\n')
-    + all.map(n => `- ${n}`).join('\n') + '\n';
+  const local    = JSON.parse(localStorage.getItem('ai_improvement_notes') || '[]');
+  const insights = [...new Set([...(_serverLearningsCache[taskType] || []), ...local])];
+  const rules    = _behaviorRulesCache[taskType] || [];
+  if (!insights.length && !rules.length) return '';
+  let ctx = '';
+  if (insights.length) {
+    ctx += (isDE
+      ? '\nGELERNTE ERKENNTNISSE (aus früheren Analysen — bitte berücksichtigen):\n'
+      : '\nLEARNED INSIGHTS (from previous analyses — please apply):\n')
+      + insights.map(n => `- ${n}`).join('\n') + '\n';
+  }
+  if (rules.length) {
+    ctx += (isDE
+      ? '\nVERHALTENSREGELN (automatisch optimiert — strikt einhalten):\n'
+      : '\nBEHAVIOUR RULES (auto-optimised — strictly follow):\n')
+      + rules.map(r => `- ${r}`).join('\n') + '\n';
+  }
+  return ctx;
 }
 
 // =====================
@@ -5721,12 +5870,15 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   result = stripCodeFences(result);
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
 
-  // Fire-and-forget: extract non-sensitive insights and store server-side
+  // Fire-and-forget: extract insights + send structured learning signal
+  const _taskType    = detectTaskType(prompt);
+  const _analysisLen = analyseBody?.analysisLength || 'medium';
   fetch('/api/learn', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ result, taskType: detectTaskType(prompt) }),
+    body: JSON.stringify({ result, taskType: _taskType }),
   }).catch(() => {});
+  sendLearningSignal(_taskType, evaluateResult(result, _analysisLen), _analysisLen);
 
   const currentPct = parseInt(document.getElementById('progress-fill').style.width) || 95;
   startProgressAnimation(currentPct, 100, 600, currentLang === 'de' ? 'Fertig!' : 'Done!');
