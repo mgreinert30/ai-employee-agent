@@ -5108,84 +5108,84 @@ Jede wichtige Aussage mit Seitenzahl belegen. Zahlen interpretieren, nicht nur w
   // Calculate page-count-based targets (#2 — length control)
   const depthInstructions = {
     short: isDE
-      ? `AUSGABELÄNGE: KURZ — MINDESTENS 1 vollständige Seite, maximal 2 Seiten (ca. 450-700 Wörter). UNTERSCHREITE DIE MINDESTLÄNGE NICHT.
-PFLICHTSTRUKTUR — schreibe immer alle 4 Blöcke vollständig aus:
+      ? `⚠️ KURZ-MODUS — ÜBERSCHREIBT DAS AUSGABE-FORMAT UNTEN KOMPLETT.
+Ignoriere die Abschnittsvorlage. Schreibe AUSSCHLIESSLICH diese 4 Blöcke — keine anderen Überschriften, kein TL;DR, keine Kennzahlen-Tabelle.
+LÄNGE: ca. 400-600 Wörter. Keine Grafiken. Maximal 1 einfache Tabelle (nur wenn absolut unverzichtbar).
 
 **ZUSAMMENFASSUNG**
 2-3 Sätze: Worum geht es? Was ist das Kernthema des Dokuments?
 
 **WICHTIGSTE ERKENNTNISSE**
-Die 4-6 entscheidenden Punkte — jeweils 2-3 Sätze mit Begründung, nicht nur Stichworte.
+Die 4-6 entscheidenden Punkte — jeweils 2-3 Sätze mit konkreten Zahlen und Begründung.
 
 **KRITISCHE PUNKTE / RISIKEN**
-Was ist auffällig, problematisch oder besonders wichtig? Mindestens 2 Punkte ausformuliert.
+Was ist auffällig, problematisch oder besonders wichtig? Mindestens 2 Punkte vollständig ausformuliert.
 
 **EMPFEHLUNG**
-1-2 klare Handlungsempfehlungen — konkret und umsetzbar.
+1-2 klare, sofort umsetzbare Handlungsempfehlungen.
 
-Regeln: Kein Fließtext-Padding. Keine Wiederholungen. Jeder Satz trägt Informationswert. Aber: Schreibe vollständige Sätze, keine reinen Stichpunkte.`
-      : `OUTPUT LENGTH: SHORT — MINIMUM 1 full page, maximum 2 pages (approx. 450-700 words). DO NOT GO BELOW MINIMUM LENGTH.
-REQUIRED STRUCTURE — always write all 4 blocks in full:
+Regeln: Jeder Satz trägt Informationswert. Keine Wiederholungen. Vollständige Sätze, keine reinen Stichpunkte.`
+      : `⚠️ SHORT MODE — COMPLETELY OVERRIDES THE OUTPUT FORMAT BELOW.
+Ignore the section template. Write ONLY these 4 blocks — no other headings, no TL;DR, no metrics table.
+LENGTH: approx. 400-600 words. No charts. Maximum 1 simple table (only if absolutely essential).
 
 **SUMMARY**
 2-3 sentences: What is this about? What is the core topic of the document?
 
 **KEY FINDINGS**
-The 4-6 most important points — each 2-3 sentences with reasoning, not just keywords.
+The 4-6 most important points — each 2-3 sentences with concrete figures and reasoning.
 
 **CRITICAL POINTS / RISKS**
 What stands out, is problematic or particularly important? At least 2 points written out fully.
 
 **RECOMMENDATION**
-1-2 clear action recommendations — specific and actionable.
+1-2 clear, immediately actionable recommendations.
 
-Rules: No padding. No repetition. Every sentence must carry information value. But: write complete sentences, not just bullet points.`,
+Rules: Every sentence carries information value. No repetition. Complete sentences, not just bullet points.`,
     medium: isDE
-      ? `AUSGABELÄNGE: MITTEL — ZIEL 10 bis 20 Seiten (ca. 3000-5500 Wörter). Fülle diesen Rahmen vollständig aus.
+      ? `AUSGABELÄNGE: MITTEL — ZIEL ca. 3000-5500 Wörter. Fülle diesen Rahmen vollständig aus — nicht kürzer.
 • Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
-• TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als hochwertige Markdown-Tabelle mit klaren Spaltenüberschriften.
-• GRAFIKEN PFLICHT — mindestens 3, maximal 6 hochwertige Grafiken:
-  - Wichtigste Entwicklung über Zeit → [CHART:line|Titel|Jahr:Wert,...|palette:X]
-  - Wichtigster Kategorienvergleich → [CHART:bar|Titel|Kat:Wert,...|palette:X]
-  - Wichtigste Anteile → [CHART:pie|Titel|Kat:Wert,...|palette:X]
-  FARB-PALETTE — wähle passend zum Inhalt: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
-• Kennzahlen-Abschnitt vollständig befüllen.
-• Risiken und Chancen jeweils mit Begründung und Handlungsempfehlung.`
-      : `OUTPUT LENGTH: MEDIUM — TARGET 10 to 20 pages (approx. 3000-5500 words). Fill this scope completely.
+• TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle. Kein Fließtext für Daten.
+• GRAFIKEN PFLICHT — mindestens 3 Grafiken direkt im Text platzieren. Erstelle eine Grafik IMMER wenn du Zahlen, Vergleiche oder Entwicklungen beschreibst:
+  [CHART:line|Titel|Jahr:Wert,Jahr:Wert,...|palette:finance]
+  [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:growth]
+  [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:corporate]
+  Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+• Kennzahlen-Abschnitt vollständig mit allen Zahlen aus dem Dokument befüllen.
+• Risiken und Chancen jeweils mit Begründung und konkreter Handlungsempfehlung.`
+      : `OUTPUT LENGTH: MEDIUM — TARGET approx. 3000-5500 words. Fill this scope completely — not shorter.
 • Every section thorough with context, reasoning and concrete figures.
-• TABLES MANDATORY: Every data series, comparison, pros/cons → as high-quality Markdown table with clear column headers.
-• CHARTS MANDATORY — minimum 3, maximum 6 high-quality charts:
-  - Most important trend over time → [CHART:line|Title|Year:Value,...|palette:X]
-  - Most important category comparison → [CHART:bar|Title|Cat:Value,...|palette:X]
-  - Most important shares → [CHART:pie|Title|Cat:Value,...|palette:X]
-  COLOR PALETTE — choose based on content: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
-• Fill the key metrics section completely.
-• Risks and opportunities each with justification and recommended action.`,
+• TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table. No prose for data.
+• CHARTS MANDATORY — minimum 3 charts placed directly in the text. Create a chart WHENEVER you describe numbers, comparisons or trends:
+  [CHART:line|Title|Year:Value,Year:Value,...|palette:finance]
+  [CHART:bar|Title|CatA:Value,CatB:Value,...|palette:growth]
+  [CHART:pie|Title|CatA:Value,CatB:Value,...|palette:corporate]
+  Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+• Fill the key metrics section completely with all figures from the document.
+• Risks and opportunities each with justification and concrete recommended action.`,
     long: isDE
-      ? `AUSGABELÄNGE: LANG — ZIEL 20-25 SEITEN (ca. 8000-9000 Wörter). Das ist eine vollständige Rundumanalyse — spare nichts aus.
-• MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt.
-• TABELLEN ÜBERALL: Jede Liste, jeder Vergleich, jede Zahlenreihe, jede Aufzählung → Markdown-Tabelle mit allen Details. Kein Fließtext für Daten.
-• GRAFIKEN PFLICHT — mindestens 6 bis 10 hochwertige Grafiken, alle relevanten Typen nutzen:
-  - Zeitliche Entwicklungen → [CHART:line|Titel|Jahr:Wert,...|palette:X]
-  - Kategorienvergleiche → [CHART:bar|Titel|Kat:Wert,...|palette:X]
-  - Anteile und Verteilungen → [CHART:pie|Titel|Kat:Wert,...|palette:X]
-  FARB-PALETTE — wähle passend zum Inhalt: finance · growth · costs · marketing · tech · hr · logistics · warm · cool
-• TIEFEN-ANALYSE in allen 5 Dimensionen vollständig — keine Dimension darf verkürzt werden.
+      ? `AUSGABELÄNGE: LANG — MINDEST-ZIEL ca. 8000 Wörter. Das ist eine vollständige Rundumanalyse — spare absolut nichts aus.
+• MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt. Kein Abschnitt kürzer als 5 Sätze.
+• TABELLEN ÜBERALL PFLICHT: JEDE Liste, JEDER Vergleich, JEDE Zahlenreihe, JEDE Aufzählung → sofort als Markdown-Tabelle. Absolut kein Fließtext für Daten oder Vergleiche.
+• GRAFIKEN ABSOLUT PFLICHT — mindestens 6 Grafiken direkt im Text, mehr ist besser. Erstelle eine Grafik bei JEDEM Abschnitt mit Zahlen oder Entwicklungen. Hast du am Ende weniger als 6 Grafiken, hast du die Aufgabe NICHT erfüllt:
+  [CHART:line|Titel|Jahr:Wert,Jahr:Wert,...|palette:finance]
+  [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:growth]
+  [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:corporate]
+  Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+• TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausgeschrieben — keine Dimension darf verkürzt werden.
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
-• Alle Abschnitte auf maximale Substanz — kein Abschnitt kürzer als 5 Sätze.
-• Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit Zeitrahmen.`
-      : `OUTPUT LENGTH: LONG — TARGET 20-25 PAGES (approx. 8000-9000 words). This is a complete 360° analysis — leave nothing out.
-• MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained.
-• TABLES EVERYWHERE: every list, comparison, data series, enumeration → Markdown table with all details. No prose for data.
-• CHARTS MANDATORY — minimum 6 to 10 high-quality charts, use all relevant types:
-  - Time trends → [CHART:line|Title|Year:Value,...|palette:X]
-  - Category comparisons → [CHART:bar|Title|Cat:Value,...|palette:X]
-  - Shares and distributions → [CHART:pie|Title|Cat:Value,...|palette:X]
-  COLOR PALETTE — choose based on content: finance · growth · costs · marketing · tech · hr · logistics · warm · cool
-• DEEP ANALYSIS in all 5 dimensions fully developed — no dimension may be shortened.
+• Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit konkretem Zeitrahmen.`
+      : `OUTPUT LENGTH: LONG — MINIMUM TARGET approx. 8000 words. This is a complete 360° analysis — leave absolutely nothing out.
+• MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained. No section shorter than 5 sentences.
+• TABLES EVERYWHERE MANDATORY: EVERY list, comparison, data series, enumeration → immediately as Markdown table. Absolutely no prose for data or comparisons.
+• CHARTS ABSOLUTELY MANDATORY — minimum 6 charts placed directly in text, more is better. Create a chart for EVERY section containing numbers or trends. If you end with fewer than 6 charts, you have NOT completed the task:
+  [CHART:line|Title|Year:Value,Year:Value,...|palette:finance]
+  [CHART:bar|Title|CatA:Value,CatB:Value,...|palette:growth]
+  [CHART:pie|Title|CatA:Value,CatB:Value,...|palette:corporate]
+  Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+• DEEP ANALYSIS in all 5 dimensions fully written out — no dimension may be shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
-• All sections at maximum substance — no section shorter than 5 sentences.
-• Conclusion and action plan: prioritised, numbered measures with timeline.`
+• Conclusion and action plan: prioritised, numbered measures with concrete timeline.`
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
@@ -5265,7 +5265,7 @@ KERNREGELN — NIEMALS BRECHEN:
 6. ANTWORTE AUF DEUTSCH.
 7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. GRAFIKEN: Anzahl gemäß Analysetiefe (Kurz = keine, Mittel = 3-6, Lang = 6-10). NUR wenn mindestens 4 reale Datenpunkte vorliegen:
+9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind — bereits ab 2 Datenpunkten. Keine Ausnahmen.
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
    • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:X]
    • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:X]
