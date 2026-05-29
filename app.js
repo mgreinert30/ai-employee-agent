@@ -2322,6 +2322,10 @@ function parseResultBlocks(text) {
 
     if (!t) { afterDivider = false; if (blocks.length === 0 || blocks[blocks.length-1].type !== 'gap') blocks.push({ type: 'gap' }); continue; }
 
+    // Skip raw JSON syntax lines (prevent AI JSON responses from showing as code in PDF)
+    if (/^[\s]*[{}\[\]][\s]*,?[\s]*$/.test(t)) continue;
+    if (/^"[^"]{1,80}"\s*:\s*(null|true|false|-?\d[\d.]*|\[|\{|"[^"]*")\s*,?$/.test(t)) continue;
+
     // ━━━ divider → flag that next line is a section title
     if (/^━{3,}/.test(t)) {
       let lastType = null;
@@ -2698,8 +2702,8 @@ function downloadPDF(length) {
   const depthLbl = { de:{ short:'Kurzzusammenfassung', medium:'Standardanalyse', long:'Tiefenanalyse' }, en:{ short:'Brief Summary', medium:'Standard Analysis', long:'In-Depth Analysis' } }[currentLang][length];
   const docType  = window.currentDocType || 'allgemein';
   const docTypeLabels = {
-    de: { geschaeftsbericht:'GESCHÄFTSBERICHT', vertrag:'VERTRAG', jahresabschluss:'JAHRESABSCHLUSS', rechnung:'RECHNUNG', protokoll:'PROTOKOLL', allgemein:'DOKUMENT' },
-    en: { geschaeftsbericht:'BUSINESS REPORT', vertrag:'CONTRACT', jahresabschluss:'FINANCIAL STATEMENT', rechnung:'INVOICE', protokoll:'MEETING MINUTES', allgemein:'DOCUMENT' }
+    de: { versicherungsbericht:'VERSICHERUNGSBERICHT', geschaeftsbericht:'GESCHÄFTSBERICHT', vertrag:'VERTRAG', jahresabschluss:'JAHRESABSCHLUSS', rechnung:'RECHNUNG', protokoll:'PROTOKOLL', allgemein:'DOKUMENT' },
+    en: { versicherungsbericht:'INSURANCE REPORT', geschaeftsbericht:'BUSINESS REPORT', vertrag:'CONTRACT', jahresabschluss:'FINANCIAL STATEMENT', rechnung:'INVOICE', protokoll:'MEETING MINUTES', allgemein:'DOCUMENT' }
   };
   const dtLabel = docTypeLabels[currentLang === 'de' ? 'de' : 'en'][docType] || 'DOKUMENT';
 
@@ -5187,8 +5191,8 @@ Rules: No padding. No repetition. Every sentence must carry information value. B
   const learningCtx = getLearningContext(isDE, docType);
 
   const docTypeLabels = {
-    de: { geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
-    en: { geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
+    de: { versicherungsbericht: 'Versicherungsbericht', geschaeftsbericht: 'Geschäftsbericht', vertrag: 'Vertrag', jahresabschluss: 'Jahresabschluss', rechnung: 'Rechnung', protokoll: 'Protokoll', allgemein: 'Dokument' },
+    en: { versicherungsbericht: 'Insurance Report', geschaeftsbericht: 'Business Report', vertrag: 'Contract', jahresabschluss: 'Financial Statement', rechnung: 'Invoice', protokoll: 'Meeting Minutes', allgemein: 'Document' }
   };
   const dtLabel = docTypeLabels[isDE ? 'de' : 'en'][docType.replace('create_','')] || 'Dokument';
   const isCreation = docType.startsWith('create_');
@@ -5239,6 +5243,8 @@ QUALITÄTSPRÜFUNG: Ist das Dokument direkt verwendbar ohne weitere Bearbeitung?
 AUFGABE DES KUNDEN: ${taskDesc}
 DOKUMENTTYP: ${dtLabel}
 ${professionCtx}${businessCtx}${learningCtx}${typeInstructions}
+AUSGABEFORMAT — ABSOLUTES GEBOT: Gib die Analyse AUSSCHLIESSLICH als strukturierten Berichtstext aus. NIEMALS JSON, Code-Blöcke, Arrays oder technische Datenstrukturen ausgeben. Alle Daten → Fließtext und Markdown-Tabellen.
+
 REGEL 0 — KUNDENFRAGE GEHT VOR ALLEM:
 Wenn die Aufgabe eine konkrete Frage oder Entscheidung enthält (z.B. "Soll ich kaufen?", "Lohnt sich das?", "Ist das riskant?", "Empfehlung?"):
 • Beginne die Analyse IMMER mit einer KLAREN DIREKTANTWORT auf genau diese Frage.
@@ -5256,7 +5262,7 @@ KERNREGELN — NIEMALS BRECHEN:
 6. ANTWORTE AUF DEUTSCH.
 7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. GRAFIKEN: Maximal 1-5 essentielle Grafiken — nur für die wichtigsten Erkenntnisse, NIE für jede Zahl. Qualität vor Quantität. NUR wenn mindestens 4 reale Datenpunkte vorliegen:
+9. GRAFIKEN: Anzahl gemäß Analysetiefe (Kurz = keine, Mittel = 3-6, Lang = 6-10). NUR wenn mindestens 4 reale Datenpunkte vorliegen:
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
    • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:X]
    • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:X]
@@ -5339,6 +5345,8 @@ QUALITY CHECK: Is the document directly usable without further editing? If not �
 CLIENT TASK: ${taskDesc}
 DOCUMENT TYPE: ${dtLabel}
 ${professionCtx}${businessCtx}${learningCtx}${typeInstructions}
+OUTPUT FORMAT — ABSOLUTE REQUIREMENT: Output the analysis EXCLUSIVELY as structured report text. NEVER output JSON, code blocks, arrays or technical data structures. All data → prose and Markdown tables.
+
 RULE 0 — CLIENT QUESTION TAKES PRIORITY:
 If the task contains a concrete question or decision (e.g. "Should I buy?", "Is this worth it?", "Is this risky?", "Recommendation?"):
 • ALWAYS begin the analysis with a CLEAR DIRECT ANSWER to exactly that question.
