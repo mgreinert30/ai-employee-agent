@@ -161,7 +161,7 @@ body {
    HEADER
    ===================== */
 header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); color: white; padding: 24px 32px; min-height: 90px; border-bottom: 1px solid rgba(37,99,235,0.2); position: sticky; top: 0; z-index: 500; box-sizing: border-box; }
-.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1440px; margin: 0 auto; gap: 16px; }
 .logo { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .header-logo-img { height: 50px; width: auto; max-width: 200px; display: block; flex-shrink: 0; }
 .logo span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
