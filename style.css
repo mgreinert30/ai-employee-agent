@@ -160,14 +160,14 @@ body {
 /* =====================
    HEADER
    ===================== */
-header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); color: white; padding: 20px 24px; border-bottom: 1px solid rgba(37,99,235,0.2); position: sticky; top: 0; z-index: 500; }
-.header-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; }
-.logo { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; display: flex; align-items: center; gap: 10px; }
-.header-logo-img { height: 44px; width: auto; max-width: 200px; display: block; flex-shrink: 0; }
+header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); color: white; padding: 24px 32px; min-height: 90px; border-bottom: 1px solid rgba(37,99,235,0.2); position: sticky; top: 0; z-index: 500; box-sizing: border-box; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1200px; margin: 0 auto; gap: 16px; }
+.logo { font-size: 28px; font-weight: 900; letter-spacing: -1.5px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header-logo-img { height: 50px; width: auto; max-width: 200px; display: block; flex-shrink: 0; }
 .logo span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.header-right { display: flex; align-items: center; gap: 10px; }
+.header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .header-user { color: #64748b; font-size: 14px; font-weight: 500; }
-.tagline { color: #64748b; font-size: 14px; margin-top: 8px; text-align: center; letter-spacing: 0.3px; }
+.tagline { color: rgba(255,255,255,0.42); font-size: 14px; margin-top: 14px; text-align: center; letter-spacing: 0.3px; }
 
 /* =====================
    SITE NAVIGATION — inline between logo and auth buttons
@@ -178,43 +178,44 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  padding: 0 16px;
 }
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   overflow-x: auto;
   scrollbar-width: none;
   flex-wrap: nowrap;
 }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-link {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.7);
   text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 11px;
-  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 7px;
   transition: background 0.15s, color 0.15s;
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
 .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
-.nav-link.nav-active { color: #fff; background: rgba(37,99,235,0.35); }
+.nav-link.nav-active { color: #fff; background: rgba(37,99,235,0.4); font-weight: 600; }
 /* Scroll margin so sticky header doesn't cover sections */
-[id^="nav-"], #other-services { scroll-margin-top: 90px; }
+[id^="nav-"], #other-services { scroll-margin-top: 110px; }
 /* Mobile: nav scrolls horizontally below logo+buttons row */
 @media (max-width: 768px) {
   .site-nav {
     order: 3;
     width: 100%;
-    padding: 4px 0 0;
+    padding: 6px 0 0;
     justify-content: flex-start;
     border-top: 1px solid rgba(255,255,255,0.08);
-    margin-top: 6px;
+    margin-top: 8px;
   }
-  [id^="nav-"], #other-services { scroll-margin-top: 160px; }
+  .nav-link { font-size: 13px; padding: 6px 10px; }
+  [id^="nav-"], #other-services { scroll-margin-top: 170px; }
 }
 
 /* MY TASKS PANEL */
@@ -1348,12 +1349,12 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 /* HEADER LOGIN/SIGNUP BUTTONS (guest state) */
 .btn-header-login {
   display: none;
-  padding: 8px 18px;
+  padding: 10px 22px;
   border: 1.5px solid rgba(255,255,255,0.4);
   background: transparent;
   color: #ffffff;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -1362,12 +1363,12 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .btn-header-login:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.7); }
 .btn-header-signup {
   display: none;
-  padding: 8px 18px;
+  padding: 10px 22px;
   background: var(--blue);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
