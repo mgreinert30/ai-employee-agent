@@ -170,29 +170,23 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .tagline { color: #64748b; font-size: 14px; margin-top: 8px; text-align: center; letter-spacing: 0.3px; }
 
 /* =====================
-   SITE NAVIGATION
+   SITE NAVIGATION — inline between logo and auth buttons
    ===================== */
 .site-nav {
-  border-top: 1px solid rgba(255,255,255,0.08);
-  margin-top: 10px;
-  padding-bottom: 4px;
-}
-.site-nav-inner {
-  max-width: 1200px;
-  margin: 0 auto;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  position: relative;
+  justify-content: center;
+  padding: 0 12px;
 }
 .nav-links {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 4px 0;
+  flex-wrap: nowrap;
 }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-link {
@@ -208,52 +202,19 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 }
 .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .nav-link.nav-active { color: #fff; background: rgba(37,99,235,0.35); }
-/* Burger button — hidden on desktop */
-.nav-burger {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
-  flex-shrink: 0;
-}
-.nav-burger span {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: rgba(255,255,255,0.8);
-  border-radius: 2px;
-  transition: all 0.2s;
-}
 /* Scroll margin so sticky header doesn't cover sections */
-[id^="nav-"], #other-services {
-  scroll-margin-top: 145px;
-}
-/* Mobile nav */
+[id^="nav-"], #other-services { scroll-margin-top: 90px; }
+/* Mobile: nav scrolls horizontally below logo+buttons row */
 @media (max-width: 768px) {
-  .site-nav { margin-top: 8px; padding-bottom: 0; }
-  .site-nav-inner { flex-direction: row; }
-  .nav-burger { display: flex; }
-  .nav-links {
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: -24px;
-    right: -24px;
-    background: #0b1629;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding: 8px 16px 14px;
-    z-index: 200;
-    overflow: visible;
+  .site-nav {
+    order: 3;
+    width: 100%;
+    padding: 4px 0 0;
+    justify-content: flex-start;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 6px;
   }
-  .nav-links.nav-open { display: flex; }
-  .nav-link { font-size: 14px; padding: 10px 14px; border-radius: 8px; }
+  [id^="nav-"], #other-services { scroll-margin-top: 160px; }
 }
 
 /* MY TASKS PANEL */
