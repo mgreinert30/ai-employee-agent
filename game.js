@@ -85,11 +85,17 @@
     }
 
     _onKey(e) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
       if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); this._jump(); }
       if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); this.player.slideStart(); }
       if (e.code === 'KeyD' && this.state === 'running') this.debug = !this.debug;
     }
-    _onKeyUp(e) { if (e.code === 'ArrowDown' || e.code === 'KeyS') this.player.slideEnd(); }
+    _onKeyUp(e) {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') this.player.slideEnd();
+    }
     _onPtr(e) { e.preventDefault(); this._jump(); }
 
     _jump() {
