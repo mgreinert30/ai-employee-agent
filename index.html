@@ -12,7 +12,7 @@
   <meta name="robots" content="index, follow" />
   <title>AI Employee Agent — KI-Mitarbeiter ab €0,99 | DSGVO-konform</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=27" />
+  <link rel="stylesheet" href="style.css?v=28" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -239,14 +239,17 @@
       <!-- MAIN NAVIGATION -->
       <nav class="site-nav" id="site-nav">
         <div class="nav-links" id="nav-links">
-          <a href="#nav-start"      class="nav-link">Start</a>
-          <a href="#nav-demo"       class="nav-link">Demo</a>
-          <a href="#other-services" class="nav-link">KI Dienste</a>
-          <a href="#nav-loesungen"  class="nav-link">Tools</a>
-          <a href="#mini-spiel"     class="nav-link">Mini-Spiel</a>
-          <a href="#nav-preise"     class="nav-link">Preise</a>
-          <a href="#nav-faq"        class="nav-link">FAQ</a>
-          <a href="#nav-kontakt"    class="nav-link">Kontakt</a>
+          <a href="#nav-start"          class="nav-link">Start</a>
+          <a href="#nav-demo"           class="nav-link">Video</a>
+          <a href="#mini-spiel"         class="nav-link">Mini-Spiel</a>
+          <a href="#nav-telefon"        class="nav-link">Telefon-KI</a>
+          <a href="#nav-chat"           class="nav-link">Chat</a>
+          <a href="#nav-leads"          class="nav-link">Leads</a>
+          <a href="#nav-automatisierung" class="nav-link">Automatisierung</a>
+          <a href="#nav-funktionen"     class="nav-link">Funktionen</a>
+          <a href="#nav-preise"         class="nav-link">Preise</a>
+          <a href="#nav-faq"            class="nav-link">FAQ</a>
+          <a href="#nav-kontakt"        class="nav-link">Kontakt</a>
         </div>
       </nav>
       <div class="header-right">
@@ -329,6 +332,175 @@
       <div class="video-demo-cta">
         <p data-de="Überzeug dich selbst — lade ein beliebiges PDF hoch und sieh das Ergebnis in 2 Minuten." data-en="See it for yourself — upload any PDF and see the result in 2 minutes.">Überzeug dich selbst — lade ein beliebiges PDF hoch und sieh das Ergebnis in 2 Minuten.</p>
         <a href="#" class="btn-primary" onclick="showPage('pdf'); return false;" data-de="📄 PDF jetzt analysieren" data-en="📄 Analyse PDF now">📄 PDF jetzt analysieren</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFICE RUNNER GAME SECTION -->
+  <section class="game-section" id="mini-spiel">
+    <div class="game-section-inner">
+      <span class="section-chip">🎮 Mini-Spiel</span>
+      <h2 class="game-section-title">Teste den KI-Mitarbeiter spielerisch</h2>
+      <p class="game-section-sub">Probiere aus, wie schnell dein KI-Mitarbeiter reagiert — während du über den Büroalltag springst. Spring über die Hindernisse, während dein echter KI-Agent im Hintergrund die Arbeit erledigt.</p>
+      <div class="game-canvas-container" style="max-width:720px;">
+        <canvas id="game-canvas-home" width="720" height="220"></canvas>
+      </div>
+      <p class="game-section-hint">⌨ Leertaste oder Tippen = Springen &nbsp;·&nbsp; ↓ Pfeiltaste = Slide</p>
+    </div>
+  </section>
+
+  <!-- TELEFON-KI SECTION -->
+  <section class="other-services" id="nav-telefon">
+    <div class="os-inner">
+      <span class="section-chip">📞 Telefon-KI · 24/7</span>
+      <h2>Dein <span class="gradient-text">KI-Telefonassistent</span><br>beantwortet jeden Anruf</h2>
+      <p class="os-subtitle">Kein verpasster Anruf mehr — dein KI-Mitarbeiter nimmt rund um die Uhr ab, beantwortet Kundenfragen, nimmt Termine an und leitet weiter.</p>
+      <div class="os-grid">
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🎙️</div>
+          <h3>Gesprächsführung</h3>
+          <p>Natürliche Gespräche in Echtzeit — die KI spricht mit Kunden wie ein Mitarbeiter, stellt Rückfragen und erfasst alle Informationen.</p>
+          <span class="os-badge">Conversational Calls</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">📋</div>
+          <h3>Anruf-Zusammenfassung</h3>
+          <p>Jedes Gespräch wird automatisch protokolliert und als E-Mail-Zusammenfassung zugestellt — nichts geht verloren.</p>
+          <span class="os-badge">Call Recording · Summary</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🕐</div>
+          <h3>Flexible Erreichbarkeit</h3>
+          <p>Individuelle Geschäftszeiten konfigurierbar — außerhalb deiner Öffnungszeiten übernimmt die KI automatisch alle Anrufe.</p>
+          <span class="os-badge">Custom Working Hours</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🔀</div>
+          <h3>Anruf-Weiterleitung</h3>
+          <p>Wichtige Anrufe werden nach Thema und Dringlichkeit automatisch an den richtigen Mitarbeiter oder dein Handy weitergeleitet.</p>
+          <span class="os-badge">Route Inbound Calls</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAT & NACHRICHTEN SECTION -->
+  <section class="other-services" id="nav-chat">
+    <div class="os-inner">
+      <span class="section-chip chip-dark">💬 Chat &amp; Nachrichten · 24/7</span>
+      <h2>Sofortige Antworten auf <span class="gradient-text">allen Kanälen</span></h2>
+      <p class="os-subtitle">Dein KI-Mitarbeiter antwortet automatisch auf Website-Chat, WhatsApp, Instagram und weitere Kanäle — rund um die Uhr, ohne Wartezeiten.</p>
+      <div class="os-grid">
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🌐</div>
+          <h3>Website-Chat</h3>
+          <p>Eingebetteter KI-Chatbot auf deiner Website — beantwortet Fragen, qualifiziert Besucher und leitet weiter an dein Team.</p>
+          <span class="os-badge">Live Chat · Widget</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">📱</div>
+          <h3>WhatsApp &amp; SMS</h3>
+          <p>Automatische Antworten auf WhatsApp-Nachrichten und SMS — dein Kunde erhält eine Antwort in Sekunden, nicht Stunden.</p>
+          <span class="os-badge">WhatsApp · SMS</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">📸</div>
+          <h3>Social Media</h3>
+          <p>Instagram DMs, Facebook Messenger und weitere Kanäle — alles zentral verwaltet, alles automatisch beantwortet.</p>
+          <span class="os-badge">Instagram · Facebook</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🎯</div>
+          <h3>Ton-Anpassung</h3>
+          <p>Die KI kommuniziert in deinem Unternehmens-Ton — professionell, freundlich oder locker, genau wie du es möchtest.</p>
+          <span class="os-badge">Tone Customization</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEAD-ERFASSUNG SECTION -->
+  <section class="other-services" id="nav-leads">
+    <div class="os-inner">
+      <span class="section-chip">🎯 Lead-Erfassung · Automatisch</span>
+      <h2>Kein Interessent <span class="gradient-text">geht mehr verloren</span></h2>
+      <p class="os-subtitle">Dein KI-Mitarbeiter erkennt Interessenten, sammelt Kontaktdaten und speichert qualifizierte Leads direkt in dein CRM — vollautomatisch.</p>
+      <div class="os-grid">
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🔍</div>
+          <h3>Interessenten erkennen</h3>
+          <p>Die KI erkennt automatisch, ob ein Besucher oder Anrufer ein potenzieller Kunde ist — und leitet den Qualifizierungsprozess ein.</p>
+          <span class="os-badge">Lead Detection</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">📊</div>
+          <h3>Daten erfassen</h3>
+          <p>Name, E-Mail, Telefon, Bedarf — die KI sammelt alle relevanten Kontaktdaten im Gespräch, ohne dass du eingreifen musst.</p>
+          <span class="os-badge">Gather Information</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🔗</div>
+          <h3>CRM-Integration</h3>
+          <p>Leads werden automatisch in dein CRM übertragen — HubSpot, Salesforce, Pipedrive oder dein eigenes System.</p>
+          <span class="os-badge">CRM · HubSpot · Pipedrive</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">⭐</div>
+          <h3>Lead-Qualifizierung</h3>
+          <p>Die KI bewertet und priorisiert Leads automatisch nach Kaufbereitschaft und Bedarf — damit du dich auf die richtigen konzentrierst.</p>
+          <span class="os-badge">Lead Scoring</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMINBUCHUNG & AUTOMATISIERUNG SECTION -->
+  <section class="other-services" id="nav-automatisierung">
+    <div class="os-inner">
+      <span class="section-chip chip-dark">📅 Terminbuchung &amp; Follow-up</span>
+      <h2>Mehr Termine, <span class="gradient-text">weniger Aufwand</span></h2>
+      <p class="os-subtitle">Dein KI-Mitarbeiter bucht Termine, verschickt automatische Erinnerungen, leitet Anfragen weiter und hält dauerhaft Kontakt mit deinen Kunden.</p>
+      <div class="os-grid">
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">📅</div>
+          <h3>Terminvereinbarung</h3>
+          <p>Die KI bucht Termine direkt in deinen Kalender — ohne Telefonkette, ohne Rückfragen, rund um die Uhr verfügbar.</p>
+          <span class="os-badge">Google · Outlook · Kalender</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">🔁</div>
+          <h3>Automatisches Follow-up</h3>
+          <p>Kein Interessent wird vergessen — automatische Nachfass-E-Mails und Erinnerungen nach festgelegten Intervallen.</p>
+          <span class="os-badge">E-Mail · SMS · WhatsApp</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">↗️</div>
+          <h3>Weiterleitung &amp; Eskalation</h3>
+          <p>Dringende Anfragen werden sofort an dich oder den richtigen Mitarbeiter weitergeleitet — mit vollständigem Gesprächskontext.</p>
+          <span class="os-badge">Route · Escalate</span>
+        </div>
+        <div class="os-card os-card-beta">
+          <div class="os-beta-badge">Demnächst</div>
+          <div class="os-icon">⚡</div>
+          <h3>Workflow-Automation</h3>
+          <p>Verbinde deine KI mit bestehenden Tools — CRM, E-Mail-Marketing, Slack, Zapier. Komplette Workflows automatisch ausführen.</p>
+          <span class="os-badge">Workflow · Zapier · Make</span>
+        </div>
       </div>
     </div>
   </section>
@@ -653,10 +825,10 @@
   </section>
 
   <!-- USE CASES BY DEPARTMENT -->
-  <section class="usecases-section" id="nav-loesungen">
+  <section class="usecases-section" id="nav-funktionen">
     <div class="usecases-inner">
-      <span class="section-chip chip-dark" data-de="💼 Einsatzgebiete" data-en="💼 Use Cases">💼 Einsatzgebiete</span>
-      <h2 data-de="Für jede Abteilung der richtige KI-Mitarbeiter" data-en="The right AI employee for every department">Für jede Abteilung der <span class="gradient-text">richtige KI-Mitarbeiter</span></h2>
+      <span class="section-chip chip-dark" data-de="💼 Funktionen im Überblick" data-en="💼 Features Overview">💼 Funktionen im Überblick</span>
+      <h2 data-de="Alles, was dein KI-Mitarbeiter kann" data-en="Everything your AI employee can do">Alles, was dein <span class="gradient-text">KI-Mitarbeiter kann</span></h2>
       <p class="usecases-sub" data-de="Erkennst du dich wieder? Wähle dein Szenario und sieh wie die KI sofort übernimmt." data-en="Recognise your situation? Choose your scenario and see how the AI takes over immediately.">Erkennst du dich wieder? Wähle dein Szenario — die KI übernimmt sofort.</p>
       <div class="usecases-grid">
         <div class="usecase-card" onclick="showPage('pdf'); return false;">
@@ -703,19 +875,6 @@
           <span style="display:inline-block;margin-top:8px;font-size:11px;font-weight:700;background:linear-gradient(135deg,#2563eb,#06b6d4);color:white;padding:3px 10px;border-radius:20px;width:fit-content;">NEU</span>
         </a>
       </div>
-    </div>
-  </section>
-
-  <!-- OFFICE RUNNER GAME SECTION -->
-  <section class="game-section" id="mini-spiel">
-    <div class="game-section-inner">
-      <span class="section-chip">🎮 Mini-Spiel</span>
-      <h2 class="game-section-title">Teste den KI-Mitarbeiter spielerisch</h2>
-      <p class="game-section-sub">Probiere aus, wie schnell dein KI-Mitarbeiter reagiert — während du über den Büroalltag springst. Spring über die Hindernisse, während dein echter KI-Agent im Hintergrund die Arbeit erledigt.</p>
-      <div class="game-canvas-container" style="max-width:720px;">
-        <canvas id="game-canvas-home" width="720" height="220"></canvas>
-      </div>
-      <p class="game-section-hint">⌨ Leertaste oder Tippen = Springen &nbsp;·&nbsp; ↓ Pfeiltaste = Slide</p>
     </div>
   </section>
 
@@ -2227,6 +2386,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
