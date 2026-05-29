@@ -1561,15 +1561,18 @@ function showPage(page) {
   const task = document.getElementById('page-task');
   const reviewCta = document.getElementById('review-cta-section');
 
+  const siteNav = document.getElementById('site-nav');
   if (page === 'main') {
     main.style.display = 'block';
     task.style.display = 'none';
     if (reviewCta) reviewCta.style.display = 'block';
+    if (siteNav) siteNav.style.display = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } else {
     main.style.display = 'none';
     task.style.display = 'block';
     if (reviewCta) reviewCta.style.display = 'none';
+    if (siteNav) siteNav.style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     if (page === 'pdf') {
@@ -6001,4 +6004,44 @@ function closeGameOverlay() {
   // Resume from exact state — no restart, score and position preserved
   if (window._officeRunnerInstance) window._officeRunnerInstance.state = 'running';
 }
+
+// =====================
+// SITE NAVIGATION — burger menu + active link highlight
+// =====================
+function toggleNavMobile() {
+  const links = document.getElementById('nav-links');
+  if (links) links.classList.toggle('nav-open');
+}
+
+function closeNavMobile() {
+  const links = document.getElementById('nav-links');
+  if (links) links.classList.remove('nav-open');
+}
+
+// Highlight the active nav link based on scroll position
+(function initNavHighlight() {
+  if (typeof IntersectionObserver === 'undefined') return;
+  const targets = ['nav-start','nav-loesungen','other-services','nav-automatisierung','nav-vorteile','nav-branchen','nav-preise','nav-faq','nav-kontakt'];
+  const hrefs   = ['#nav-start','#nav-loesungen','#other-services','#nav-automatisierung','#nav-vorteile','#nav-branchen','#nav-preise','#nav-faq','#nav-kontakt'];
+  let activeIdx = 0;
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = targets.indexOf(e.target.id);
+        if (idx !== -1) activeIdx = idx;
+        document.querySelectorAll('.nav-link').forEach((a, i) => {
+          a.classList.toggle('nav-active', i === activeIdx);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    targets.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+  });
+})();
 

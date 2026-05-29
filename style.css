@@ -169,6 +169,93 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .header-user { color: #64748b; font-size: 14px; font-weight: 500; }
 .tagline { color: #64748b; font-size: 14px; margin-top: 8px; text-align: center; letter-spacing: 0.3px; }
 
+/* =====================
+   SITE NAVIGATION
+   ===================== */
+.site-nav {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 10px;
+  padding-bottom: 4px;
+}
+.site-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-link {
+  color: rgba(255,255,255,0.65);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.nav-link.nav-active { color: #fff; background: rgba(37,99,235,0.35); }
+/* Burger button — hidden on desktop */
+.nav-burger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  flex-shrink: 0;
+}
+.nav-burger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+/* Scroll margin so sticky header doesn't cover sections */
+[id^="nav-"], #other-services {
+  scroll-margin-top: 145px;
+}
+/* Mobile nav */
+@media (max-width: 768px) {
+  .site-nav { margin-top: 8px; padding-bottom: 0; }
+  .site-nav-inner { flex-direction: row; }
+  .nav-burger { display: flex; }
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -24px;
+    right: -24px;
+    background: #0b1629;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 8px 16px 14px;
+    z-index: 200;
+    overflow: visible;
+  }
+  .nav-links.nav-open { display: flex; }
+  .nav-link { font-size: 14px; padding: 10px 14px; border-radius: 8px; }
+}
+
 /* MY TASKS PANEL */
 #my-tasks-panel { background: white; border-bottom: 2px solid var(--light); }
 .panel-inner { max-width: 860px; margin: 0 auto; padding: 28px; }
