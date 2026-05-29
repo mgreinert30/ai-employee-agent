@@ -5257,6 +5257,7 @@ Wenn die Aufgabe eine konkrete Frage oder Entscheidung enthält (z.B. "Soll ich 
 • Die gesamte Analyse dient als Belege und Begründung für diese Antwort — nicht umgekehrt.
 
 KERNREGELN — NIEMALS BRECHEN:
+0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit einem Statistik-, Metadaten- oder Dokumentinfo-Block (z.B. "ANALYSE-STATISTIK", "Seiten: X", "Zeichen: X", "Tabellen: X", "Grafiken: X", "QUELLDOKUMENT"). Starte SOFORT mit dem TL;DR und der Analyse.
 1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
 2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
 3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...". Direkt starten.
