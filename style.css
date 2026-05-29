@@ -203,7 +203,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .nav-link.nav-active { color: #fff; background: rgba(37,99,235,0.4); font-weight: 600; }
 /* Scroll margin so sticky header doesn't cover sections */
-[id^="nav-"], #other-services { scroll-margin-top: 110px; }
+[id^="nav-"], #other-services, #mini-spiel { scroll-margin-top: 110px; }
 /* Mobile: nav scrolls horizontally below logo+buttons row */
 @media (max-width: 768px) {
   .site-nav {
@@ -215,7 +215,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
     margin-top: 8px;
   }
   .nav-link { font-size: 13px; padding: 6px 10px; }
-  [id^="nav-"], #other-services { scroll-margin-top: 170px; }
+  [id^="nav-"], #other-services, #mini-spiel { scroll-margin-top: 170px; }
 }
 
 /* MY TASKS PANEL */

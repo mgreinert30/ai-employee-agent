@@ -6021,8 +6021,8 @@ function closeNavMobile() {
 // Highlight the active nav link based on scroll position
 (function initNavHighlight() {
   if (typeof IntersectionObserver === 'undefined') return;
-  const targets = ['nav-start','nav-loesungen','other-services','nav-automatisierung','nav-vorteile','nav-branchen','nav-preise','nav-faq','nav-kontakt'];
-  const hrefs   = ['#nav-start','#nav-loesungen','#other-services','#nav-automatisierung','#nav-vorteile','#nav-branchen','#nav-preise','#nav-faq','#nav-kontakt'];
+  const targets = ['nav-start','nav-demo','other-services','nav-loesungen','mini-spiel','nav-preise','nav-faq','nav-kontakt'];
+  const hrefs   = ['#nav-start','#nav-demo','#other-services','#nav-loesungen','#mini-spiel','#nav-preise','#nav-faq','#nav-kontakt'];
   let activeIdx = 0;
 
   const io = new IntersectionObserver(entries => {
