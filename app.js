@@ -4912,6 +4912,114 @@ function checkResetToken() {
 }
 
 // =====================
+// PDF KLASSIFIKATOR
+// Analysiert extrahierte Seiten und bestimmt 12 Dokumentmerkmale.
+// Ergebnis wird in window._lastPDFClassification gespeichert und
+// dem KI-Prompt als strukturierter Kontext beigefügt.
+// =====================
+function classifyPDF(allPages, filename) {
+  const de = currentLang === 'de';
+  const totalChars = allPages.reduce((s, p) => s + p.text.length, 0);
+  const avgCharsPerPage = allPages.length > 0 ? Math.round(totalChars / allPages.length) : 0;
+  const pageCount = allPages.length;
+
+  // 1. Digitaler Text vs. Scan
+  const isScanned    = avgCharsPerPage < 60;
+  const isLowQuality = !isScanned && avgCharsPerPage < 180;
+
+  // 2. Tabellen — Seiten mit min. 2 Pipe-Zeilen (aus table-aware reconstruction)
+  const tablePages = allPages.filter(p =>
+    p.text.split('\n').filter(l => (l.match(/\|/g) || []).length >= 2).length >= 2
+  );
+  const hasTables   = tablePages.length > 0;
+  const tableDensity = pageCount > 0 ? tablePages.length / pageCount : 0;
+
+  // 3. Formulare — Unterstriche, Checkboxen, beschriftete Felder
+  const formRx = [/_{3,}/, /\[\s*\]/, /[☐□☑]/, /\b(Name|Unterschrift|Datum|Adresse|Signature|Date|PLZ)\s*:/i];
+  const formHits = allPages.reduce((n, p) => n + formRx.filter(rx => rx.test(p.text)).length, 0);
+  const hasForms = formHits >= 4;
+
+  // 4. Mehrspaltig — hoher Anteil kurzer Zeilen deutet auf Spaltenbreiten hin
+  const shortLineRatio = allPages.reduce((sum, p) => {
+    const lines = p.text.split('\n').filter(l => l.trim().length > 10);
+    if (!lines.length) return sum;
+    return sum + lines.filter(l => l.trim().length < 65).length / lines.length;
+  }, 0) / (pageCount || 1);
+  const isMultiColumn = shortLineRatio > 0.68 && avgCharsPerPage > 300 && !hasForms;
+
+  // 5. Fußnoten — nummerierte Einträge am Ende von Zeilen
+  const fnRx = /^(?:\d{1,2}[\.\)]\s|[¹²³⁴⁵⁶⁷⁸⁹]\s).{8,}/m;
+  const footnotePages = allPages.filter(p => fnRx.test(p.text)).length;
+  const hasFootnotes = footnotePages > pageCount * 0.25;
+
+  // 6. Bilder/Diagramme — viele Seiten mit sehr wenig Text
+  const sparsePages = allPages.filter(p => p.text.length < 130).length;
+  const hasImages = sparsePages > pageCount * 0.25;
+
+  // 7. Handschrift — nur heuristisch: sehr kurze Zeilen + geringe Zeichendichte + kein bekanntes Muster
+  const handwritingScore = isScanned && avgCharsPerPage < 30 ? true : false;
+
+  // 8. Wissenschaftliches Paper
+  const firstFew = allPages.slice(0, Math.min(4, pageCount)).map(p => p.text).join(' ').toLowerCase();
+  const sciTerms = ['abstract', 'introduction', 'methodology', 'references', 'doi:', 'et al.', 'keywords', 'hypothesis', 'discussion'];
+  const isScientificPaper = sciTerms.filter(t => firstFew.includes(t)).length >= 3;
+
+  // 9. Dokumentkategorie (Vertrag / Rechnung / Bericht / Paper / Formular)
+  const combined = (filename + ' ' + (allPages[0]?.text || '')).toLowerCase();
+  let docCategory = 'allgemein';
+  if (/vertrag|contract|agreement|nda|mietvertrag|arbeitsvertrag/i.test(combined)) docCategory = 'vertrag';
+  else if (/rechnung|invoice|faktura|angebot|quotation/i.test(combined)) docCategory = 'rechnung';
+  else if (/geschäftsbericht|jahresbericht|annual.?report|quartalsbericht|konzernbericht/i.test(combined)) docCategory = 'bericht';
+  else if (isScientificPaper) docCategory = 'paper';
+  else if (hasForms) docCategory = 'formular';
+
+  // 10. Seitenanzahl-Kategorie
+  const pageLength = pageCount <= 5 ? (de ? 'kurz' : 'short')
+    : pageCount <= 25  ? (de ? 'mittel' : 'medium')
+    : pageCount <= 100 ? (de ? 'lang' : 'long')
+    : (de ? 'sehr lang' : 'very long');
+
+  // Empfohlener Analyse-Modus
+  const suggestedMode = isScanned ? 'visual' : 'fileapi';
+
+  // Lesbare Tags für Fortschrittsanzeige
+  const tags = [];
+  if (isScanned)           tags.push('📷 Scan');
+  else if (isLowQuality)   tags.push('⚠️ Textarm');
+  else                     tags.push('✅ Digitaler Text');
+  if (hasTables)           tags.push('📊 Tabellen');
+  if (hasForms)            tags.push('📋 Formular');
+  if (isMultiColumn)       tags.push('⬛ Mehrspaltig');
+  if (hasFootnotes)        tags.push('📎 Fußnoten');
+  if (hasImages)           tags.push('🖼️ Bildlastig');
+  if (handwritingScore)    tags.push('✍️ Handschrift?');
+  if (isScientificPaper)   tags.push('🔬 Wissenschaft');
+  const catTag = { vertrag:'📄 Vertrag', rechnung:'🧾 Rechnung', bericht:'📈 Bericht', paper:'🎓 Paper', formular:'📋 Formular', allgemein:'📁 Dokument' };
+  tags.push(catTag[docCategory] || '📁 Dokument');
+  tags.push(`${pageCount} ${de ? 'Seiten' : 'pages'} (${pageLength})`);
+
+  // KI-Kontext: spezialisierte Analyse-Hinweise pro Merkmal
+  const hints = [];
+  if (isScanned)        hints.push(de ? 'Kein Text-Layer vorhanden — analysiere ausschließlich anhand der Seitenbilder.' : 'No text layer — analyse only from page images.');
+  if (hasTables)        hints.push(de ? 'Enthält Tabellen: Alle Zahlen, Kennzahlen und tabellarischen Daten vollständig extrahieren.' : 'Contains tables: extract all figures and tabular data completely.');
+  if (hasForms)         hints.push(de ? 'Formular-Dokument: Alle ausgefüllten Felder und ihre Werte vollständig auflisten.' : 'Form document: list all filled fields and their values.');
+  if (isMultiColumn)    hints.push(de ? 'Mehrspaltige Layout: Spalten getrennt und in logischer Lesereihenfolge interpretieren.' : 'Multi-column layout: interpret columns separately in logical reading order.');
+  if (hasFootnotes)     hints.push(de ? 'Fußnoten vorhanden: Für Quellenangaben und rechtliche Details die Fußnoten einbeziehen.' : 'Footnotes present: include them for source references and legal details.');
+  if (isScientificPaper) hints.push(de ? 'Wissenschaftliches Paper: Struktur nach Abstract, Methodik, Ergebnissen und Schlussfolgerungen aufbauen.' : 'Scientific paper: structure around abstract, methodology, results and conclusions.');
+  if (docCategory === 'vertrag') hints.push(de ? 'Vertrag: Besonders auf Laufzeit, Kündigungsfristen, Klauseln und Risiken achten.' : 'Contract: focus especially on duration, notice periods, clauses and risks.');
+  if (docCategory === 'rechnung') hints.push(de ? 'Rechnung: Alle Positionen, Beträge, Steuern, Fälligkeiten und Zahlungsbedingungen erfassen.' : 'Invoice: capture all line items, amounts, taxes, due dates and payment terms.');
+
+  return {
+    isScanned, isLowQuality, hasTables, hasForms, isMultiColumn,
+    hasFootnotes, hasImages, handwritingScore, isScientificPaper,
+    docCategory, pageLength, pageCount, avgCharsPerPage, tableDensity,
+    suggestedMode, tags, hints,
+    summary: tags.join(' · '),
+    hintsText: hints.join('\n'),
+  };
+}
+
+// =====================
 // PDF TEXT EXTRACTION (PDF.js)
 // =====================
 async function extractPDFText(file) {
@@ -4964,39 +5072,48 @@ async function extractPDFText(file) {
           if (pageText.length > 10) allPages.push({ page: i, text: pageText });
         }
 
-        // ── Qualitätstest: gescannte PDFs erkennen ──────────────────────────
-        const totalExtracted = allPages.reduce((s, p) => s + p.text.length, 0);
-        const avgCharsPerPage = allPages.length > 0 ? Math.round(totalExtracted / allPages.length) : 0;
-        const isScanned    = avgCharsPerPage < 60;   // kaum Text → reines Scan-PDF
-        const isLowQuality = !isScanned && avgCharsPerPage < 180; // wenig Text → viele Grafiken
+        // ── PDF-Klassifikation ──────────────────────────────────────────────
+        const clf = classifyPDF(allPages, file.name);
+        window._lastPDFClassification = clf;
 
-        let qualityNote = '';
-        if (isScanned) {
-          qualityNote = `⚠️ [SCAN-PDF ERKANNT: Dieses Dokument enthält kein auswertbares Text-Layer (∅ ${avgCharsPerPage} Zeichen/Seite). Die Analyse basiert auf dem visuellen Rendering der Seiten.]\n\n`;
-        } else if (isLowQuality) {
-          qualityNote = `ℹ️ [Textarmes Dokument (∅ ${avgCharsPerPage} Zeichen/Seite) — enthält wahrscheinlich viele Grafiken oder Tabellen. Für Zahlen wird die visuelle Analyse herangezogen.]\n\n`;
-        }
+        // Klassifikations-Header für den KI-Prompt
+        let classHeader = `[PDF-KLASSIFIKATION: ${clf.summary}]\n`;
+        if (clf.hintsText) classHeader += `[ANALYSE-HINWEISE:\n${clf.hintsText}]\n`;
+        classHeader += '\n';
 
-        // ── Smartes Chunking: gleichmäßige Seitenverteilung ─────────────────
-        // Statt 40%/60% bekommt jede Seite proportional ihren Anteil.
-        // Kein Kapitel fällt komplett heraus — alle Seiten sind vertreten.
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + qualityNote;
+        // ── Smartes Chunking: typ-bewusste Seitenverteilung ─────────────────
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + classHeader;
         const MAX_CHARS = 110000;
         const allCombined = allPages.map(p => `--- Seite ${p.page} ---\n${p.text}`).join('\n\n');
 
         if (allCombined.length <= MAX_CHARS) {
           fullText += allCombined;
-        } else {
-          // Budget gleichmäßig auf alle Seiten verteilen
-          const charsPerPage = Math.floor(MAX_CHARS / allPages.length);
-          const trimmedPages = allPages.map(p => {
-            const header = `--- Seite ${p.page} ---\n`;
-            const maxBody = Math.max(charsPerPage - header.length, 80);
-            const body = p.text.length <= maxBody ? p.text : p.text.slice(0, maxBody) + '…';
-            return header + body;
+        } else if (clf.hasTables && clf.tableDensity > 0.25) {
+          // Tabellen-Dokument: Tabellenseiten bekommen 1.8× Budget
+          const tablePageNums = new Set(
+            allPages.filter(p => p.text.split('\n').filter(l => (l.match(/\|/g)||[]).length >= 2).length >= 2).map(p => p.page)
+          );
+          const tableCount   = tablePageNums.size;
+          const regularCount = allPages.length - tableCount;
+          const tableBudget   = Math.floor((MAX_CHARS * 0.65) / Math.max(tableCount, 1));
+          const regularBudget = Math.floor((MAX_CHARS * 0.35) / Math.max(regularCount, 1));
+          const trimmed = allPages.map(p => {
+            const hdr  = `--- Seite ${p.page} ---\n`;
+            const max  = Math.max((tablePageNums.has(p.page) ? tableBudget : regularBudget) - hdr.length, 80);
+            return hdr + (p.text.length <= max ? p.text : p.text.slice(0, max) + '…');
           });
-          fullText += trimmedPages.join('\n\n');
-          fullText += `\n\n[Hinweis: Dokument hatte ${Math.round(allCombined.length / 1000)}K Zeichen. Alle ${allPages.length} Seiten gleichmäßig auf je ${charsPerPage} Zeichen gekürzt — kein Kapitel wurde ausgelassen.]`;
+          fullText += trimmed.join('\n\n');
+          fullText += `\n\n[${tableCount} Tabellenseiten mit 1,8× Budget priorisiert. ${Math.round(allCombined.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen.]`;
+        } else {
+          // Standard: gleichmäßige Verteilung auf alle Seiten — kein Kapitel fällt weg
+          const charsPerPage = Math.floor(MAX_CHARS / allPages.length);
+          const trimmed = allPages.map(p => {
+            const hdr = `--- Seite ${p.page} ---\n`;
+            const max = Math.max(charsPerPage - hdr.length, 80);
+            return hdr + (p.text.length <= max ? p.text : p.text.slice(0, max) + '…');
+          });
+          fullText += trimmed.join('\n\n');
+          fullText += `\n\n[Alle ${allPages.length} Seiten gleichmäßig auf je ${charsPerPage} Zeichen gekürzt — kein Kapitel ausgelassen. ${Math.round(allCombined.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen.]`;
         }
 
         if (totalPages > maxPages) {
@@ -5833,17 +5950,21 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
         docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
       }
 
-      // Qualitätstest-Ergebnis auswerten: Scan-PDF = primär visuelle Analyse
-      const isScannedDoc = docText.includes('⚠️ [SCAN-PDF ERKANNT');
+      // Klassifikationsergebnis auswerten und im UI anzeigen
+      const clf = window._lastPDFClassification;
+      if (clf) {
+        setProgress(30, (currentLang === 'de' ? '⚡ Klassifiziert: ' : '⚡ Classified: ') + clf.summary);
+        await new Promise(r => setTimeout(r, 900)); // kurz anzeigen
+      }
+
+      const isScannedDoc = clf?.isScanned || docText.includes('⚠️ [SCAN-PDF ERKANNT');
       if (isScannedDoc && pageImages.length > 0) {
-        setProgress(30, currentLang === 'de'
-          ? '⚠️ Scan-PDF erkannt — visuelle Analyse wird priorisiert...'
-          : '⚠️ Scanned PDF detected — prioritising visual analysis...');
-        // Bei Scan-PDFs: Text enthält wenig Info, Bilder sind das Hauptsignal
-        // Kürze den Text stark — Gemini nutzt primär die Seiten-Bilder
+        setProgress(32, currentLang === 'de'
+          ? '⚠️ Scan-PDF — visuelle Analyse wird priorisiert...'
+          : '⚠️ Scanned PDF — prioritising visual analysis...');
         const textLimit = 8000;
         if (docText.length > textLimit) {
-          docText = docText.slice(0, textLimit) + '\n\n[Scan-PDF: Text-Extraktion minimal — primäre Analyse über Seitenbilder]';
+          docText = docText.slice(0, textLimit) + '\n\n[Scan-PDF: primäre Analyse über Seitenbilder]';
         }
       } else {
         const textLimit = pageImages.length > 0 ? 15000 : 80000;
