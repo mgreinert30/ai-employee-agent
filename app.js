@@ -4912,6 +4912,160 @@ function checkResetToken() {
 }
 
 // =====================
+// ANALYSE-AGENTEN SYSTEM
+// Spezialisierte Agenten pro Dokumenttyp.
+// Ablauf: selectAgents → runAgentPipeline (sequenziell) → verifyCitationsClientSide
+// Jeder Agent = fokussierter API-Call; SummaryAgent kombiniert mehrere Ergebnisse.
+// =====================
+
+const AGENT_PROMPTS = {
+
+  table: (content, q, de) => de
+    ? `Du bist der TableExtractionAgent — Spezialist für tabellarische Daten.\n\nFrage: "${q}"\n\nExtrahiere aus ALLEN Tabellen:\n• Jeden Kennwert mit exakter Seite: "Umsatz: 1,2 Mrd. [S.12, Tab.3]"\n• Veränderungen zum Vorjahr (absolut + %)\n• Ausreißer oder auffällige Werte\n• Rechnerische Plausibilität (summieren sich alle Werte?)\n\nNur Fakten — keine Interpretation.\n\nTabellen:\n${content}`
+    : `You are the TableExtractionAgent — specialist in tabular data.\n\nQuestion: "${q}"\n\nExtract from ALL tables:\n• Every figure with exact page: "Revenue: €1.2B [p.12, Tab.3]"\n• Year-on-year changes (absolute + %)\n• Outliers or notable values\n• Arithmetic plausibility check\n\nFacts only — no interpretation.\n\nTables:\n${content}`,
+
+  contract: (content, q, de) => de
+    ? `Du bist der ContractAgent — Spezialist für Vertragsanalyse.\n\nFrage: "${q}"\n\nAnalysiere mit Fokus auf:\n• Laufzeit und Kündigungsfristen (exakte Daten) [Seite]\n• Haftungsklauseln und -obergrenzen [Seite]\n• Exklusivität und Wettbewerbsverbote [Seite]\n• Vertragsstrafen und Pönalen [Seite]\n• Änderungs- und Anpassungsrechte [Seite]\n• Top-3-Risiken für den Auftraggeber\n\nJEDE Aussage mit Seitenangabe: "(laut Seite X, § Y)"\n\n${content}`
+    : `You are the ContractAgent — specialist in contract analysis.\n\nQuestion: "${q}"\n\nAnalyse focusing on:\n• Duration and notice periods (exact dates) [Page]\n• Liability clauses and caps [Page]\n• Exclusivity and non-compete clauses [Page]\n• Penalties [Page]\n• Amendment rights [Page]\n• Top 3 risks for the commissioning party\n\nEVERY claim with page reference: "(per page X, § Y)"\n\n${content}`,
+
+  invoice: (content, q, de) => de
+    ? `Du bist der InvoiceAgent — Spezialist für Rechnungsanalyse.\n\nFrage: "${q}"\n\nExtrahiere und prüfe vollständig:\n• Kopf: Nr., Datum, Lieferant, Empfänger [Seite]\n• Alle Positionen: Bezeichnung | Menge | Einzelpreis | Gesamt [Seite]\n• Steuern: MwSt.-Satz und -Betrag [Seite]\n• Gesamtbetrag netto / brutto [Seite]\n• Zahlungsbedingungen und Fälligkeitsdatum [Seite]\n• Mathematische Prüfung: Stimmen alle Summen?\n\n${content}`
+    : `You are the InvoiceAgent — specialist in invoice analysis.\n\nQuestion: "${q}"\n\nExtract and verify completely:\n• Header: No., Date, Supplier, Recipient [Page]\n• All line items: Description | Qty | Unit price | Total [Page]\n• Tax: VAT rate and amount [Page]\n• Total net / gross [Page]\n• Payment terms and due date [Page]\n• Arithmetic check: do all totals add up?\n\n${content}`,
+
+  financial: (content, q, de) => de
+    ? `Du bist der FinancialReportAgent — Spezialist für Geschäfts- und Finanzberichte.\n\nFrage: "${q}"\n\nAnalysiere mit Fokus auf:\n• Umsatz, EBIT, EBITDA, Jahresüberschuss (+ % Vorjahr) [Seite]\n• Cashflow: operativ / investiv / finanzierend [Seite]\n• Eigenkapitalquote und Verschuldungsgrad [Seite]\n• Segmentergebnisse [Seite]\n• Management-Risiken und Ausblick [Seite]\n• Versteckte Schwächen: ungewöhnliche Formulierungen, Einmaleffekte\n\nJeden Zahlenwert mit Seite belegen. Zahlen interpretieren, nicht nur wiederholen.\n\n${content}`
+    : `You are the FinancialReportAgent — specialist in annual and financial reports.\n\nQuestion: "${q}"\n\nAnalyse focusing on:\n• Revenue, EBIT, EBITDA, net income (+ % YoY) [Page]\n• Cash flow: operating / investing / financing [Page]\n• Equity ratio and leverage [Page]\n• Segment results [Page]\n• Management risks and outlook [Page]\n• Hidden weaknesses: unusual phrasing, one-off effects\n\nCite every figure. Interpret — don't just repeat.\n\n${content}`,
+
+  scientific: (content, q, de) => de
+    ? `Du bist der ScientificPaperAgent — Spezialist für wissenschaftliche Publikationen.\n\nFrage: "${q}"\n\nAnalysiere:\n• Forschungsfrage und Hypothese [Seite]\n• Methodik: Stichprobengröße, Verfahren, Zeitraum [Seite]\n• Hauptergebnisse mit statistischen Werten (p, n, KI) [Seite]\n• Limitationen der Studie [Seite]\n• Schlussfolgerungen und Übertragbarkeit [Seite]\n• Evidenzqualität: stark / mittel / schwach\n\nJede Aussage mit Seitenreferenz: "(S. X, Abschnitt)"\n\n${content}`
+    : `You are the ScientificPaperAgent — specialist in scientific publications.\n\nQuestion: "${q}"\n\nAnalyse:\n• Research question and hypothesis [Page]\n• Methodology: sample size, procedure, timeframe [Page]\n• Main results with statistics (p, n, CI) [Page]\n• Study limitations [Page]\n• Conclusions and generalisability [Page]\n• Evidence quality: strong / moderate / weak\n\nEvery claim with page reference: "(p. X, section)"\n\n${content}`,
+
+  compliance: (content, q, de) => de
+    ? `Du bist der ComplianceAgent — Spezialist für rechtliche und regulatorische Konformität.\n\nFrage: "${q}"\n\nPrüfe auf:\n• Explizit genannte Normen (DSGVO, ISO, IFRS, HGB) und Einhaltung [Seite]\n• Problematische Klauseln oder Formulierungen [Seite]\n• Fehlende Pflichtangaben oder interne Widersprüche [Seite]\n• Rechtliche Risiken und Handlungsempfehlung\n\nJede Auffälligkeit mit Quelle: "(S. X, Abschnitt Y)"\n\n${content}`
+    : `You are the ComplianceAgent — specialist in legal/regulatory compliance.\n\nQuestion: "${q}"\n\nCheck for:\n• Explicitly named standards (GDPR, ISO, IFRS) and compliance [Page]\n• Problematic clauses or phrasing [Page]\n• Missing mandatory disclosures or contradictions [Page]\n• Legal risks and recommended actions\n\nEvery finding with source: "(p. X, section Y)"\n\n${content}`,
+
+  summary: (agentOutputs, q, de) => de
+    ? `Du bist der SummaryAgent. Fasse die Spezialisten-Ergebnisse zu einer klaren Antwort zusammen.\n\nFrage: "${q}"\n\nAgenten-Ergebnisse:\n${agentOutputs}\n\nErstelle:\n1. Direkte Antwort auf die Frage (3–5 Sätze)\n2. Wichtigste Erkenntnisse (Stichpunkte — alle Seitenangaben behalten)\n3. Handlungsempfehlung (wenn relevant)\n\nAlle Seitenangaben der Agenten beibehalten — nicht weglassen.`
+    : `You are the SummaryAgent. Synthesise the specialist results into a clear answer.\n\nQuestion: "${q}"\n\nAgent results:\n${agentOutputs}\n\nCreate:\n1. Direct answer to the question (3–5 sentences)\n2. Key findings (bullet points — keep all page references)\n3. Recommended action (if relevant)\n\nKeep ALL page references from the agents — do not drop them.`,
+};
+
+// Wählt Agenten basierend auf Dokumentklassifikation und Aufgabe
+function selectAgents(clf, taskDesc, analysisLength) {
+  if (!clf) return [];
+  const agents = [];
+
+  // TableExtractionAgent: wenn Tabellen vorhanden + nicht nur Kurzanalyse
+  if (clf.hasTables && analysisLength !== 'short') agents.push('table');
+
+  // Spezialist nach erkanntem Dokumenttyp
+  const typeMap = {
+    vertrag:              'contract',
+    rechnung:             'invoice',
+    geschaeftsbericht:    'financial',
+    versicherungsbericht: 'financial',
+    jahresabschluss:      'financial',
+    paper:                'scientific',
+  };
+  const specialist = typeMap[clf.docCategory];
+  if (specialist) agents.push(specialist);
+
+  // ComplianceAgent bei expliziten Compliance-Schlüsselwörtern
+  if (/dsgvo|gdpr|compli|norm|iso\s*\d|ifrs|hgb|gesetz|legal|recht/i.test(taskDesc)) {
+    agents.push('compliance');
+  }
+
+  return agents;
+}
+
+// Client-seitige Zitatprüfung — kein API-Call nötig
+function verifyCitationsClientSide(text) {
+  const de = currentLang === 'de';
+  const citeRx  = /\((?:laut\s+)?(?:Seite|S\.|p\.|page)\s*\d+[^)]{0,30}\)/gi;
+  const claimRx = /\b(?:\d[\d,.]*\s*(?:Mrd|Mio|€|\$|%)|Umsatz|EBIT|Gewinn|Revenue|Profit|gemäß|according|laut|per|stated|heißt es)\b/gi;
+  const citations = (text.match(citeRx)  || []).length;
+  const claims    = (text.match(claimRx) || []).length;
+  const rate = claims > 0 ? Math.min(100, Math.round(citations / claims * 100)) : 100;
+  return {
+    badge: rate >= 80 ? '✅' : rate >= 50 ? '⚠️' : '❌',
+    label: de
+      ? `Quellen: ${citations} Seitenangaben · ${rate}% der Aussagen belegt`
+      : `Sources: ${citations} page refs · ${rate}% of claims cited`,
+  };
+}
+
+// Haupt-Orchestrator: läuft Agenten sequenziell, kombiniert mit SummaryAgent
+async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLength) {
+  const de = currentLang === 'de';
+  const agents = selectAgents(clf, taskDesc, analysisLength);
+  if (!agents.length) return null;
+
+  const AGENT_META = {
+    table:      { name: 'TableExtractionAgent', icon: '📊' },
+    contract:   { name: 'ContractAgent',         icon: '📄' },
+    invoice:    { name: 'InvoiceAgent',           icon: '🧾' },
+    financial:  { name: 'FinancialReportAgent',   icon: '📈' },
+    scientific: { name: 'ScientificPaperAgent',   icon: '🔬' },
+    compliance: { name: 'ComplianceAgent',        icon: '⚖️' },
+  };
+
+  // Tabellen-Inhalt für TableExtractionAgent
+  const tableText = (allChunks || [])
+    .filter(c => c.chunk_type === 'table')
+    .map(c => serializeChunksForPrompt([c]))
+    .join('\n');
+
+  const results = [];
+
+  for (let i = 0; i < agents.length; i++) {
+    const id   = agents[i];
+    const meta = AGENT_META[id];
+    if (!meta) continue;
+
+    const pct = 48 + Math.round(i * (38 / agents.length));
+    setProgress(pct, `${meta.icon} ${meta.name}...`);
+
+    const buildFn  = AGENT_PROMPTS[id];
+    const context  = id === 'table' ? tableText : docText;
+    if (!buildFn || !context?.trim()) continue;
+
+    const prompt = buildFn(context, taskDesc, de);
+    try {
+      const res = await callAnalyseSSE(prompt, 'medium');
+      results.push({ id, name: meta.name, icon: meta.icon, result: res });
+    } catch (err) {
+      console.warn(`[${meta.name}] Fehler:`, err.message);
+    }
+  }
+
+  if (!results.length) return null;
+
+  // Mehrere Agenten → SummaryAgent kombiniert die Ergebnisse
+  let finalText;
+  if (results.length > 1) {
+    setProgress(88, de ? '📝 SummaryAgent kombiniert Ergebnisse...' : '📝 SummaryAgent combining results...');
+    const combined = results.map(r => `━━━ ${r.icon} ${r.name} ━━━\n\n${r.result}`).join('\n\n');
+    const sumPrompt = AGENT_PROMPTS.summary(combined, taskDesc, de);
+    try {
+      const sumResult = await callAnalyseSSE(sumPrompt, 'medium');
+      finalText = sumResult
+        + `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        + (de ? 'AGENTEN-DETAILS' : 'AGENT DETAILS')
+        + `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+        + results.map(r => `\n${r.icon} ${r.name}\n${r.result}`).join('\n\n');
+    } catch (_) {
+      finalText = results.map(r => `━━━ ${r.icon} ${r.name} ━━━\n\n${r.result}`).join('\n\n');
+    }
+  } else {
+    finalText = results[0].result;
+  }
+
+  // Zitatprüfung (client-seitig, kein API-Call)
+  setProgress(96, de ? '✅ Quellenprüfung...' : '✅ Citation check...');
+  const citCheck = verifyCitationsClientSide(finalText);
+  return finalText + `\n\n[${citCheck.badge} ${citCheck.label}]`;
+}
+
+// =====================
 // STRUKTURIERTE PDF-BLOCK-EXTRAKTION
 // Wandelt PDF.js-Rohdaten in typisierte Blöcke um:
 // {page, block_type, heading, text, bbox, source, confidence}
@@ -6261,6 +6415,33 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
 
   // Prefetch server-side learnings so getLearningContext can include them
   await prefetchServerLearnings(docType);
+
+  // ── Agenten-Pipeline (bei PDF-Analyse mit extrahierten Chunks + Spezialist) ─
+  // Läuft NUR bei Fallback-Pfad (kein fileUri) und wenn ein Spezialist erkannt wurde.
+  // Bei Erfolg: Early-Return, überspringt den Standard-Einzel-Prompt-Pfad.
+  if (!isCreationTask && !fileUri && window._lastPDFChunks?.length > 0) {
+    const _pipeAgents = selectAgents(window._lastPDFClassification, taskDesc, analysisLength);
+    if (_pipeAgents.length > 0) {
+      try {
+        const _pipeResult = await runAgentPipeline(
+          taskDesc, docText, window._lastPDFChunks,
+          window._lastPDFClassification, analysisLength
+        );
+        if (_pipeResult) {
+          const _tt = detectTaskType(taskDesc);
+          fetch('/api/learn', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ result: _pipeResult, taskType: _tt }) }).catch(()=>{});
+          sendLearningSignal(_tt, evaluateResult(_pipeResult, analysisLength), analysisLength);
+          setProgress(100, currentLang === 'de' ? 'Fertig!' : 'Done!');
+          await new Promise(r => setTimeout(r, 500));
+          stopProgressAnimation();
+          return stripCodeFences(_pipeResult);
+        }
+      } catch (pipeErr) {
+        console.warn('[AgentPipeline] Fehler, Fallback auf Einzel-Prompt:', pipeErr.message);
+      }
+    }
+  }
 
   const prompt = buildPrompt(taskDesc, businessDetails, profession, docText, docType, analysisLength);
 
