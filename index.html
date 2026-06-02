@@ -66,7 +66,7 @@
         </div>
         <div class="cookie-detail-section">
           <h4 class="cookie-detail-title">KI-Verarbeitung — Google Gemini API</h4>
-          <p class="cookie-detail-text">Wenn du eine KI-Analyse startest, werden deine Dokumente temporär an die Google Gemini API (USA) übertragen. Google verarbeitet diese Daten ausschließlich zur Bereitstellung der KI-Antwort. Es findet keine dauerhafte Speicherung oder Profilbildung statt. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO sowie <a href="https://dsgvo-gesetz.de/art-49-dsgvo/" target="_blank" rel="noopener" class="cookie-inline-link">Art. 49 Abs. 1 lit. a DSGVO</a> für die Drittlandübermittlung.</p>
+          <p class="cookie-detail-text">Wenn du eine KI-Analyse startest, werden deine Dokumente temporär an die Google Gemini API (USA) übertragen. Google agiert dabei als unser Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Es findet keine dauerhafte Speicherung oder Profilbildung statt — und laut Googles bezahlter API-Bedingungen kein Training von KI-Modellen mit deinen Daten. Rechtsgrundlage für die Drittlandübermittlung: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (Standardvertragsklauseln). Google ist zudem nach dem EU-U.S. Data Privacy Framework zertifiziert.</p>
         </div>
         <div class="cookie-detail-section">
           <h4 class="cookie-detail-title">Deine Rechte</h4>
@@ -305,7 +305,7 @@
     <div class="hero-stats">
       <div class="hero-stat"><strong>5</strong><span data-de="Dienste" data-en="Services">Dienste</span></div>
       <div class="hero-stat-sep">·</div>
-      <div class="hero-stat"><strong>100%</strong><span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></div>
+      <div class="hero-stat"><strong>🔒</strong><span data-de="Datenschutz-transparent" data-en="Privacy transparent">Datenschutz-transparent</span></div>
       <div class="hero-stat-sep">·</div>
       <div class="hero-stat hero-stat-live"><span class="hero-stat-pulse"></span><strong data-de="Wird laufend verbessert" data-en="Continuously improving">Wird laufend verbessert</strong></div>
     </div>
@@ -443,8 +443,8 @@
         </div>
         <div class="trust-card trust-card-highlight">
           <div class="trust-card-icon">🚫</div>
-          <h3 data-de="Keine KI-Training mit deinen Daten" data-en="No AI training with your data">Keine KI-Training mit deinen Daten</h3>
-          <p data-de="Deine Dokumente werden ausschließlich für die Analyse verwendet — niemals zum Training von KI-Modellen. Das unterscheidet uns von kostenlosen KI-Tools." data-en="Your documents are used exclusively for analysis — never to train AI models. This is what sets us apart from free AI tools.">Deine Dokumente werden <strong>niemals zum Training von KI-Modellen verwendet</strong>. Das unterscheidet uns von kostenlosen KI-Tools wie ChatGPT.</p>
+          <h3 data-de="Kein KI-Training mit deinen Daten" data-en="No AI training with your data">Kein KI-Training mit deinen Daten</h3>
+          <p data-de="Wir nutzen die bezahlte Google Gemini API — laut Googles API-Bedingungen werden Eingaben in bezahlten Projekten nicht fürs KI-Training verwendet. Anders als bei kostenlosen Tools." data-en="We use the paid Google Gemini API — per Google's API terms, inputs in paid projects are not used for AI training. Unlike free tools.">Wir nutzen die <strong>bezahlte Google Gemini API</strong>. Laut Googles API-Bedingungen werden Eingaben in bezahlten Projekten <strong>nicht zum Training von KI-Modellen genutzt</strong> — anders als bei kostenlosen Tools.</p>
         </div>
         <div class="trust-card">
           <div class="trust-card-icon">👤</div>
@@ -2010,10 +2010,14 @@
           <h3>4. Einsatz von Drittanbietern</h3>
 
           <p><strong>4.1 Hosting: Vercel Inc.</strong></p>
-          <p>Diese Website wird gehostet von Vercel Inc., 340 Pine Street, Suite 900, San Francisco, CA 94104, USA. Vercel ist gemäß EU-U.S. Data Privacy Framework zertifiziert. Es kann zu einer Datenübertragung in die USA kommen. Datenschutzerklärung: <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">vercel.com/legal/privacy-policy</a></p>
+          <p>Diese Website wird gehostet von Vercel Inc., 340 Pine Street, Suite 900, San Francisco, CA 94104, USA. Vercel agiert als Auftragsverarbeiter gemäß Art. 28 DSGVO und ist gemäß EU-U.S. Data Privacy Framework zertifiziert. Ein Auftragsverarbeitungsvertrag ist über die Vercel-Plattform abrufbar. Datenschutzerklärung: <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">vercel.com/legal/privacy-policy</a></p>
 
           <p style="margin-top:12px;"><strong>4.2 KI-Verarbeitung: Google Gemini API</strong></p>
-          <p>Für die KI-gestützte Analyse verwenden wir die Google Gemini API (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Die von Ihnen eingereichten Inhalte (Dokumente, Texte) werden zur Verarbeitung an Google übermittelt. Es gelten die Nutzungsbedingungen und Datenschutzbestimmungen von Google: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>. Wir empfehlen ausdrücklich, keine besonders sensiblen personenbezogenen Daten (Gesundheitsdaten, Finanzgeheimnisse, etc.) hochzuladen. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+          <p>Für die KI-gestützte Analyse verwenden wir die Google Gemini API (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Die von Ihnen eingereichten Inhalte (Dokumente, Texte) werden ausschließlich zur KI-Verarbeitung an Google übermittelt und danach sofort gelöscht — es findet keine dauerhafte Speicherung durch uns oder Google statt.</p>
+          <p style="margin-top:8px;"><strong>Kein KI-Training:</strong> Gemäß den Google Gemini API-Nutzungsbedingungen für bezahlte (billing-enabled) Projekte werden Ihre Eingaben und Ergebnisse <strong>nicht für das Training von KI-Modellen oder zur Produktverbesserung genutzt</strong>. Google behält sich lediglich kurzzeitige technische Logs vor (Standard: bis zu 55 Tage), die ausschließlich Sicherheits- und Stabilitätszwecken dienen.</p>
+          <p style="margin-top:8px;"><strong>Auftragsverarbeitung (AVV):</strong> Google LLC agiert als unser Auftragsverarbeiter im Sinne des Art. 28 DSGVO. Grundlage ist der Google Cloud Data Processing Addendum, der als standardisierter Auftragsverarbeitungsvertrag die Anforderungen der DSGVO erfüllt und unter <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener">cloud.google.com/terms/data-processing-addendum</a> einsehbar ist.</p>
+          <p style="margin-top:8px;"><strong>Drittlandübermittlung:</strong> Google LLC ist gemäß dem EU-U.S. Data Privacy Framework zertifiziert. Ergänzend stützen wir die Übermittlung auf die von der EU-Kommission erlassenen Standardvertragsklauseln (SCC). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (SCC).</p>
+          <p style="margin-top:8px;"><strong>Geeignet für:</strong> Öffentliche Geschäftsberichte, Jahresabschlüsse, Verträge (ohne besonders sensible Drittdaten), Rechnungen, allgemeine Geschäftsdokumente. <strong>Nicht geeignet für:</strong> Gesundheitsdaten, biometrische Daten oder Daten mit strafrechtlicher Relevanz gemäß Art. 9/10 DSGVO. Für diese Kategorien nutzen Sie bitte spezialisierte, zertifizierte Dienste.</p>
 
           <p style="margin-top:12px;"><strong>4.3 Google Sign-In</strong></p>
           <p>Wir bieten die Möglichkeit, sich über Google Sign-In anzumelden. Dabei werden Daten (insb. E-Mail-Adresse, Name) von Google an uns übermittelt. Anbieter: Google LLC. Es gelten die Datenschutzbestimmungen von Google. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).</p>
