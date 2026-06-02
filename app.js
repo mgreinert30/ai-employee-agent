@@ -4912,6 +4912,158 @@ function checkResetToken() {
 }
 
 // =====================
+// STRUKTURIERTE PDF-BLOCK-EXTRAKTION
+// Wandelt PDF.js-Rohdaten in typisierte Blöcke um:
+// {page, block_type, heading, text, bbox, source, confidence}
+// =====================
+
+// Extrahiert alle Blöcke einer einzelnen Seite aus PDF.js-Items
+function extractBlocksFromItems(items, pageNum, filename) {
+  if (!items.length) return [];
+
+  // Anreichern mit berechneten Eigenschaften
+  const enriched = items.map(it => ({
+    text:     it.str.trim(),
+    x:        Math.round(it.transform[4]),
+    y:        Math.round(it.transform[5]),
+    fontSize: Math.round(Math.abs(it.transform[3]) || Math.abs(it.transform[0]) || 10),
+    isBold:   /bold|heavy|black/i.test(it.fontName || ''),
+    width:    it.width || 0,
+  })).filter(it => it.text);
+
+  if (!enriched.length) return [];
+
+  // Zeilen gruppieren (y-Koordinate innerhalb 4 Einheiten = gleiche Zeile)
+  const lineMap = {};
+  enriched.forEach(it => {
+    const yKey = Math.round(it.y / 4) * 4;
+    if (!lineMap[yKey]) lineMap[yKey] = [];
+    lineMap[yKey].push(it);
+  });
+
+  const lines = Object.entries(lineMap)
+    .sort(([a], [b]) => Number(b) - Number(a)) // oben → unten (PDF y ist invertiert)
+    .map(([y, its]) => {
+      const sorted   = its.sort((a, b) => a.x - b.x);
+      const xSpread  = Math.max(...sorted.map(it => it.x + it.width)) - Math.min(...sorted.map(it => it.x));
+      const avgFont  = Math.round(sorted.reduce((s, it) => s + it.fontSize, 0) / sorted.length);
+      const isBold   = sorted.some(it => it.isBold);
+      const isTableRow = sorted.length >= 3 || (sorted.length >= 2 && xSpread > 140);
+      return { y: Number(y), items: sorted, xSpread, avgFont, isBold, isTableRow,
+               text: sorted.map(it => it.text).join(' ') };
+    })
+    .filter(l => l.text.trim());
+
+  if (!lines.length) return [];
+
+  // Dominante Schriftgröße bestimmen (= Fließtext-Größe)
+  const fontFreq = {};
+  lines.forEach(l => { fontFreq[l.avgFont] = (fontFreq[l.avgFont] || 0) + 1; });
+  const domFont = Number(Object.entries(fontFreq).sort(([,a],[,b]) => b-a)[0][0]);
+
+  // y-Range für Header/Footer-Erkennung
+  const yVals  = lines.map(l => l.y);
+  const yMax   = Math.max(...yVals);
+  const yRange = (yMax - Math.min(...yVals)) || 1;
+
+  // Zeilen zu Blöcken zusammenfassen und klassifizieren
+  const blocks = [];
+  let cur = null;
+  let lastHeading = null;
+  let prevY = null;
+
+  for (const line of lines) {
+    const gap      = prevY !== null ? prevY - line.y : 0;
+    const bigGap   = gap > domFont * 2.8;
+    const isHead   = line.y > yMax - yRange * 0.07 && line.text.length < 80;
+    const isFoot   = line.y < Math.min(...yVals) + yRange * 0.07 && line.text.length < 80;
+    const isFn     = isFoot && /^\d{1,2}[\.\)]\s/.test(line.text);
+    const isHding  = !line.isTableRow && (line.avgFont >= domFont * 1.15 || line.isBold) && line.text.length < 130;
+    const isList   = /^[•\-\*▪◦→►✓✗]\s|^\d+[\.\)]\s/.test(line.text);
+
+    let type = 'text';
+    if      (isHead)       type = 'header';
+    else if (isFn)         type = 'footnote';
+    else if (isFoot)       type = 'footer';
+    else if (isHding)      type = 'heading';
+    else if (line.isTableRow) type = 'table';
+    else if (isList)       type = 'list';
+
+    if (type === 'heading') lastHeading = line.text;
+
+    const typeChanged = cur && cur.type !== type && !(cur.type === 'text' && type === 'text');
+    if (!cur || bigGap || typeChanged) {
+      if (cur) blocks.push(cur);
+      cur = { type, lines: [line], heading: type === 'table' ? lastHeading : null,
+              topY: line.y, bottomY: line.y };
+    } else {
+      cur.lines.push(line);
+      cur.bottomY = line.y;
+      if (type === 'table') cur.type = 'table'; // Tabellenzeilen dominieren
+    }
+    prevY = line.y;
+  }
+  if (cur) blocks.push(cur);
+
+  // Konfidenz pro Block-Typ
+  const CONF = { heading: 0.87, table: 0.88, list: 0.83, header: 0.80, footer: 0.78, footnote: 0.82, text: 0.75 };
+
+  return blocks.map(b => {
+    const text = b.type === 'table'
+      ? b.lines.map(l => l.items.length >= 2 ? l.items.map(it => it.text).join(' | ') : l.text).join('\n')
+      : b.lines.map(l => l.text).join('\n');
+
+    const allItems = b.lines.flatMap(l => l.items);
+    const minX = Math.min(...allItems.map(it => it.x));
+    const maxX = Math.max(...allItems.map(it => it.x + it.width));
+
+    return {
+      page:        pageNum,
+      block_type:  b.type,
+      heading:     b.heading || null,
+      text:        text.trim(),
+      bbox:        [Math.round(minX), Math.round(b.bottomY), Math.round(maxX), Math.round(b.topY)],
+      source:      filename,
+      confidence:  CONF[b.type] || 0.75,
+    };
+  }).filter(b => b.text.length > 3);
+}
+
+// Strukturiertes Markdown für den KI-Prompt
+// Jeder Block bekommt Typ-Tags, Seitenreferenz und Kontext
+function serializeBlocksForPrompt(allBlocks) {
+  const pageGroups = {};
+  allBlocks.forEach(b => { (pageGroups[b.page] = pageGroups[b.page] || []).push(b); });
+
+  return Object.entries(pageGroups)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([pageNum, blocks]) => {
+      const lines = [`\n━━━ Seite ${pageNum} ━━━`];
+      blocks.forEach(b => {
+        if (b.block_type === 'header' || b.block_type === 'footer') return;
+        if (b.block_type === 'heading') {
+          lines.push(`\n## ${b.text}`);
+        } else if (b.block_type === 'table') {
+          const ctx = b.heading ? ` "${b.heading}"` : '';
+          lines.push(`\n[TABELLE${ctx} | S.${b.page} | Konfidenz: ${Math.round(b.confidence * 100)}%]`);
+          lines.push(b.text);
+          lines.push(`[/TABELLE]`);
+        } else if (b.block_type === 'list') {
+          lines.push(`\n[LISTE | S.${b.page}]`);
+          lines.push(b.text);
+          lines.push(`[/LISTE]`);
+        } else if (b.block_type === 'footnote') {
+          lines.push(`[FUSSNOTE S.${b.page}] ${b.text}`);
+        } else {
+          lines.push(b.text);
+        }
+      });
+      return lines.join('\n');
+    })
+    .join('\n');
+}
+
+// =====================
 // PDF KLASSIFIKATOR
 // Analysiert extrahierte Seiten und bestimmt 12 Dokumentmerkmale.
 // Ergebnis wird in window._lastPDFClassification gespeichert und
@@ -5020,7 +5172,7 @@ function classifyPDF(allPages, filename) {
 }
 
 // =====================
-// PDF TEXT EXTRACTION (PDF.js)
+// PDF TEXT EXTRACTION (PDF.js) — strukturiert via Block-Extraktion
 // =====================
 async function extractPDFText(file) {
   if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js nicht geladen');
@@ -5030,94 +5182,70 @@ async function extractPDFText(file) {
       try {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
-        const totalPages = pdf.numPages;
-        const PAGE_HARD_LIMIT = 150;
-        const maxPages = Math.min(totalPages, PAGE_HARD_LIMIT);
-        if (totalPages > PAGE_HARD_LIMIT) {
-          console.warn(`PDF hat ${totalPages} Seiten — nur erste ${PAGE_HARD_LIMIT} werden verarbeitet`);
-        }
+        const totalPages  = pdf.numPages;
+        const PAGE_LIMIT  = 150;
+        const maxPages    = Math.min(totalPages, PAGE_LIMIT);
 
-        // Extract each page with table-aware reconstruction (#9)
-        async function extractPage(i) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const items = content.items;
-          if (!items.length) return '';
+        // ── Strukturierte Block-Extraktion pro Seite ─────────────────────────
+        const allBlocks = []; // alle Blöcke aller Seiten
+        const allPages  = []; // {page, text} — für classifyPDF
 
-          // Group items by row (y-coordinate within 4 units = same row)
-          const rows = {};
-          items.forEach(item => {
-            if (!item.str.trim()) return;
-            const y = Math.round(item.transform[5] / 4) * 4;
-            if (!rows[y]) rows[y] = [];
-            rows[y].push({ x: item.transform[4], text: item.str });
-          });
-
-          // Sort rows top-to-bottom (PDF y is bottom-up), cells left-to-right
-          const sortedRows = Object.entries(rows)
-            .sort(([a], [b]) => Number(b) - Number(a))
-            .map(([_, cells]) => {
-              const sorted = cells.sort((a, b) => a.x - b.x).map(c => c.text);
-              // If row has multiple cells with clear x-gaps → format as table row
-              if (sorted.length > 2) return sorted.join(' | ');
-              return sorted.join(' ');
-            });
-
-          return sortedRows.join('\n').replace(/[ \t]+/g, ' ').trim();
-        }
-
-        let allPages = [];
         for (let i = 1; i <= maxPages; i++) {
-          const pageText = await extractPage(i);
+          const pdfPage = await pdf.getPage(i);
+          const content = await pdfPage.getTextContent();
+          const blocks  = extractBlocksFromItems(content.items, i, file.name);
+          allBlocks.push(...blocks);
+
+          // Flat text dieser Seite für classifyPDF (Backward-Compat)
+          const pageText = blocks.map(b => b.text).join('\n');
           if (pageText.length > 10) allPages.push({ page: i, text: pageText });
         }
 
-        // ── PDF-Klassifikation ──────────────────────────────────────────────
+        window._lastPDFBlocks = allBlocks; // für spätere Referenzen verfügbar
+
+        // ── Klassifikation ────────────────────────────────────────────────────
         const clf = classifyPDF(allPages, file.name);
         window._lastPDFClassification = clf;
 
-        // Klassifikations-Header für den KI-Prompt
+        // ── Strukturierten Prompt-Text aufbauen ───────────────────────────────
         let classHeader = `[PDF-KLASSIFIKATION: ${clf.summary}]\n`;
         if (clf.hintsText) classHeader += `[ANALYSE-HINWEISE:\n${clf.hintsText}]\n`;
         classHeader += '\n';
 
-        // ── Smartes Chunking: typ-bewusste Seitenverteilung ─────────────────
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + classHeader;
-        const MAX_CHARS = 110000;
-        const allCombined = allPages.map(p => `--- Seite ${p.page} ---\n${p.text}`).join('\n\n');
+        const serialized = serializeBlocksForPrompt(allBlocks);
+        const MAX_CHARS  = 110000;
 
-        if (allCombined.length <= MAX_CHARS) {
-          fullText += allCombined;
-        } else if (clf.hasTables && clf.tableDensity > 0.25) {
-          // Tabellen-Dokument: Tabellenseiten bekommen 1.8× Budget
-          const tablePageNums = new Set(
-            allPages.filter(p => p.text.split('\n').filter(l => (l.match(/\|/g)||[]).length >= 2).length >= 2).map(p => p.page)
-          );
-          const tableCount   = tablePageNums.size;
-          const regularCount = allPages.length - tableCount;
-          const tableBudget   = Math.floor((MAX_CHARS * 0.65) / Math.max(tableCount, 1));
-          const regularBudget = Math.floor((MAX_CHARS * 0.35) / Math.max(regularCount, 1));
-          const trimmed = allPages.map(p => {
-            const hdr  = `--- Seite ${p.page} ---\n`;
-            const max  = Math.max((tablePageNums.has(p.page) ? tableBudget : regularBudget) - hdr.length, 80);
-            return hdr + (p.text.length <= max ? p.text : p.text.slice(0, max) + '…');
-          });
-          fullText += trimmed.join('\n\n');
-          fullText += `\n\n[${tableCount} Tabellenseiten mit 1,8× Budget priorisiert. ${Math.round(allCombined.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen.]`;
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + classHeader;
+
+        if (serialized.length <= MAX_CHARS) {
+          fullText += serialized;
         } else {
-          // Standard: gleichmäßige Verteilung auf alle Seiten — kein Kapitel fällt weg
-          const charsPerPage = Math.floor(MAX_CHARS / allPages.length);
-          const trimmed = allPages.map(p => {
-            const hdr = `--- Seite ${p.page} ---\n`;
-            const max = Math.max(charsPerPage - hdr.length, 80);
-            return hdr + (p.text.length <= max ? p.text : p.text.slice(0, max) + '…');
+          // Chunking: Seiten-Budget proportional zu Blockanzahl
+          // Tabellenseiten bekommen 1.8× Gewicht
+          const tablePageNums = new Set(
+            allBlocks.filter(b => b.block_type === 'table').map(b => b.page)
+          );
+          const pageSerials = {};
+          allBlocks.forEach(b => {
+            if (!pageSerials[b.page]) pageSerials[b.page] = [];
+            pageSerials[b.page].push(b);
           });
-          fullText += trimmed.join('\n\n');
-          fullText += `\n\n[Alle ${allPages.length} Seiten gleichmäßig auf je ${charsPerPage} Zeichen gekürzt — kein Kapitel ausgelassen. ${Math.round(allCombined.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen.]`;
+          const pageNums  = Object.keys(pageSerials).map(Number).sort((a,b)=>a-b);
+          const totalW    = pageNums.reduce((s, p) => s + (tablePageNums.has(p) ? 1.8 : 1), 0);
+          const chunkParts = pageNums.map(p => {
+            const weight   = tablePageNums.has(p) ? 1.8 : 1;
+            const budget   = Math.floor(MAX_CHARS * (weight / totalW));
+            const pageSer  = serializeBlocksForPrompt(pageSerials[p]);
+            return pageSer.length <= budget ? pageSer : pageSer.slice(0, budget) + '\n…';
+          });
+          fullText += chunkParts.join('\n');
+          fullText += `\n\n[${Math.round(serialized.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen. `
+            + (tablePageNums.size > 0 ? `${tablePageNums.size} Tabellenseiten mit 1,8× Budget. ` : '')
+            + `Alle ${pageNums.length} Seiten vertreten.]`;
         }
 
-        if (totalPages > maxPages) {
-          fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${maxPages} analysiert.]`;
+        if (totalPages > PAGE_LIMIT) {
+          fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${PAGE_LIMIT} analysiert.]`;
         }
         resolve(fullText);
       } catch (err) { reject(err); }
