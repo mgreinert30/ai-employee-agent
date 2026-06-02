@@ -1896,6 +1896,21 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .game-section .game-canvas-container { border-color: rgba(37,99,235,0.3); box-shadow: 0 0 40px rgba(37,99,235,0.15); }
 @media (max-width: 600px) { .game-section-title { font-size: 22px; } }
 
+/* ── Quality Control Banner ─────────────────────────────────────────────── */
+#qc-banner {
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+  font-size: 13px; animation: qcSlideIn 0.35s ease;
+}
+@keyframes qcSlideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+.qc-banner-warning { background: #fffbeb; border: 1.5px solid #f59e0b; color: #92400e; }
+.qc-banner-critical { background: #fff1f2; border: 1.5px solid #f43f5e; color: #9f1239; }
+.qc-banner-header { display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:8px; }
+.qc-close { margin-left:auto; background:none; border:none; cursor:pointer; font-size:15px; color:inherit; opacity:0.6; }
+.qc-close:hover { opacity:1; }
+.qc-issue-list, .qc-rec-list { margin:0 0 6px; padding-left:18px; line-height:1.8; }
+.qc-rec-list { color: #065f46; font-style: italic; }
+.qc-banner-warning .qc-rec-list { color: #78350f; }
+
 /* ── Privacy Mode Selector ──────────────────────────────────────────────── */
 .privacy-mode-card {
   background: #f8faff;

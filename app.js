@@ -4912,6 +4912,248 @@ function checkResetToken() {
 }
 
 // =====================
+// QUALITÄTSKONTROLLE (QC) — PDF-Extraktion prüfen
+// 8 Prüfpunkte: Seiten-Abdeckung, leere Seiten, Zeichen-Qualität,
+// Überschriften, Tabellen, Zahlen-Plausibilität, Lesereihenfolge, Text-Dichte
+// =====================
+
+// Hilfsfunktion: Seitenzahlen zu Bereichen formatieren (z.B. [4,5,6,9] → "4–6, 9")
+function formatPageRanges(pages) {
+  if (!pages || !pages.length) return '';
+  const s = [...pages].sort((a, b) => a - b);
+  const ranges = [];
+  let lo = s[0], hi = s[0];
+  for (let i = 1; i < s.length; i++) {
+    if (s[i] === hi + 1) { hi = s[i]; }
+    else { ranges.push(lo === hi ? `${lo}` : `${lo}–${hi}`); lo = hi = s[i]; }
+  }
+  ranges.push(lo === hi ? `${lo}` : `${lo}–${hi}`);
+  return ranges.join(', ');
+}
+
+function runQualityControl(allBlocks, allChunks, clf, totalPages, filename) {
+  const de = currentLang === 'de';
+  const findings = [];
+  const issues   = [];
+  let   totalScore = 0;
+
+  // Blöcke nach Seiten gruppieren
+  const pageMap = {};
+  allBlocks.forEach(b => { (pageMap[b.page] = pageMap[b.page] || []).push(b); });
+  const extractedNums  = Object.keys(pageMap).map(Number).sort((a,b) => a-b);
+  const extractedCount = extractedNums.length;
+
+  // ─── 1. Seiten-Abdeckung (25 Punkte) ────────────────────────────────────
+  const coveragePct = totalPages > 0 ? Math.round(extractedCount / totalPages * 100) : 100;
+  const covScore = Math.round(coveragePct / 4);
+  totalScore += covScore;
+  findings.push({
+    id: 'coverage', score: covScore,
+    ok:   coveragePct >= 90,
+    warn: coveragePct >= 65 && coveragePct < 90,
+    name: de ? 'Seiten-Abdeckung' : 'Page coverage',
+    detail: de ? `${extractedCount}/${totalPages} Seiten (${coveragePct}%)` : `${extractedCount}/${totalPages} pages (${coveragePct}%)`,
+  });
+  if (coveragePct < 65) issues.push({ sev: 'critical', msg: de
+    ? `Nur ${coveragePct}% der Seiten extrahiert — viele Seiten fehlen.`
+    : `Only ${coveragePct}% of pages extracted — many pages missing.` });
+
+  // ─── 2. Leere Seiten (20 Punkte) ────────────────────────────────────────
+  const pageLengths = {};
+  extractedNums.forEach(p => { pageLengths[p] = (pageMap[p] || []).reduce((s, b) => s + b.text.length, 0); });
+  for (let p = 1; p <= Math.min(totalPages, extractedNums[extractedNums.length - 1] || 1); p++) {
+    if (!pageLengths[p]) pageLengths[p] = 0;
+  }
+  const emptyPages  = Object.entries(pageLengths).filter(([,v]) => v < 30).map(([p]) => Number(p));
+  const emptyRatio  = totalPages > 0 ? emptyPages.length / totalPages : 0;
+  const emptyScore  = Math.round(Math.max(0, 1 - emptyRatio * 2.5) * 20);
+  totalScore += emptyScore;
+  findings.push({
+    id: 'empty', score: emptyScore,
+    ok:   emptyPages.length === 0,
+    warn: emptyRatio > 0 && emptyRatio <= 0.2,
+    name: de ? 'Leere Seiten' : 'Empty pages',
+    detail: de
+      ? `${emptyPages.length} leere Seiten${emptyPages.length ? ': S.' + formatPageRanges(emptyPages) : ''}`
+      : `${emptyPages.length} empty pages${emptyPages.length ? ': p.' + formatPageRanges(emptyPages) : ''}`,
+    emptyPages,
+  });
+  if (emptyPages.length && emptyRatio > 0.15) issues.push({ sev: emptyRatio > 0.4 ? 'critical' : 'warning', msg: de
+    ? `Seiten ${formatPageRanges(emptyPages)} enthalten kaum Text — wahrscheinlich Scans oder Grafiken.`
+    : `Pages ${formatPageRanges(emptyPages)} contain almost no text — probably scans or images.` });
+
+  // ─── 3. Zeichen-Qualität (15 Punkte) ────────────────────────────────────
+  const allText = allBlocks.map(b => b.text).join(' ');
+  const printRatio = allText.length > 0
+    ? allText.replace(/[^\x20-\x7EäöüÿÀ-ɏ]/g, '').length / allText.length : 1;
+  const words = allText.split(/\s+/).filter(w => w.length > 0);
+  const singleCharRatio = words.length > 5
+    ? words.filter(w => w.length === 1 && !/\d/.test(w)).length / words.length : 0;
+  const qualScore = Math.round((printRatio * 0.7 + (1 - Math.min(1, singleCharRatio * 4)) * 0.3) * 15);
+  totalScore += qualScore;
+  findings.push({
+    id: 'charquality', score: qualScore,
+    ok:   printRatio > 0.9 && singleCharRatio < 0.1,
+    warn: printRatio > 0.75 || singleCharRatio < 0.2,
+    name: de ? 'Zeichen-Qualität' : 'Character quality',
+    detail: de
+      ? `${Math.round(printRatio * 100)}% lesbare Zeichen · ${Math.round(singleCharRatio * 100)}% Einzelzeichen`
+      : `${Math.round(printRatio * 100)}% readable chars · ${Math.round(singleCharRatio * 100)}% single chars`,
+  });
+  if (printRatio < 0.7 || singleCharRatio > 0.25) issues.push({ sev: 'critical', msg: de
+    ? `Schlechte Zeichen-Qualität (${Math.round(printRatio * 100)}% lesbar) — fehlerhafte OCR oder beschädigtes PDF.`
+    : `Poor character quality (${Math.round(printRatio * 100)}% readable) — OCR errors or corrupted PDF.` });
+
+  // ─── 4. Überschriften-Erkennung (10 Punkte) ─────────────────────────────
+  const headings     = allBlocks.filter(b => b.block_type === 'heading');
+  const hdgDensity   = extractedCount > 0 ? headings.length / extractedCount * 10 : 0;
+  const hdgScore     = Math.min(10, Math.round(Math.min(1, hdgDensity / 0.5) * 10));
+  totalScore += hdgScore;
+  findings.push({
+    id: 'headings', score: hdgScore,
+    ok:   headings.length > 0,
+    warn: false,
+    name: de ? 'Überschriften' : 'Headings',
+    detail: de
+      ? `${headings.length} erkannt (${hdgDensity.toFixed(1)} pro 10 Seiten)`
+      : `${headings.length} detected (${hdgDensity.toFixed(1)} per 10 pages)`,
+  });
+  if (!headings.length && extractedCount > 4) issues.push({ sev: 'warning', msg: de
+    ? `Keine Überschriften erkannt — Dokumentstruktur unklar, Analyse möglicherweise weniger präzise.`
+    : `No headings detected — document structure unclear, analysis may be less precise.` });
+
+  // ─── 5. Tabellen-Erkennung (10 Punkte) ──────────────────────────────────
+  const tables      = allBlocks.filter(b => b.block_type === 'table');
+  const tblExpected = clf?.hasTables;
+  const tblScore    = tables.length > 0 ? 10 : (tblExpected ? 0 : 10);
+  totalScore += tblScore;
+  findings.push({
+    id: 'tables', score: tblScore,
+    ok:   tables.length > 0 || !tblExpected,
+    warn: tables.length === 0 && tblExpected,
+    name: de ? 'Tabellen' : 'Tables',
+    detail: de ? `${tables.length} Tabellen erkannt` : `${tables.length} tables detected`,
+  });
+  if (!tables.length && tblExpected) issues.push({ sev: 'warning', msg: de
+    ? `Tabellen erwartet aber nicht erkannt — Tabelleninhalt könnte als Fließtext extrahiert sein.`
+    : `Tables expected but not detected — table content may have been extracted as running text.` });
+
+  // ─── 6. Zahlen-Plausibilität (10 Punkte) ────────────────────────────────
+  let numScore = 10;
+  if (tables.length > 0) {
+    const tblText  = tables.map(b => b.text).join('\n');
+    const cells    = tblText.split('|').map(c => c.trim()).filter(c => c.length > 0);
+    const numCells = cells.filter(c => /^\d[\d.,\s%\-+Mm€$TBM]*$/.test(c)).length;
+    const numRatio = cells.length > 0 ? numCells / cells.length : 0;
+    const ocrErr   = (tblText.match(/[IlO][\d]|[\d][IlO]/g) || []).length;
+    numScore = Math.max(0, Math.round(numRatio * 10) - (ocrErr > 5 ? 3 : 0));
+    totalScore += numScore;
+    findings.push({
+      id: 'numbers', score: numScore,
+      ok:   numRatio > 0.25 && ocrErr < 5,
+      warn: numRatio > 0.1,
+      name: de ? 'Zahlen-Plausibilität' : 'Number plausibility',
+      detail: de
+        ? `${Math.round(numRatio * 100)}% numerische Zellen · ${ocrErr} mögliche OCR-Fehler`
+        : `${Math.round(numRatio * 100)}% numeric cells · ${ocrErr} possible OCR errors`,
+    });
+    if (ocrErr > 8) issues.push({ sev: 'warning', msg: de
+      ? `${ocrErr} mögliche OCR-Fehler in Tabellenzahlen (z.B. "l" statt "1", "O" statt "0").`
+      : `${ocrErr} possible OCR errors in table numbers (e.g. "l" vs "1", "O" vs "0").` });
+  } else {
+    totalScore += numScore;
+  }
+
+  // ─── 7. Lesereihenfolge (10 Punkte) ─────────────────────────────────────
+  const orderIssuePages = [];
+  extractedNums.slice(0, 30).forEach(pNum => {
+    const pb = pageMap[pNum] || [];
+    if (pb.length < 4) return;
+    let jumps = 0;
+    for (let i = 1; i < pb.length; i++) {
+      const prevTop = pb[i-1].bbox?.[3] || 0;
+      const curTop  = pb[i].bbox?.[3]   || 0;
+      if (curTop > prevTop + 60) jumps++;  // y springt nach oben → Spaltensprung?
+    }
+    if (jumps > pb.length * 0.35) orderIssuePages.push(pNum);
+  });
+  const orderScore = Math.max(0, 10 - orderIssuePages.length * 2);
+  totalScore += orderScore;
+  findings.push({
+    id: 'order', score: orderScore,
+    ok:   orderIssuePages.length === 0,
+    warn: orderIssuePages.length > 0 && orderIssuePages.length <= 3,
+    name: de ? 'Lesereihenfolge' : 'Reading order',
+    detail: de
+      ? `${orderIssuePages.length} Seiten mit möglichen Sprüngen${orderIssuePages.length ? ': S.' + orderIssuePages.slice(0,5).join(', ') : ''}`
+      : `${orderIssuePages.length} pages with possible jumps${orderIssuePages.length ? ': p.' + orderIssuePages.slice(0,5).join(', ') : ''}`,
+    orderIssuePages,
+  });
+  if (orderIssuePages.length > 4) issues.push({ sev: 'warning', msg: de
+    ? `Lesereihenfolge auf ${orderIssuePages.length} Seiten möglicherweise falsch — mehrspaltige Layouts können Probleme verursachen.`
+    : `Reading order may be wrong on ${orderIssuePages.length} pages — multi-column layouts can cause issues.` });
+
+  // ─── Gesamtbewertung & Empfehlungen ────────────────────────────────────
+  const grade      = totalScore >= 80 ? 'good' : totalScore >= 55 ? 'warning' : 'critical';
+  const gradeEmoji = { good: '🟢', warning: '🟡', critical: '🔴' }[grade];
+  const recs = [];
+  if (emptyRatio > 0.2 || clf?.isScanned) recs.push(de
+    ? `OCR-Tool verwenden (z.B. Adobe Acrobat, ABBYY) und PDF erneut hochladen — Seiten ${formatPageRanges(emptyPages)} sind wahrscheinlich Scans.`
+    : `Use an OCR tool (e.g. Adobe Acrobat, ABBYY) and re-upload — pages ${formatPageRanges(emptyPages)} are probably scans.`);
+  if (orderIssuePages.length > 3) recs.push(de
+    ? `Mehrspaltige Seiten manuell prüfen: Tabellen und Listen auf Seiten ${orderIssuePages.slice(0,4).join(', ')} könnten falsch geordnet sein.`
+    : `Manually check multi-column pages: tables and lists on pages ${orderIssuePages.slice(0,4).join(', ')} may be in wrong order.`);
+  if (printRatio < 0.8) recs.push(de
+    ? `PDF neu exportieren: Öffne das Original-Programm und speichere als PDF (nicht drucken als PDF).`
+    : `Re-export PDF: open the source application and save as PDF (don't print to PDF).`);
+
+  return { findings, issues, totalScore: Math.min(100, totalScore), grade, gradeEmoji, recs, emptyPages, orderIssuePages };
+}
+
+// Formatiert den QC-Report als Text-Block für den KI-Prompt
+function formatQCReport(qc, de) {
+  if (!qc) return '';
+  const grade = qc.totalScore >= 80 ? (de ? 'Gut' : 'Good') : qc.totalScore >= 55 ? (de ? 'Mittel' : 'Fair') : (de ? 'Kritisch' : 'Critical');
+  let out = `[QUALITÄTSKONTROLLE: ${qc.totalScore}/100 | ${qc.gradeEmoji} ${grade}]\n`;
+  qc.findings.forEach(f => { out += `${f.ok ? '✅' : f.warn ? '⚠️' : '❌'} ${f.name}: ${f.detail}\n`; });
+  if (qc.issues.length) {
+    out += `[EXTRAKTIONS-PROBLEME:\n`;
+    qc.issues.forEach(i => { out += `${i.sev === 'critical' ? '🔴' : '🟡'} ${i.msg}\n`; });
+    out += `]\n`;
+  }
+  if (qc.recs.length) {
+    out += `[EMPFEHLUNGEN FÜR BESSERE EXTRAKTION:\n`;
+    qc.recs.forEach(r => { out += `→ ${r}\n`; });
+    out += `]\n`;
+  }
+  return out + '\n';
+}
+
+// Zeigt QC-Banner im Progress-Schritt (nur bei Warnung oder kritisch)
+function showQCBanner(qc) {
+  if (!qc || qc.grade === 'good') return;
+  const de = currentLang === 'de';
+  const existing = document.getElementById('qc-banner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'qc-banner';
+  banner.className = `qc-banner qc-banner-${qc.grade}`;
+  const issueItems = qc.issues.slice(0, 3).map(i =>
+    `<li>${i.sev === 'critical' ? '🔴' : '🟡'} ${i.msg}</li>`).join('');
+  const recItems = qc.recs.slice(0, 2).map(r => `<li>→ ${r}</li>`).join('');
+  banner.innerHTML = `
+    <div class="qc-banner-header">
+      ${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: <strong>${qc.totalScore}/100</strong>
+      <button onclick="this.closest('#qc-banner').remove()" class="qc-close">✕</button>
+    </div>
+    ${issueItems ? `<ul class="qc-issue-list">${issueItems}</ul>` : ''}
+    ${recItems   ? `<ul class="qc-rec-list">${recItems}</ul>`   : ''}`;
+  const box = document.querySelector('#step-progress .progress-box');
+  if (box) box.insertBefore(banner, box.firstChild);
+  else document.getElementById('step-progress')?.insertAdjacentElement('afterbegin', banner);
+}
+
+// =====================
 // PRIVACY MODE — Datenschutz-Modi: cloud / privacy / strict
 // =====================
 
@@ -5675,6 +5917,13 @@ async function extractPDFText(file) {
         // Blöcke → semantische Chunks (nach Struktur, nicht nach Zeichenzahl)
         const allChunks = createSemanticChunks(allBlocks);
         window._lastPDFChunks = allChunks;
+
+        // ── Qualitätskontrolle ────────────────────────────────────────────
+        const qcReport = runQualityControl(allBlocks, allChunks, clf, totalPages, file.name);
+        window._lastQCReport = qcReport;
+        const qcText = formatQCReport(qcReport, currentLang === 'de');
+        // QC-Bericht dem KI-Prompt voranstellen (bei Problemen)
+        if (qcReport.grade !== 'good') classHeader = qcText + classHeader;
 
         const serialized = serializeChunksForPrompt(allChunks);
         const MAX_CHARS  = 110000;
@@ -6546,6 +6795,13 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
       if (clf) {
         setProgress(30, (currentLang === 'de' ? '⚡ Klassifiziert: ' : '⚡ Classified: ') + clf.summary);
         await new Promise(r => setTimeout(r, 900)); // kurz anzeigen
+      }
+
+      // QC-Banner anzeigen wenn Extraktion Probleme hat
+      const _qc = window._lastQCReport;
+      if (_qc && _qc.grade !== 'good') {
+        showQCBanner(_qc);
+        if (_qc.grade === 'critical') await new Promise(r => setTimeout(r, 1800));
       }
 
       const isScannedDoc = clf?.isScanned || docText.includes('⚠️ [SCAN-PDF ERKANNT');
