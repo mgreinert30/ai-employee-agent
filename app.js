@@ -5417,6 +5417,9 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
 
   const results = [];
 
+  // Per-Agent-Statusleiste initialisieren
+  initAgentStatusBar(agents.map(id => ({ id, ...(AGENT_META[id] || { name: id, icon: '🤖' }) })));
+
   for (let i = 0; i < agents.length; i++) {
     const id   = agents[i];
     const meta = AGENT_META[id];
@@ -5424,21 +5427,25 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
 
     const pct = 48 + Math.round(i * (38 / agents.length));
     setProgress(pct, `${meta.icon} ${meta.name}...`);
+    updateAgentStatus(id, 'running');
 
     const buildFn  = AGENT_PROMPTS[id];
     const context  = id === 'table' ? tableText : docText;
-    if (!buildFn || !context?.trim()) continue;
+    if (!buildFn || !context?.trim()) { updateAgentStatus(id, 'error'); continue; }
 
+    const t0 = Date.now();
     const prompt = buildFn(context, taskDesc, de);
     try {
       const res = await callAnalyseSSE(prompt, 'medium');
       results.push({ id, name: meta.name, icon: meta.icon, result: res });
+      updateAgentStatus(id, 'done', Date.now() - t0);
     } catch (err) {
       console.warn(`[${meta.name}] Fehler:`, err.message);
+      updateAgentStatus(id, 'error', Date.now() - t0);
     }
   }
 
-  if (!results.length) return null;
+  if (!results.length) { resetAgentStatusBar(); return null; }
 
   // Mehrere Agenten → SummaryAgent kombiniert die Ergebnisse
   let finalText;
@@ -5460,6 +5467,8 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
     finalText = results[0].result;
   }
 
+  resetAgentStatusBar();
+
   // Zitatprüfung (client-seitig, kein API-Call)
   setProgress(96, de ? '✅ Quellenprüfung...' : '✅ Citation check...');
   const citCheck = verifyCitationsClientSide(finalText);
@@ -5471,6 +5480,142 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
 // Wandelt PDF.js-Rohdaten in typisierte Blöcke um:
 // {page, block_type, heading, text, bbox, source, confidence}
 // =====================
+
+// Baut aus Tabellenzeilen eine strukturierte Markdown-Tabelle mit Header-Mapping.
+// Erste Zeile = Überschrift wenn fett, größer oder keine Zahlen enthält.
+function buildStructuredTable(lines) {
+  if (!lines.length) return { text: '', headers: [], rows: [] };
+
+  // Header-Erkennung
+  const first = lines[0];
+  const restAvgFont = lines.length > 1
+    ? lines.slice(1).reduce((s, l) => s + l.avgFont, 0) / (lines.length - 1)
+    : first.avgFont;
+  const isHeader = lines.length >= 2 && (
+    first.isBold ||
+    first.avgFont > restAvgFont * 1.08 ||
+    first.items.every(it => it.text.trim().length < 40 && !/^\d[\d.,]+$/.test(it.text.trim()))
+  );
+
+  const headers   = isHeader ? first.items.map(it => it.text.trim()).filter(Boolean) : [];
+  const dataLines = isHeader ? lines.slice(1) : lines;
+
+  // Zeilen → Objekte mit Header-Mapping
+  const rows = dataLines.map(l => {
+    const cells = l.items.length >= 2
+      ? l.items.map(it => it.text.trim())
+      : l.text.split(' | ').map(s => s.trim());
+    if (headers.length >= 2) {
+      const obj = {};
+      cells.forEach((cell, i) => { if (headers[i]) obj[headers[i]] = cell; });
+      return obj;
+    }
+    return cells;
+  }).filter(r => Array.isArray(r) ? r.length > 0 : Object.keys(r).length > 0);
+
+  // Markdown-Tabelle aufbauen
+  let md = '';
+  if (headers.length >= 2) {
+    md += '| ' + headers.join(' | ') + ' |\n';
+    md += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+    rows.forEach(row => {
+      const cells = headers.map(h => String(row[h] || '').replace(/\|/g, '\\|'));
+      md += '| ' + cells.join(' | ') + ' |\n';
+    });
+  } else {
+    md = dataLines.map(l =>
+      l.items.length >= 2 ? l.items.map(it => it.text).join(' | ') : l.text
+    ).join('\n');
+  }
+
+  return { text: md.trim(), headers, rows };
+}
+
+// Entfernt doppelten Tabelleninhalt aus section/text_block-Chunks
+// (tritt auf wenn eine Tabelle sowohl als eigener Chunk als auch im Abschnittstext landet).
+function deduplicateChunks(chunks) {
+  const tableChunks = chunks.filter(c => c.chunk_type === 'table');
+  if (!tableChunks.length) return chunks;
+
+  return chunks.map(chunk => {
+    if (chunk.chunk_type !== 'section' && chunk.chunk_type !== 'text_block') return chunk;
+    if (!chunk.text) return chunk;
+
+    let text = chunk.text;
+    let changed = false;
+
+    for (const tc of tableChunks) {
+      const tcLines = tc.text.split('\n').filter(l => l.trim().length > 8 && !l.startsWith('|---') && !l.startsWith('| ---'));
+      if (tcLines.length < 2) continue;
+      const matched = tcLines.filter(l => text.includes(l.trim())).length;
+      if (matched / tcLines.length >= 0.65) {
+        tcLines.forEach(l => { text = text.split(l.trim()).join(''); });
+        text = text.replace(/\n{3,}/g, '\n\n').trim();
+        changed = true;
+      }
+    }
+
+    if (changed && text.length < 15) return null; // Chunk war fast nur Tabellen-Duplikat
+    return changed ? { ...chunk, text } : chunk;
+  }).filter(Boolean).filter(c => (c.text?.trim().length ?? 0) > 5 || c.chunk_type === 'metadata');
+}
+
+// Quality-Signal nach jeder Analyse aufzeichnen — QC-Score vs. Quellenquote
+function recordQualitySignal(qcReport, result, docType) {
+  if (!qcReport || !result) return;
+  const citCheck = verifyCitationsClientSide(result);
+  const sig = { docType: docType || 'allgemein', qcScore: qcReport.totalScore,
+                qcGrade: qcReport.grade, citRate: citCheck.rate, ts: Date.now() };
+  const signals = JSON.parse(localStorage.getItem('ai_quality_signals') || '[]');
+  signals.push(sig);
+  localStorage.setItem('ai_quality_signals', JSON.stringify(signals.slice(-50)));
+  // Doppelte Schwäche → Lern-Signal
+  if (qcReport.grade !== 'good' && citCheck.rate < 55) {
+    const de = currentLang === 'de';
+    fetch('/api/learn', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ result: `[QUALITY_SIGNAL] QC=${qcReport.totalScore}/100 · Cit=${citCheck.rate}% · Typ=${docType}`, taskType: docType }) }).catch(() => {});
+  }
+}
+
+// Gibt adaptiven Prompt-Zusatz zurück wenn dieser Dokument-Typ historisch schlecht abschneidet
+function getQualityAdaptation(docType) {
+  const de = currentLang === 'de';
+  const signals = JSON.parse(localStorage.getItem('ai_quality_signals') || '[]');
+  const rel = signals.filter(s => s.docType === docType).slice(-8);
+  if (rel.length < 3) return '';
+  const poor = rel.filter(s => s.qcGrade !== 'good' || s.citRate < 50).length;
+  if (poor < 2) return '';
+  const avgQC  = Math.round(rel.reduce((a, s) => a + s.qcScore, 0) / rel.length);
+  const avgCit = Math.round(rel.reduce((a, s) => a + s.citRate, 0) / rel.length);
+  return de
+    ? `\n[LERNHINWEIS: Bei ${docType}-Dokumenten war Extraktionsqualität zuletzt ∅ ${avgQC}/100 und Quellenquote ∅ ${avgCit}%. Bitte JEDE Aussage mit Seitenangabe belegen — auch wenn der Text unsicher wirkt. Bei unsicheren Zahlen explizit "(unsicher)" hinzufügen.]\n`
+    : `\n[LEARNING NOTE: For ${docType} documents, avg extraction quality was ${avgQC}/100 and citation rate ${avgCit}%. Please cite EVERY claim with a page number — even if the text seems uncertain. For uncertain figures, explicitly add "(uncertain)".]\n`;
+}
+
+// Agent-Status-Bar: Init / Update / Reset
+function initAgentStatusBar(agentList) {
+  const bar = document.getElementById('agent-status-bar');
+  if (!bar) return;
+  bar.innerHTML = agentList.map(a =>
+    `<div id="ast-${a.id}" class="ast-item ast-pending">
+       <span class="ast-icon">⏳</span>
+       <span class="ast-name">${a.icon} ${a.name}</span>
+       <span class="ast-time"></span>
+     </div>`
+  ).join('');
+  bar.style.display = 'flex';
+}
+function updateAgentStatus(id, status, ms) {
+  const el = document.getElementById(`ast-${id}`);
+  if (!el) return;
+  el.className = `ast-item ast-${status}`;
+  el.querySelector('.ast-icon').textContent = { running:'🔄', done:'✅', error:'❌', pending:'⏳' }[status] || '⏳';
+  if (ms) el.querySelector('.ast-time').textContent = `${(ms/1000).toFixed(1)}s`;
+}
+function resetAgentStatusBar() {
+  const bar = document.getElementById('agent-status-bar');
+  if (bar) { bar.innerHTML = ''; bar.style.display = 'none'; }
+}
 
 // Extrahiert alle Blöcke einer einzelnen Seite aus PDF.js-Items
 function extractBlocksFromItems(items, pageNum, filename) {
@@ -5568,22 +5713,30 @@ function extractBlocksFromItems(items, pageNum, filename) {
   const CONF = { heading: 0.87, table: 0.88, list: 0.83, header: 0.80, footer: 0.78, footnote: 0.82, image_caption: 0.81, text: 0.75 };
 
   return blocks.map(b => {
-    const text = b.type === 'table'
-      ? b.lines.map(l => l.items.length >= 2 ? l.items.map(it => it.text).join(' | ') : l.text).join('\n')
-      : b.lines.map(l => l.text).join('\n');
+    let text, headers = null, tableRows = null;
+    if (b.type === 'table') {
+      const structured = buildStructuredTable(b.lines);
+      text      = structured.text;
+      headers   = structured.headers.length >= 2 ? structured.headers : null;
+      tableRows = structured.rows.length > 0 ? structured.rows : null;
+    } else {
+      text = b.lines.map(l => l.text).join('\n');
+    }
 
     const allItems = b.lines.flatMap(l => l.items);
     const minX = Math.min(...allItems.map(it => it.x));
     const maxX = Math.max(...allItems.map(it => it.x + it.width));
 
     return {
-      page:        pageNum,
-      block_type:  b.type,
-      heading:     b.heading || null,
-      text:        text.trim(),
-      bbox:        [Math.round(minX), Math.round(b.bottomY), Math.round(maxX), Math.round(b.topY)],
-      source:      filename,
-      confidence:  CONF[b.type] || 0.75,
+      page:       pageNum,
+      block_type: b.type,
+      heading:    b.heading || null,
+      text:       text.trim(),
+      bbox:       [Math.round(minX), Math.round(b.bottomY), Math.round(maxX), Math.round(b.topY)],
+      source:     filename,
+      confidence: CONF[b.type] || 0.75,
+      ...(headers   ? { headers }   : {}),
+      ...(tableRows ? { tableRows } : {}),
     };
   }).filter(b => b.text.length > 3);
 }
@@ -5726,7 +5879,8 @@ function createSemanticChunks(allBlocks) {
     });
   }
 
-  return chunks;
+  // Doppelten Tabelleninhalt aus section/text_block entfernen
+  return deduplicateChunks(chunks);
 }
 
 // Wandelt semantische Chunks in strukturiertes Markdown um
@@ -6638,7 +6792,9 @@ DER EINZIGE ERLAUBTE OUTPUT:
   const docSection = (!isCreation && hasDoc)
     ? `\n\n━━━ QUELLDOKUMENT ━━━\n${docText}`
     : '';
-  return (isDE ? personaDE : personaEN) + docSection;
+  // Quality-Adaptation: wenn dieser Dokumenttyp historisch schlecht abschnitt
+  const qualAdapt = getQualityAdaptation(docType);
+  return (isDE ? personaDE : personaEN) + qualAdapt + docSection;
 }
 
 // =====================
@@ -6870,6 +7026,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
         );
         if (_pipeResult) {
           const _tt = detectTaskType(taskDesc);
+          recordQualitySignal(window._lastQCReport, _pipeResult, docType);
           fetch('/api/learn', { method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ result: _pipeResult, taskType: _tt }) }).catch(()=>{});
           sendLearningSignal(_tt, evaluateResult(_pipeResult, analysisLength), analysisLength);
@@ -6998,6 +7155,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   result = stripCodeFences(result);
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
+  recordQualitySignal(window._lastQCReport, result, docType);
 
   // Fire-and-forget: extract insights + send structured learning signal
   const _taskType    = detectTaskType(prompt);

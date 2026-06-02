@@ -1896,6 +1896,26 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .game-section .game-canvas-container { border-color: rgba(37,99,235,0.3); box-shadow: 0 0 40px rgba(37,99,235,0.15); }
 @media (max-width: 600px) { .game-section-title { font-size: 22px; } }
 
+/* ── Agent Status Bar ───────────────────────────────────────────────────── */
+#agent-status-bar {
+  flex-direction: column; gap: 6px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+}
+.ast-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #94a3b8; transition: color 0.2s;
+}
+.ast-icon { font-size: 15px; width: 20px; text-align: center; }
+.ast-name { flex: 1; font-weight: 600; }
+.ast-time { font-size: 11px; color: #64748b; min-width: 36px; text-align: right; }
+.ast-running { color: #93c5fd; }
+.ast-running .ast-icon { animation: astSpin 1s linear infinite; }
+@keyframes astSpin { to { transform: rotate(360deg); } }
+.ast-done    { color: #4ade80; }
+.ast-error   { color: #f87171; }
+.ast-pending { color: #475569; }
+
 /* ── Quality Control Banner ─────────────────────────────────────────────── */
 #qc-banner {
   border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
