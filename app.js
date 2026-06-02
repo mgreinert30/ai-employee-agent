@@ -5409,6 +5409,11 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
     compliance: { name: 'ComplianceAgent',        icon: '⚖️' },
   };
 
+  // Metadaten aus docText entfernen — Agenten sehen nur echten Dokumentinhalt
+  // (Klassifikation, QC-Report etc. kommen als Fußnote, nicht am Anfang)
+  const firstPage = docText.indexOf('━━━ Seite');
+  const cleanDocText = firstPage > 0 ? docText.slice(firstPage) : docText;
+
   // Tabellen-Inhalt für TableExtractionAgent
   const tableText = (allChunks || [])
     .filter(c => c.chunk_type === 'table')
@@ -5430,7 +5435,7 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
     updateAgentStatus(id, 'running');
 
     const buildFn  = AGENT_PROMPTS[id];
-    const context  = id === 'table' ? tableText : docText;
+    const context  = id === 'table' ? tableText : cleanDocText;
     if (!buildFn || !context?.trim()) { updateAgentStatus(id, 'error'); continue; }
 
     const t0 = Date.now();
@@ -5447,24 +5452,17 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
 
   if (!results.length) { resetAgentStatusBar(); return null; }
 
-  // Mehrere Agenten → SummaryAgent kombiniert die Ergebnisse
+  // SummaryAgent läuft IMMER — egal ob 1 oder mehrere Agenten
+  // Verhindert dass interne Agenten-Namen (ContractAgent etc.) im Output erscheinen
+  setProgress(88, de ? '📝 Ergebnisse werden zusammengefasst...' : '📝 Summarising results...');
+  const combined = results.map(r => r.result).join('\n\n---\n\n');
+  const sumPrompt = AGENT_PROMPTS.summary(combined, taskDesc, de);
   let finalText;
-  if (results.length > 1) {
-    setProgress(88, de ? '📝 SummaryAgent kombiniert Ergebnisse...' : '📝 SummaryAgent combining results...');
-    const combined = results.map(r => `━━━ ${r.icon} ${r.name} ━━━\n\n${r.result}`).join('\n\n');
-    const sumPrompt = AGENT_PROMPTS.summary(combined, taskDesc, de);
-    try {
-      const sumResult = await callAnalyseSSE(sumPrompt, 'medium');
-      finalText = sumResult
-        + `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-        + (de ? 'AGENTEN-DETAILS' : 'AGENT DETAILS')
-        + `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
-        + results.map(r => `\n${r.icon} ${r.name}\n${r.result}`).join('\n\n');
-    } catch (_) {
-      finalText = results.map(r => `━━━ ${r.icon} ${r.name} ━━━\n\n${r.result}`).join('\n\n');
-    }
-  } else {
-    finalText = results[0].result;
+  try {
+    finalText = await callAnalyseSSE(sumPrompt, analysisLength || 'medium');
+    if (!finalText || finalText.length < 100) finalText = combined; // fallback
+  } catch (_) {
+    finalText = combined;
   }
 
   resetAgentStatusBar();
@@ -6063,26 +6061,19 @@ async function extractPDFText(file) {
         const clf = classifyPDF(allPages, file.name);
         window._lastPDFClassification = clf;
 
-        // ── Semantisches Chunking + Prompt-Aufbau ────────────────────────────
-        let classHeader = `[PDF-KLASSIFIKATION: ${clf.summary}]\n`;
-        if (clf.hintsText) classHeader += `[ANALYSE-HINWEISE:\n${clf.hintsText}]\n`;
-        classHeader += '\n';
-
         // Blöcke → semantische Chunks (nach Struktur, nicht nach Zeichenzahl)
         const allChunks = createSemanticChunks(allBlocks);
         window._lastPDFChunks = allChunks;
 
-        // ── Qualitätskontrolle ────────────────────────────────────────────
+        // ── Qualitätskontrolle (nur für UI-Banner, nicht mehr im Prompt) ──
         const qcReport = runQualityControl(allBlocks, allChunks, clf, totalPages, file.name);
         window._lastQCReport = qcReport;
-        const qcText = formatQCReport(qcReport, currentLang === 'de');
-        // QC-Bericht dem KI-Prompt voranstellen (bei Problemen)
-        if (qcReport.grade !== 'good') classHeader = qcText + classHeader;
 
         const serialized = serializeChunksForPrompt(allChunks);
         const MAX_CHARS  = 110000;
 
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + classHeader;
+        // Dokumentinhalt kommt ZUERST — Metadaten nur als kurze Fußnote
+        let fullText = `[Dokument: ${file.name} | ${clf.docCategory} | ${totalPages} Seiten]\n\n`;
 
         if (serialized.length <= MAX_CHARS) {
           fullText += serialized;
@@ -6112,6 +6103,14 @@ async function extractPDFText(file) {
 
         if (totalPages > PAGE_LIMIT) {
           fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${PAGE_LIMIT} analysiert.]`;
+        }
+        // Kurze Kontext-Fußnote am Ende (nicht am Anfang — damit Content zuerst gelesen wird)
+        if (clf.docCategory !== 'allgemein') {
+          const firstHint = clf.hintsText ? clf.hintsText.split('\n')[0] : '';
+          fullText += `\n[DOKUMENT-TYP: ${clf.docCategory}${firstHint ? ' — ' + firstHint : ''}]`;
+        }
+        if (qcReport.grade === 'critical' && qcReport.issues.length > 0) {
+          fullText += `\n[⚠️ EXTRAKTIONS-WARNUNG: ${qcReport.issues[0].msg}]`;
         }
         resolve(fullText);
       } catch (err) { reject(err); }
@@ -6609,29 +6608,14 @@ Wenn die Aufgabe eine konkrete Frage oder Entscheidung enthält (z.B. "Soll ich 
 • Bei MITTEL/LANG-Analyse: Direktantwort zuerst, dann die vollständige Analyse als Begründung.
 • Die gesamte Analyse dient als Belege und Begründung für diese Antwort — nicht umgekehrt.
 
-SCHRITT 0 — DATEN-INDEX (IMMER ZUERST, KEINE AUSNAHME):
-Bevor du irgendetwas anderes schreibst: Erstelle eine Tabelle mit ALLEN Zahlen und Fakten aus dem Dokument:
-| Kennzahl | Wert | Seite |
-|----------|------|-------|
-| ... | ... | ... |
-Nutze die ━━━ Seite X ━━━ Marker im Quelltext um die Seitenzahl zu bestimmen.
-Analysiere danach NUR was im Daten-Index steht — kein Erfinden, kein Raten.
-
 KERNREGELN — NIEMALS BRECHEN:
-0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit einem Statistik-, Metadaten- oder Dokumentinfo-Block. Starte SOFORT mit dem Daten-Index, dann TL;DR.
-1. ⚡ ZITIERPFLICHT — ABSOLUTES GESETZ: Jede Zahl, jeder Prozentsatz, jeder Name, jede Aussage MUSS eine Seitenangabe haben.
-   ❌ FALSCH: "Der Umsatz stieg um 6,4 %"
-   ✅ RICHTIG: "Der Umsatz stieg um 6,4 % (laut Seite 12)"
-   ❌ FALSCH: "Das Beitragswachstum ist positiv"
-   ✅ RICHTIG: "Das Beitragswachstum beträgt 6,4 % (laut Seite 5, Tabelle 2)"
-   WENN kein Seitenmarker für eine Aussage existiert → Aussage NICHT aufnehmen.
-   Seitenmarker im Text erkennst du an: ━━━ Seite X ━━━ oder [S.X] oder --- Seite X ---
-2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
-3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Es wäre sinnvoll...". Direkt starten.
-4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
-5. JEDER SATZ trägt Information — keine Füllsätze, keine generischen Empfehlungen.
-6. ANTWORTE AUF DEUTSCH.
-7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt mit Seite] | 2. [zweiter Punkt mit Seite] | 3. [dritter Punkt mit Seite]"
+0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit Statistik- oder Dokumentinfo-Blöcken. Starte SOFORT mit TL;DR.
+1. SEITENREFERENZEN ZWINGEND: Bei jeder Zahl und jedem konkreten Fakt schreibe "(laut Seite X)" dahinter. Die Seitennummern erkennst du an ━━━ Seite X ━━━ im Text. Keine Seitenangabe gefunden → Aussage weglassen.
+2. ECHTE ZAHLEN: Nur tatsächliche Werte aus dem Dokument — keine Platzhalter wie "[Zahl]".
+3. KEINE FLOSKELN: Verboten: "Es wäre sinnvoll...", "Eine Analyse empfiehlt sich...". Direkt mit Fakten starten.
+4. KRITISCH DENKEN: Widersprüche, Risiken und Lücken explizit benennen.
+5. ANTWORTE AUF DEUTSCH.
+6. TL;DR PFLICHT: Beginne IMMER mit "TL;DR | Dringlichkeit: X/10 | 1. [Fakt + Seite] | 2. [Fakt + Seite] | 3. [Fakt + Seite]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
 9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind — bereits ab 2 Datenpunkten. Keine Ausnahmen.
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
@@ -6726,29 +6710,14 @@ If the task contains a concrete question or decision (e.g. "Should I buy?", "Is 
 • For MEDIUM/LONG analysis: Direct answer first, then the full analysis as supporting evidence.
 • The entire analysis serves as evidence and justification for this answer — not the other way around.
 
-STEP 0 — DATA INDEX (ALWAYS FIRST, NO EXCEPTION):
-Before writing anything else: create a table of ALL numbers and facts from the document:
-| Metric | Value | Page |
-|--------|-------|------|
-| ... | ... | ... |
-Use the ━━━ Page X ━━━ markers in the source text to determine page numbers.
-Only analyse what is in the data index — no inventing, no guessing.
-
 CORE RULES — NEVER BREAK:
-0. NO METADATA BLOCK: Never start with a statistics or document-info block. Start with the Data Index, then TL;DR.
-1. ⚡ CITATION LAW — ABSOLUTE RULE: Every number, percentage, name and claim MUST have a page reference.
-   ❌ WRONG: "Revenue grew by 6.4%"
-   ✅ RIGHT: "Revenue grew by 6.4% (see page 12)"
-   ❌ WRONG: "Premium growth is positive"
-   ✅ RIGHT: "Premium growth stands at 6.4% (see page 5, Table 2)"
-   IF no page marker exists for a claim → do NOT include that claim.
-   Page markers in the text look like: ━━━ Page X ━━━ or [p.X] or --- Page X ---
-2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
-3. NO FILLER: Banned: "It is important to note...", "The document describes...", "It would be useful...". Start directly.
-4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
-5. EVERY SENTENCE carries information — no generic advice, no padding.
-6. RESPOND IN ENGLISH.
-7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important + page] | 2. [second + page] | 3. [third + page]"
+0. NO METADATA BLOCK: Never start with statistics or document-info blocks. Start DIRECTLY with TL;DR.
+1. PAGE REFERENCES MANDATORY: After every number and concrete fact write "(see page X)". Page numbers are marked ━━━ Page X ━━━ in the text. No page found → don't include the claim.
+2. REAL NUMBERS: Only actual values from the document — no placeholders like "[number]".
+3. NO FILLER: Banned: "It would be useful...", "An analysis is recommended...". Start with facts.
+4. THINK CRITICALLY: Name contradictions, risks and gaps explicitly.
+5. RESPOND IN ENGLISH.
+6. TL;DR MANDATORY: Always begin with "TL;DR | Urgency: X/10 | 1. [fact + page] | 2. [fact + page] | 3. [fact + page]"
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
 9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10. Only when at least 4 real data points exist:
    • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
@@ -7184,20 +7153,6 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   result = stripCodeFences(result);
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
-
-  // ── Citation-Retry: wenn < 20% Quellenangaben → gezielter Nachbesserungs-Aufruf ─
-  const _citRate = verifyCitationsClientSide(result).rate;
-  if (_citRate < 20 && !fileUri && !isCreationTask) {
-    const de2 = currentLang === 'de';
-    setProgress(96, de2 ? '⚡ Quellenangaben nachbessern...' : '⚡ Adding citations...');
-    const retryPrompt = de2
-      ? `Die folgende Analyse hat ${_citRate}% Quellenangaben — das ist zu wenig.\n\nÜberarbeite sie und füge bei JEDER Aussage eine Seitenangabe "(laut Seite X)" hinzu.\nNutze die ━━━ Seite X ━━━ Marker aus dem ursprünglichen Quelltext.\nWenn du keine Seite findest → Aussage weglassen.\n\nAnalyse zum Überarbeiten:\n\n${result}`
-      : `The following analysis has ${_citRate}% citations — too few.\n\nRevise it and add a page reference "(see page X)" after EVERY claim.\nUse the ━━━ Page X ━━━ markers from the original source text.\nIf you cannot find a page → remove that claim.\n\nAnalysis to revise:\n\n${result}`;
-    try {
-      const retried = await callAnalyseSSE(retryPrompt, 'medium');
-      if (retried && retried.length > 200) result = stripCodeFences(retried);
-    } catch (_) {}
-  }
 
   recordQualitySignal(window._lastQCReport, result, docType);
 
