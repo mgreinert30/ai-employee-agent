@@ -4964,19 +4964,39 @@ async function extractPDFText(file) {
           if (pageText.length > 10) allPages.push({ page: i, text: pageText });
         }
 
-        // Smart chunking (#6): if too long, keep first 40% + last 60% (intro + conclusions)
-        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n`;
+        // ── Qualitätstest: gescannte PDFs erkennen ──────────────────────────
+        const totalExtracted = allPages.reduce((s, p) => s + p.text.length, 0);
+        const avgCharsPerPage = allPages.length > 0 ? Math.round(totalExtracted / allPages.length) : 0;
+        const isScanned    = avgCharsPerPage < 60;   // kaum Text → reines Scan-PDF
+        const isLowQuality = !isScanned && avgCharsPerPage < 180; // wenig Text → viele Grafiken
+
+        let qualityNote = '';
+        if (isScanned) {
+          qualityNote = `⚠️ [SCAN-PDF ERKANNT: Dieses Dokument enthält kein auswertbares Text-Layer (∅ ${avgCharsPerPage} Zeichen/Seite). Die Analyse basiert auf dem visuellen Rendering der Seiten.]\n\n`;
+        } else if (isLowQuality) {
+          qualityNote = `ℹ️ [Textarmes Dokument (∅ ${avgCharsPerPage} Zeichen/Seite) — enthält wahrscheinlich viele Grafiken oder Tabellen. Für Zahlen wird die visuelle Analyse herangezogen.]\n\n`;
+        }
+
+        // ── Smartes Chunking: gleichmäßige Seitenverteilung ─────────────────
+        // Statt 40%/60% bekommt jede Seite proportional ihren Anteil.
+        // Kein Kapitel fällt komplett heraus — alle Seiten sind vertreten.
+        let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + qualityNote;
         const MAX_CHARS = 110000;
         const allCombined = allPages.map(p => `--- Seite ${p.page} ---\n${p.text}`).join('\n\n');
 
         if (allCombined.length <= MAX_CHARS) {
           fullText += allCombined;
         } else {
-          const front = Math.floor(MAX_CHARS * 0.4);
-          const back  = MAX_CHARS - front;
-          const frontText = allCombined.slice(0, front);
-          const backText  = allCombined.slice(-back);
-          fullText += frontText + '\n\n[... mittlere Seiten übersprungen — Anfang & Ende priorisiert ...]\n\n' + backText;
+          // Budget gleichmäßig auf alle Seiten verteilen
+          const charsPerPage = Math.floor(MAX_CHARS / allPages.length);
+          const trimmedPages = allPages.map(p => {
+            const header = `--- Seite ${p.page} ---\n`;
+            const maxBody = Math.max(charsPerPage - header.length, 80);
+            const body = p.text.length <= maxBody ? p.text : p.text.slice(0, maxBody) + '…';
+            return header + body;
+          });
+          fullText += trimmedPages.join('\n\n');
+          fullText += `\n\n[Hinweis: Dokument hatte ${Math.round(allCombined.length / 1000)}K Zeichen. Alle ${allPages.length} Seiten gleichmäßig auf je ${charsPerPage} Zeichen gekürzt — kein Kapitel wurde ausgelassen.]`;
         }
 
         if (totalPages > maxPages) {
@@ -5799,8 +5819,8 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
     // ── Step 3: text extraction (used as context in fallback path; skipped for File API)
     if (!fileUri) {
       setProgress(25, currentLang === 'de'
-        ? 'Text wird extrahiert (für lange Dokumente)...'
-        : 'Extracting text (for long documents)...');
+        ? 'Text wird extrahiert & Qualität geprüft...'
+        : 'Extracting text & checking quality...');
       for (const file of pdfFiles) {
         try {
           const text = await extractPDFText(file);
@@ -5812,9 +5832,24 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
       if (imageFiles.length > 0 && pdfFiles.length === 0) {
         docText = `[Bilder hochgeladen: ${imageFiles.map(f => f.name).join(', ')}]`;
       }
-      const textLimit = pageImages.length > 0 ? 15000 : 80000;
-      if (docText.length > textLimit) {
-        docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
+
+      // Qualitätstest-Ergebnis auswerten: Scan-PDF = primär visuelle Analyse
+      const isScannedDoc = docText.includes('⚠️ [SCAN-PDF ERKANNT');
+      if (isScannedDoc && pageImages.length > 0) {
+        setProgress(30, currentLang === 'de'
+          ? '⚠️ Scan-PDF erkannt — visuelle Analyse wird priorisiert...'
+          : '⚠️ Scanned PDF detected — prioritising visual analysis...');
+        // Bei Scan-PDFs: Text enthält wenig Info, Bilder sind das Hauptsignal
+        // Kürze den Text stark — Gemini nutzt primär die Seiten-Bilder
+        const textLimit = 8000;
+        if (docText.length > textLimit) {
+          docText = docText.slice(0, textLimit) + '\n\n[Scan-PDF: Text-Extraktion minimal — primäre Analyse über Seitenbilder]';
+        }
+      } else {
+        const textLimit = pageImages.length > 0 ? 15000 : 80000;
+        if (docText.length > textLimit) {
+          docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
+        }
       }
     } else {
       docText = `[Dokument via Gemini File API hochgeladen: ${uploadedPDFs[0].name} — vollständige Analyse aller Seiten]`;
