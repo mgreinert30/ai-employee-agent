@@ -6609,15 +6609,29 @@ Wenn die Aufgabe eine konkrete Frage oder Entscheidung enthält (z.B. "Soll ich 
 • Bei MITTEL/LANG-Analyse: Direktantwort zuerst, dann die vollständige Analyse als Begründung.
 • Die gesamte Analyse dient als Belege und Begründung für diese Antwort — nicht umgekehrt.
 
+SCHRITT 0 — DATEN-INDEX (IMMER ZUERST, KEINE AUSNAHME):
+Bevor du irgendetwas anderes schreibst: Erstelle eine Tabelle mit ALLEN Zahlen und Fakten aus dem Dokument:
+| Kennzahl | Wert | Seite |
+|----------|------|-------|
+| ... | ... | ... |
+Nutze die ━━━ Seite X ━━━ Marker im Quelltext um die Seitenzahl zu bestimmen.
+Analysiere danach NUR was im Daten-Index steht — kein Erfinden, kein Raten.
+
 KERNREGELN — NIEMALS BRECHEN:
-0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit einem Statistik-, Metadaten- oder Dokumentinfo-Block (z.B. "ANALYSE-STATISTIK", "Seiten: X", "Zeichen: X", "Tabellen: X", "Grafiken: X", "QUELLDOKUMENT"). Starte SOFORT mit dem TL;DR und der Analyse.
-1. SEITENREFERENZEN PFLICHT: Schreibe bei JEDER wichtigen Aussage "(laut Seite X)" dahinter.
+0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit einem Statistik-, Metadaten- oder Dokumentinfo-Block. Starte SOFORT mit dem Daten-Index, dann TL;DR.
+1. ⚡ ZITIERPFLICHT — ABSOLUTES GESETZ: Jede Zahl, jeder Prozentsatz, jeder Name, jede Aussage MUSS eine Seitenangabe haben.
+   ❌ FALSCH: "Der Umsatz stieg um 6,4 %"
+   ✅ RICHTIG: "Der Umsatz stieg um 6,4 % (laut Seite 12)"
+   ❌ FALSCH: "Das Beitragswachstum ist positiv"
+   ✅ RICHTIG: "Das Beitragswachstum beträgt 6,4 % (laut Seite 5, Tabelle 2)"
+   WENN kein Seitenmarker für eine Aussage existiert → Aussage NICHT aufnehmen.
+   Seitenmarker im Text erkennst du an: ━━━ Seite X ━━━ oder [S.X] oder --- Seite X ---
 2. ECHTE ZAHLEN: Niemals Platzhalter wie "[Zahl]" — nur echte Werte aus dem Dokument.
-3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...". Direkt starten.
+3. KEINE FLOSKELN: Verboten: "Es ist wichtig zu beachten...", "Das Dokument beschreibt...", "Es wäre sinnvoll...". Direkt starten.
 4. KRITISCH DENKEN: Widersprüche, Inkonsistenzen, versteckte Risiken explizit benennen.
-5. JEDER SATZ trägt Information — keine Füllsätze.
+5. JEDER SATZ trägt Information — keine Füllsätze, keine generischen Empfehlungen.
 6. ANTWORTE AUF DEUTSCH.
-7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt] | 2. [zweiter Punkt] | 3. [dritter Punkt]"
+7. TL;DR PFLICHT: Beginne die Analyse IMMER mit einer Zusammenfassung im Format: "TL;DR | Dringlichkeit: X/10 | 1. [wichtigster Punkt mit Seite] | 2. [zweiter Punkt mit Seite] | 3. [dritter Punkt mit Seite]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
 9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind — bereits ab 2 Datenpunkten. Keine Ausnahmen.
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
@@ -6712,14 +6726,29 @@ If the task contains a concrete question or decision (e.g. "Should I buy?", "Is 
 • For MEDIUM/LONG analysis: Direct answer first, then the full analysis as supporting evidence.
 • The entire analysis serves as evidence and justification for this answer — not the other way around.
 
+STEP 0 — DATA INDEX (ALWAYS FIRST, NO EXCEPTION):
+Before writing anything else: create a table of ALL numbers and facts from the document:
+| Metric | Value | Page |
+|--------|-------|------|
+| ... | ... | ... |
+Use the ━━━ Page X ━━━ markers in the source text to determine page numbers.
+Only analyse what is in the data index — no inventing, no guessing.
+
 CORE RULES — NEVER BREAK:
-1. PAGE REFERENCES MANDATORY: After EVERY important claim write "(see page X)".
+0. NO METADATA BLOCK: Never start with a statistics or document-info block. Start with the Data Index, then TL;DR.
+1. ⚡ CITATION LAW — ABSOLUTE RULE: Every number, percentage, name and claim MUST have a page reference.
+   ❌ WRONG: "Revenue grew by 6.4%"
+   ✅ RIGHT: "Revenue grew by 6.4% (see page 12)"
+   ❌ WRONG: "Premium growth is positive"
+   ✅ RIGHT: "Premium growth stands at 6.4% (see page 5, Table 2)"
+   IF no page marker exists for a claim → do NOT include that claim.
+   Page markers in the text look like: ━━━ Page X ━━━ or [p.X] or --- Page X ---
 2. REAL NUMBERS: Never use placeholders like "[number]" — only actual values from the document.
-3. NO FILLER: Banned: "It is important to note...", "The document describes...". Start directly.
+3. NO FILLER: Banned: "It is important to note...", "The document describes...", "It would be useful...". Start directly.
 4. THINK CRITICALLY: Name contradictions, inconsistencies, hidden risks explicitly.
-5. EVERY SENTENCE carries information — no padding.
+5. EVERY SENTENCE carries information — no generic advice, no padding.
 6. RESPOND IN ENGLISH.
-7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important] | 2. [second] | 3. [third]"
+7. TL;DR MANDATORY: Always begin with: "TL;DR | Urgency: X/10 | 1. [most important + page] | 2. [second + page] | 3. [third + page]"
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
 9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10. Only when at least 4 real data points exist:
    • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
@@ -7155,6 +7184,21 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   if (!result) { stopProgressAnimation(); throw new Error(de ? 'Keine Antwort von der KI erhalten.' : 'No response received from AI.'); }
   result = stripCodeFences(result);
   window.lastAnalysedPages = window.lastAnalysedPages ?? totalPages;
+
+  // ── Citation-Retry: wenn < 20% Quellenangaben → gezielter Nachbesserungs-Aufruf ─
+  const _citRate = verifyCitationsClientSide(result).rate;
+  if (_citRate < 20 && !fileUri && !isCreationTask) {
+    const de2 = currentLang === 'de';
+    setProgress(96, de2 ? '⚡ Quellenangaben nachbessern...' : '⚡ Adding citations...');
+    const retryPrompt = de2
+      ? `Die folgende Analyse hat ${_citRate}% Quellenangaben — das ist zu wenig.\n\nÜberarbeite sie und füge bei JEDER Aussage eine Seitenangabe "(laut Seite X)" hinzu.\nNutze die ━━━ Seite X ━━━ Marker aus dem ursprünglichen Quelltext.\nWenn du keine Seite findest → Aussage weglassen.\n\nAnalyse zum Überarbeiten:\n\n${result}`
+      : `The following analysis has ${_citRate}% citations — too few.\n\nRevise it and add a page reference "(see page X)" after EVERY claim.\nUse the ━━━ Page X ━━━ markers from the original source text.\nIf you cannot find a page → remove that claim.\n\nAnalysis to revise:\n\n${result}`;
+    try {
+      const retried = await callAnalyseSSE(retryPrompt, 'medium');
+      if (retried && retried.length > 200) result = stripCodeFences(retried);
+    } catch (_) {}
+  }
+
   recordQualitySignal(window._lastQCReport, result, docType);
 
   // Fire-and-forget: extract insights + send structured learning signal
