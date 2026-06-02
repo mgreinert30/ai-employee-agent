@@ -836,11 +836,21 @@ function cycleFontSize() {
 
 // Shared SSE reader for /api/analyse — replaces res.json() everywhere
 async function callAnalyseSSE(prompt, analysisLength) {
-  const res = await fetch('/api/analyse', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, ...(analysisLength ? { analysisLength } : {}) })
-  });
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 90000); // 90s timeout
+  let res;
+  try {
+    res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, ...(analysisLength ? { analysisLength } : {}) }),
+      signal: controller.signal
+    });
+  } catch (fetchErr) {
+    clearTimeout(tid);
+    throw new Error(currentLang === 'de' ? 'Server nicht erreichbar — bitte erneut versuchen.' : 'Server unreachable — please try again.');
+  }
+  clearTimeout(tid);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `HTTP ${res.status}`);
@@ -859,11 +869,11 @@ async function callAnalyseSSE(prompt, analysisLength) {
       if (!line.startsWith('data: ')) continue;
       const payload = line.slice(6).trim();
       if (!payload) continue;
-      try {
-        const evt = JSON.parse(payload);
-        if (evt.error) throw new Error(evt.error);
-        if (evt.chunk) chunks.push(evt.chunk);
-      } catch (_) {}
+      // Parse JSON and business logic SEPARATELY — so errors thrown here propagate correctly
+      let evt;
+      try { evt = JSON.parse(payload); } catch (_) { continue; }
+      if (evt.error) throw new Error(evt.error);
+      if (evt.chunk) chunks.push(evt.chunk);
     }
   }
   const text = chunks.join('');
@@ -880,7 +890,7 @@ async function runChain(prefix) {
     alert(de ? 'Kein Textinhalt zum Weiterverarbeiten verfügbar.' : 'No text content available to process.');
     return;
   }
-  const input = rawText.slice(0, 6000);
+  const input = rawText.slice(0, 18000);
   const prompt = prefix + input;
 
   showStep('step-progress');
