@@ -12,7 +12,7 @@
   <meta name="robots" content="index, follow" />
   <title>AI Employee Agent — KI-Mitarbeiter ab €0,99 | DSGVO-konform</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=29" />
+  <link rel="stylesheet" href="style.css?v=30" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1624,25 +1624,35 @@
         <div class="chain-section">
           <div class="chain-label" data-de="↩️ Ergebnis weiterverarbeiten:" data-en="↩️ Process result further:">↩️ Ergebnis weiterverarbeiten:</div>
           <div class="chain-buttons" id="chain-buttons">
-            <button id="chain-btn-shorten" onclick="chainTask('shorten')" class="btn-chain">📝 Kürzer fassen</button>
-            <button id="chain-btn-translate" onclick="showLangPicker()" class="btn-chain">🌍 Übersetzen</button>
-            <button id="chain-btn-report" onclick="chainTask('report')" class="btn-chain">📊 Als Bericht</button>
-            <button id="chain-btn-bullets" onclick="chainTask('bullets')" class="btn-chain">• Stichpunkte</button>
+            <button id="chain-btn-shorten"   onclick="chainTask('shorten')"  class="btn-chain" data-de="📝 Kürzer fassen"  data-en="📝 Shorten">📝 Kürzer fassen</button>
+            <button id="chain-btn-translate" onclick="showLangPicker()"      class="btn-chain" data-de="🌍 Übersetzen"     data-en="🌍 Translate">🌍 Übersetzen</button>
+            <button id="chain-btn-report"    onclick="chainTask('report')"   class="btn-chain" data-de="📊 Als Bericht"    data-en="📊 As Report">📊 Als Bericht</button>
+            <button id="chain-btn-bullets"   onclick="chainTask('bullets')"  class="btn-chain" data-de="• Stichpunkte"     data-en="• Bullet points">• Stichpunkte</button>
+            <button id="chain-btn-font"      onclick="cycleFontSize()"       class="btn-chain" data-de="🔠 Schriftgröße"   data-en="🔠 Font size">🔠 Schriftgröße</button>
           </div>
           <!-- Language picker (shown on Übersetzen click) -->
           <div id="lang-picker" style="display:none;margin-top:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px;">
             <p style="font-size:12px;color:var(--gray);margin-bottom:10px;" data-de="Zielsprache wählen:" data-en="Choose target language:">Zielsprache wählen:</p>
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Englisch')">🇬🇧 Englisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Spanisch')">🇪🇸 Spanisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Französisch')">🇫🇷 Französisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Italienisch')">🇮🇹 Italienisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Portugiesisch')">🇵🇹 Portugiesisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Russisch')">🇷🇺 Russisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Arabisch')">🇸🇦 Arabisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Chinesisch')">🇨🇳 Chinesisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Japanisch')">🇯🇵 Japanisch</button>
-              <button class="btn-chain lang-btn" onclick="chainTranslate('Türkisch')">🇹🇷 Türkisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('de')" data-de="🇩🇪 Deutsch"       data-en="🇩🇪 German">🇩🇪 Deutsch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('en')" data-de="🇬🇧 Englisch"      data-en="🇬🇧 English">🇬🇧 Englisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('es')" data-de="🇪🇸 Spanisch"      data-en="🇪🇸 Spanish">🇪🇸 Spanisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('fr')" data-de="🇫🇷 Französisch"   data-en="🇫🇷 French">🇫🇷 Französisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('it')" data-de="🇮🇹 Italienisch"   data-en="🇮🇹 Italian">🇮🇹 Italienisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('pt')" data-de="🇵🇹 Portugiesisch" data-en="🇵🇹 Portuguese">🇵🇹 Portugiesisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('nl')" data-de="🇳🇱 Niederländisch" data-en="🇳🇱 Dutch">🇳🇱 Niederländisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('pl')" data-de="🇵🇱 Polnisch"      data-en="🇵🇱 Polish">🇵🇱 Polnisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('sv')" data-de="🇸🇪 Schwedisch"    data-en="🇸🇪 Swedish">🇸🇪 Schwedisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('da')" data-de="🇩🇰 Dänisch"       data-en="🇩🇰 Danish">🇩🇰 Dänisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('cs')" data-de="🇨🇿 Tschechisch"   data-en="🇨🇿 Czech">🇨🇿 Tschechisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('hu')" data-de="🇭🇺 Ungarisch"     data-en="🇭🇺 Hungarian">🇭🇺 Ungarisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('ru')" data-de="🇷🇺 Russisch"      data-en="🇷🇺 Russian">🇷🇺 Russisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('tr')" data-de="🇹🇷 Türkisch"      data-en="🇹🇷 Turkish">🇹🇷 Türkisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('ar')" data-de="🇸🇦 Arabisch"      data-en="🇸🇦 Arabic">🇸🇦 Arabisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('zh')" data-de="🇨🇳 Chinesisch"    data-en="🇨🇳 Chinese">🇨🇳 Chinesisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('ja')" data-de="🇯🇵 Japanisch"     data-en="🇯🇵 Japanese">🇯🇵 Japanisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('ko')" data-de="🇰🇷 Koreanisch"    data-en="🇰🇷 Korean">🇰🇷 Koreanisch</button>
+              <button class="btn-chain lang-btn" onclick="chainTranslate('hi')" data-de="🇮🇳 Hindi"         data-en="🇮🇳 Hindi">🇮🇳 Hindi</button>
             </div>
           </div>
         </div>

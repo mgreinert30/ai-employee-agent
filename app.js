@@ -7,6 +7,29 @@
 const APP_VERSION = '1.0';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+// ISO code → language name in DE and EN
+const LANG_NAMES = {
+  de: { de: 'Deutsch',       en: 'German'       },
+  en: { de: 'Englisch',      en: 'English'      },
+  es: { de: 'Spanisch',      en: 'Spanish'      },
+  fr: { de: 'Französisch',   en: 'French'       },
+  it: { de: 'Italienisch',   en: 'Italian'      },
+  pt: { de: 'Portugiesisch', en: 'Portuguese'   },
+  nl: { de: 'Niederländisch',en: 'Dutch'        },
+  pl: { de: 'Polnisch',      en: 'Polish'       },
+  sv: { de: 'Schwedisch',    en: 'Swedish'      },
+  da: { de: 'Dänisch',       en: 'Danish'       },
+  cs: { de: 'Tschechisch',   en: 'Czech'        },
+  hu: { de: 'Ungarisch',     en: 'Hungarian'    },
+  ru: { de: 'Russisch',      en: 'Russian'      },
+  tr: { de: 'Türkisch',      en: 'Turkish'      },
+  ar: { de: 'Arabisch',      en: 'Arabic'       },
+  zh: { de: 'Chinesisch',    en: 'Chinese'      },
+  ja: { de: 'Japanisch',     en: 'Japanese'     },
+  ko: { de: 'Koreanisch',    en: 'Korean'       },
+  hi: { de: 'Hindi',         en: 'Hindi'        },
+};
+
 // =====================
 // LANGUAGE
 // =====================
@@ -749,20 +772,22 @@ function showLangPicker() {
   if (lp) lp.style.display = lp.style.display === 'none' ? 'block' : 'none';
 }
 
-function chainTranslate(language) {
+function chainTranslate(langCode) {
   document.getElementById('lang-picker').style.display = 'none';
   const de = currentLang === 'de';
   const taskType = lastCompletedTaskType || 'report';
   const contextWord = {
-    reply: de ? 'E-Mail' : 'email',
-    pdf: de ? 'Analyse' : 'analysis',
-    document: de ? 'Dokument' : 'document',
-    report: de ? 'Bericht' : 'report',
-    email: de ? 'Text' : 'text',
+    reply:    de ? 'E-Mail'    : 'email',
+    pdf:      de ? 'Analyse'   : 'analysis',
+    document: de ? 'Dokument'  : 'document',
+    report:   de ? 'Bericht'   : 'report',
+    email:    de ? 'Text'      : 'text',
   }[taskType] || (de ? 'Text' : 'text');
+  const langEntry = LANG_NAMES[langCode] || { de: langCode, en: langCode };
+  const targetLang = de ? langEntry.de : langEntry.en;
   const prefix = de
-    ? `Übersetze folgenden ${contextWord} vollständig und professionell ins ${language}e. Behalte Struktur und Formatierung bei:\n\n`
-    : `Translate the following ${contextWord} completely and professionally into ${language}. Keep the structure and formatting:\n\n`;
+    ? `Übersetze folgenden ${contextWord} vollständig und professionell auf ${targetLang}. Behalte alle Abschnittsüberschriften und Formatierung exakt bei. Gib NUR den übersetzten Text aus, kein Kommentar:\n\n`
+    : `Translate the following ${contextWord} completely and professionally into ${targetLang}. Keep all section headings and formatting exactly as-is. Output ONLY the translated text, no commentary:\n\n`;
   runChain(prefix);
 }
 
@@ -792,6 +817,60 @@ function chainTask(type) {
   runChain(prefix);
 }
 
+// Schriftgröße im Ergebnisfeld durchschalten: Klein → Normal → Groß
+let _fontSizeIdx = 1;
+const _FONT_SIZES = [
+  { size: '12px', lineH: '1.55', labelDE: '🔡 Klein',  labelEN: '🔡 Small'  },
+  { size: '15px', lineH: '1.65', labelDE: '🔠 Normal', labelEN: '🔠 Normal' },
+  { size: '19px', lineH: '1.9',  labelDE: '🔤 Groß',   labelEN: '🔤 Large'  },
+];
+
+function cycleFontSize() {
+  _fontSizeIdx = (_fontSizeIdx + 1) % _FONT_SIZES.length;
+  const chosen = _FONT_SIZES[_fontSizeIdx];
+  const container = document.getElementById('result-content');
+  if (container) { container.style.fontSize = chosen.size; container.style.lineHeight = chosen.lineH; }
+  const btn = document.getElementById('chain-btn-font');
+  if (btn) btn.textContent = currentLang === 'de' ? chosen.labelDE : chosen.labelEN;
+}
+
+// Shared SSE reader for /api/analyse — replaces res.json() everywhere
+async function callAnalyseSSE(prompt, analysisLength) {
+  const res = await fetch('/api/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, ...(analysisLength ? { analysisLength } : {}) })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let lineBuf = '';
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    lineBuf += dec.decode(value, { stream: true });
+    const lines = lineBuf.split('\n');
+    lineBuf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6).trim();
+      if (!payload) continue;
+      try {
+        const evt = JSON.parse(payload);
+        if (evt.error) throw new Error(evt.error);
+        if (evt.chunk) chunks.push(evt.chunk);
+      } catch (_) {}
+    }
+  }
+  const text = chunks.join('');
+  if (!text) throw new Error(currentLang === 'de' ? 'Keine Antwort erhalten.' : 'No response received.');
+  return stripCodeFences(text);
+}
+
 async function runChain(prefix) {
   const de = currentLang === 'de';
   const rawText = currentResult
@@ -810,21 +889,14 @@ async function runChain(prefix) {
 
   try {
     setProgress(55, de ? 'KI schreibt Ergebnis...' : 'AI writing result...');
-    const res = await fetchWithTimeout('/api/analyse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    currentResult = stripCodeFences(data.result || '');
+    currentResult = await callAnalyseSSE(prompt);
   } catch (err) {
     currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
   }
 
   setProgress(100, de ? 'Fertig!' : 'Done!');
   updateChainButtons(lastCompletedTaskType);
-  readyToShowResult();
+  showStep('step-result');
   renderResultRich(currentResult);
 }
 
@@ -979,10 +1051,7 @@ async function startCalendarTask(token) {
 
   try {
     setProgress(75, de ? 'KI analysiert...' : 'AI analysing...');
-    const res = await fetchWithTimeout('/api/analyse', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    currentResult = stripCodeFences(data.result || '');
+    currentResult = await callAnalyseSSE(prompt);
   } catch (err) {
     currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
   }
@@ -1249,15 +1318,8 @@ Format: [{"id":"MESSAGE_ID","kategorie":"KATEGORIE"}]
 E-Mails:
 ${emailList}`;
     try {
-      const res = await fetch('/api/analyse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      let data;
-      try { data = await res.json(); } catch (_) { return keywordCategorize(batch); }
-      if (data.error || !data.result) return keywordCategorize(batch);
-      const jsonMatch = data.result.match(/\[[\s\S]*\]/);
+      const text = await callAnalyseSSE(prompt);
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (!jsonMatch) return keywordCategorize(batch);
       return JSON.parse(jsonMatch[0]);
     } catch (_) {
@@ -1484,10 +1546,7 @@ async function startOutlookTask() {
   startProgressAnimation(40, 95, 30000, de ? 'KI kategorisiert Outlook-E-Mails...' : 'AI categorising Outlook emails...');
 
   try {
-    const res = await fetchWithTimeout('/api/analyse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    currentResult = stripCodeFences(data.result || '');
+    currentResult = await callAnalyseSSE(prompt);
   } catch (err) {
     currentResult = (de ? 'Fehler bei der KI-Analyse: ' : 'AI analysis error: ') + err.message;
   }
@@ -3010,6 +3069,11 @@ function downloadPDF(length) {
         }
         const x = pageW - mR - w;
         const y = 8 + (maxH - h) / 2; // vertikal zentriert in der Bounding Box
+        
+        // Weißer abgerundeter Hintergrund für das Logo (schützt Lesbarkeit transparenter/dunkler Logos auf dunklem Cover-Hintergrund)
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(x - 2, y - 2, w + 4, h + 4, 1.5, 1.5, 'F');
+        
         doc.addImage(base64, fmt, x, y, w, h, '', 'FAST');
       }
     } catch (_) {}
@@ -3731,7 +3795,7 @@ function downloadHTMLReport() {
 </head>
 <body>
 <div class="header">
-  ${window.brandLogo ? `<img src="${window.brandLogo}" style="max-height:48px;max-width:160px;object-fit:contain;margin-bottom:10px;display:block;" alt="Logo" />` : ''}
+  ${window.brandLogo ? `<img src="${window.brandLogo}" style="max-height:48px;max-width:160px;object-fit:contain;margin-bottom:10px;display:block;background-color:#ffffff;padding:4px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);" alt="Logo" />` : ''}
   <h1>✅ ${currentLang === 'de' ? 'Aufgabe abgeschlossen' : 'Task complete'}</h1>
   <p>${currentLang === 'de' ? `Erstellt von ${charName} • ${today}` : `Created by ${charName} • ${today}`}</p>
 </div>
@@ -4943,8 +5007,7 @@ function detectLanguage(text) {
 }
 
 function buildPrompt(taskDesc, businessDetails, profession, docText, docType, analysisLength) {
-  const writtenLang = detectLanguage(taskDesc);
-  const isDE = writtenLang === 'de';
+  const isDE = currentLang === 'de';
   const businessCtx = businessDetails
     ? (isDE ? `Kontext des Unternehmens: ${businessDetails}\n` : `Business context: ${businessDetails}\n`)
     : '';
