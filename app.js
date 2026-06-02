@@ -4981,13 +4981,17 @@ function extractBlocksFromItems(items, pageNum, filename) {
     const isHding  = !line.isTableRow && (line.avgFont >= domFont * 1.15 || line.isBold) && line.text.length < 130;
     const isList   = /^[•\-\*▪◦→►✓✗]\s|^\d+[\.\)]\s/.test(line.text);
 
+    const isCaption = /^(Abb\.?|Abbildung|Figure|Fig\.?|Bild|Chart|Grafik|Diagramm|Quelle|Source)\s*\d*/i.test(line.text)
+      && line.text.length < 200;
+
     let type = 'text';
-    if      (isHead)       type = 'header';
-    else if (isFn)         type = 'footnote';
-    else if (isFoot)       type = 'footer';
-    else if (isHding)      type = 'heading';
+    if      (isHead)          type = 'header';
+    else if (isFn)            type = 'footnote';
+    else if (isFoot)          type = 'footer';
+    else if (isHding)         type = 'heading';
     else if (line.isTableRow) type = 'table';
-    else if (isList)       type = 'list';
+    else if (isCaption)       type = 'image_caption';
+    else if (isList)          type = 'list';
 
     if (type === 'heading') lastHeading = line.text;
 
@@ -5006,7 +5010,7 @@ function extractBlocksFromItems(items, pageNum, filename) {
   if (cur) blocks.push(cur);
 
   // Konfidenz pro Block-Typ
-  const CONF = { heading: 0.87, table: 0.88, list: 0.83, header: 0.80, footer: 0.78, footnote: 0.82, text: 0.75 };
+  const CONF = { heading: 0.87, table: 0.88, list: 0.83, header: 0.80, footer: 0.78, footnote: 0.82, image_caption: 0.81, text: 0.75 };
 
   return blocks.map(b => {
     const text = b.type === 'table'
@@ -5061,6 +5065,149 @@ function serializeBlocksForPrompt(allBlocks) {
       return lines.join('\n');
     })
     .join('\n');
+}
+
+// =====================
+// SEMANTISCHES CHUNKING
+// Gruppiert typisierte Blöcke in sinnhafte Chunk-Einheiten.
+// Schneidet NICHT nach Zeichenzahl — schneidet nach Struktur:
+//   section        = Überschrift + nachfolgender Text
+//   table          = vollständige Tabelle (nie zerteilen)
+//   text_block     = zusammenhängender Fließtext ohne Überschrift
+//   image_caption  = Abbildungs-/Diagrammbeschriftung
+//   metadata       = Kopfzeilen, Seiteninfo, Datum, Autor
+// =====================
+function createSemanticChunks(allBlocks) {
+  const chunks   = [];
+  const metaTexts = [];
+  let cur = null;
+
+  const flushCur = () => {
+    if (!cur) return;
+    const bodyText = cur.textBlocks.map(b => b.text).join('\n\n');
+    const pages    = [...new Set(cur.textBlocks.map(b => b.page))];
+    if (cur.startPage && !pages.includes(cur.startPage)) pages.unshift(cur.startPage);
+    chunks.push({
+      chunk_type:  cur.type,
+      heading:     cur.heading || null,
+      text:        bodyText,
+      page:        cur.startPage,
+      pages:       pages.sort((a,b)=>a-b),
+      source:      cur.source,
+      confidence:  cur.type === 'section' ? 0.85 : 0.78,
+      chars:       bodyText.length + (cur.heading?.length || 0),
+    });
+    cur = null;
+  };
+
+  for (const block of allBlocks) {
+    const t = block.block_type;
+
+    // Header / Footer → Metadaten sammeln (max. 8)
+    if (t === 'header' || t === 'footer') {
+      if (metaTexts.length < 8) metaTexts.push(block.text);
+      continue;
+    }
+
+    // Tabelle → eigener Chunk, nie zerteilen
+    if (t === 'table') {
+      flushCur();
+      chunks.push({
+        chunk_type: 'table',
+        heading:    block.heading,
+        text:       block.text,
+        page:       block.page,
+        pages:      [block.page],
+        source:     block.source,
+        confidence: block.confidence,
+        chars:      block.text.length,
+      });
+      continue;
+    }
+
+    // Bildbeschriftung → eigener kompakter Chunk
+    if (t === 'image_caption') {
+      flushCur();
+      chunks.push({
+        chunk_type: 'image_caption',
+        heading:    null,
+        text:       block.text,
+        page:       block.page,
+        pages:      [block.page],
+        source:     block.source,
+        confidence: block.confidence,
+        chars:      block.text.length,
+      });
+      continue;
+    }
+
+    // Überschrift → neue Section starten
+    if (t === 'heading') {
+      flushCur();
+      cur = { type: 'section', heading: block.text, textBlocks: [],
+              startPage: block.page, source: block.source };
+      continue;
+    }
+
+    // Text, Liste, Fußnote → in aktuelle Gruppe
+    if (!cur) cur = { type: 'text_block', heading: null, textBlocks: [],
+                      startPage: block.page, source: block.source };
+    cur.textBlocks.push(block);
+  }
+  flushCur();
+
+  // Metadata-Chunk ganz vorne (Dokument-Steckbrief)
+  if (metaTexts.length > 0) {
+    const metaText = [...new Set(metaTexts)].join(' | ');
+    chunks.unshift({
+      chunk_type: 'metadata',
+      heading:    null,
+      text:       metaText,
+      page:       1,
+      pages:      [1],
+      source:     allBlocks[0]?.source || '',
+      confidence: 0.80,
+      chars:      metaText.length,
+    });
+  }
+
+  return chunks;
+}
+
+// Wandelt semantische Chunks in strukturiertes Markdown um
+// Jeder Chunk-Typ hat ein eigenes Format, das der KI klaren Kontext gibt
+function serializeChunksForPrompt(chunks) {
+  return chunks.map(c => {
+    const p0    = c.pages?.[0] ?? c.page;
+    const p1    = c.pages?.[c.pages.length - 1] ?? c.page;
+    const pRef  = p0 === p1 ? `S.${p0}` : `S.${p0}–${p1}`;
+
+    switch (c.chunk_type) {
+      case 'metadata':
+        return `[METADATA | ${pRef}] ${c.text}`;
+
+      case 'section': {
+        const hdr = c.heading
+          ? `\n## ${c.heading} [${pRef}]`
+          : `\n[ABSCHNITT | ${pRef}]`;
+        return c.text ? hdr + '\n' + c.text : hdr;
+      }
+
+      case 'text_block':
+        return `\n[TEXT | ${pRef} | ${c.chars} Zeichen]\n${c.text}`;
+
+      case 'table': {
+        const ctx = c.heading ? ` "${c.heading}"` : '';
+        return `\n[TABELLE${ctx} | ${pRef} | Konfidenz: ${Math.round(c.confidence * 100)}%]\n${c.text}\n[/TABELLE]`;
+      }
+
+      case 'image_caption':
+        return `\n[BILDBESCHRIFTUNG | ${pRef}] ${c.text}`;
+
+      default:
+        return c.text;
+    }
+  }).join('\n');
 }
 
 // =====================
@@ -5207,12 +5354,16 @@ async function extractPDFText(file) {
         const clf = classifyPDF(allPages, file.name);
         window._lastPDFClassification = clf;
 
-        // ── Strukturierten Prompt-Text aufbauen ───────────────────────────────
+        // ── Semantisches Chunking + Prompt-Aufbau ────────────────────────────
         let classHeader = `[PDF-KLASSIFIKATION: ${clf.summary}]\n`;
         if (clf.hintsText) classHeader += `[ANALYSE-HINWEISE:\n${clf.hintsText}]\n`;
         classHeader += '\n';
 
-        const serialized = serializeBlocksForPrompt(allBlocks);
+        // Blöcke → semantische Chunks (nach Struktur, nicht nach Zeichenzahl)
+        const allChunks = createSemanticChunks(allBlocks);
+        window._lastPDFChunks = allChunks;
+
+        const serialized = serializeChunksForPrompt(allChunks);
         const MAX_CHARS  = 110000;
 
         let fullText = `[Dokument: ${file.name} | ${totalPages} Seiten]\n\n` + classHeader;
@@ -5220,28 +5371,27 @@ async function extractPDFText(file) {
         if (serialized.length <= MAX_CHARS) {
           fullText += serialized;
         } else {
-          // Chunking: Seiten-Budget proportional zu Blockanzahl
-          // Tabellenseiten bekommen 1.8× Gewicht
-          const tablePageNums = new Set(
-            allBlocks.filter(b => b.block_type === 'table').map(b => b.page)
-          );
-          const pageSerials = {};
-          allBlocks.forEach(b => {
-            if (!pageSerials[b.page]) pageSerials[b.page] = [];
-            pageSerials[b.page].push(b);
-          });
-          const pageNums  = Object.keys(pageSerials).map(Number).sort((a,b)=>a-b);
-          const totalW    = pageNums.reduce((s, p) => s + (tablePageNums.has(p) ? 1.8 : 1), 0);
-          const chunkParts = pageNums.map(p => {
-            const weight   = tablePageNums.has(p) ? 1.8 : 1;
-            const budget   = Math.floor(MAX_CHARS * (weight / totalW));
-            const pageSer  = serializeBlocksForPrompt(pageSerials[p]);
-            return pageSer.length <= budget ? pageSer : pageSer.slice(0, budget) + '\n…';
-          });
-          fullText += chunkParts.join('\n');
-          fullText += `\n\n[${Math.round(serialized.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K Zeichen. `
-            + (tablePageNums.size > 0 ? `${tablePageNums.size} Tabellenseiten mit 1,8× Budget. ` : '')
-            + `Alle ${pageNums.length} Seiten vertreten.]`;
+          // Semantisches Budget-Chunking:
+          // Prioritätsgewichte pro Chunk-Typ — nie blind nach Zeichen schneiden
+          const WEIGHTS = { metadata: 4, table: 3, image_caption: 2, section: 1.5, text_block: 1 };
+          const totalW  = allChunks.reduce((s, c) => s + (WEIGHTS[c.chunk_type] || 1), 0);
+          const trimmedParts = allChunks.map(c => {
+            const budget = Math.floor(MAX_CHARS * ((WEIGHTS[c.chunk_type] || 1) / totalW));
+            const ser    = serializeChunksForPrompt([c]);
+            if (ser.length <= budget) return ser;
+            // Tabellen nie zerteilen — lieber komplett weglassen wenn zu groß
+            if (c.chunk_type === 'table' && ser.length > budget * 2) return '';
+            // Text kürzen an letztem vollständigen Satz innerhalb des Budgets
+            const truncated = ser.slice(0, budget);
+            const lastDot   = Math.max(truncated.lastIndexOf('. '), truncated.lastIndexOf('.\n'));
+            return (lastDot > budget * 0.5 ? truncated.slice(0, lastDot + 1) : truncated) + '\n…[gekürzt]';
+          }).filter(Boolean);
+
+          fullText += trimmedParts.join('\n');
+          const tableChunks = allChunks.filter(c => c.chunk_type === 'table').length;
+          fullText += `\n\n[Semantisches Chunking: ${Math.round(serialized.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K. `
+            + `${allChunks.length} Chunks (${tableChunks} Tabellen nie zerteilt). `
+            + `Gewichte: Metadaten 4×, Tabellen 3×, Abschnitte 1,5×, Text 1×.]`;
         }
 
         if (totalPages > PAGE_LIMIT) {
