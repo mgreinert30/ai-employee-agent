@@ -4912,6 +4912,165 @@ function checkResetToken() {
 }
 
 // =====================
+// PRIVACY MODE — Datenschutz-Modi: cloud / privacy / strict
+// =====================
+
+let _currentPrivacyMode = localStorage.getItem('ai_privacy_mode') || 'cloud';
+
+function setPrivacyMode(mode) {
+  _currentPrivacyMode = mode;
+  localStorage.setItem('ai_privacy_mode', mode);
+  ['cloud','privacy','strict'].forEach(m => {
+    const btn = document.getElementById(`pm-${m}`);
+    if (!btn) return;
+    btn.classList.toggle('active', m === mode);
+    if (m === 'strict') btn.classList.toggle('pm-strict-active', mode === 'strict');
+  });
+  const de = currentLang === 'de';
+  const hints = {
+    cloud: de
+      ? '☁️ Dokument wird vollständig an Google Gemini API gesendet. Für öffentliche Dokumente optimal.'
+      : '☁️ Document sent fully to Google Gemini API. Best for public documents.',
+    privacy: de
+      ? '🛡️ PII wird lokal erkannt. Du entscheidest was geschwärzt wird bevor etwas an Gemini geht.'
+      : '🛡️ PII detected locally. You decide what to redact before anything reaches Gemini.',
+    strict: de
+      ? '🔒 Alles bleibt lokal. Nur strukturelle Analyse (Tabellen, Metadaten, Schlüsselwerte) — kein Cloud-LLM.'
+      : '🔒 Everything stays local. Structural analysis only (tables, metadata, key values) — no cloud LLM.',
+  };
+  const el = document.getElementById('privacy-mode-hint');
+  if (el) el.textContent = hints[mode] || hints.cloud;
+}
+
+function getPrivacyMode() { return _currentPrivacyMode; }
+
+// PII-DETEKTOR — erkennt personenbezogene Daten mit Regex
+const PII_PATTERNS = [
+  { type: 'E-Mail',        rx: /\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/g },
+  { type: 'Telefon',       rx: /(?:\+49|0049|0)[\s\-]?(?:\d[\s\-]?){9,13}/g },
+  { type: 'IBAN',          rx: /\b[A-Z]{2}\d{2}[\s\-]?(?:\d{4}[\s\-]?){4}\d{2}\b/g },
+  { type: 'Geburtsdatum',  rx: /\b\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4}\b/g },
+  { type: 'Kreditkarte',   rx: /\b(?:\d{4}[\s\-]?){3}\d{4}\b/g },
+  { type: 'Steuer-ID',     rx: /\b\d{2}[\s\/]\d{3}[\s\/]\d{5}\b/g },
+  { type: 'Personalausweis', rx: /\b[CFGHJKLMNPRTVWXYZ\d]{9}\b/g },
+];
+
+function detectPII(text) {
+  const findings = [];
+  for (const pat of PII_PATTERNS) {
+    const matches = [...(text.matchAll(pat.rx) || [])].map(m => m[0]);
+    if (matches.length > 0) findings.push({ type: pat.type, examples: [...new Set(matches)].slice(0, 3), count: matches.length });
+  }
+  return findings;
+}
+
+function redactPII(text) {
+  let out = text;
+  for (const pat of PII_PATTERNS) {
+    out = out.replace(pat.rx, `[${pat.type.toUpperCase()}-GESCHWÄRZT]`);
+  }
+  return out;
+}
+
+// STRICT-MODE — rein lokale Strukturanalyse, kein API-Call
+function runStrictLocalAnalysis(allChunks, taskDesc) {
+  const de = currentLang === 'de';
+  if (!allChunks || !allChunks.length) {
+    return de ? '⚠️ Keine Chunks für lokale Analyse verfügbar. Bitte ein Dokument hochladen.'
+              : '⚠️ No chunks available for local analysis. Please upload a document.';
+  }
+
+  const tables    = allChunks.filter(c => c.chunk_type === 'table');
+  const sections  = allChunks.filter(c => c.chunk_type === 'section');
+  const metadata  = allChunks.filter(c => c.chunk_type === 'metadata');
+  const clf       = window._lastPDFClassification;
+
+  // Schlüsselwerte aus Text extrahieren (Zahlen mit Kontext)
+  const allText = allChunks.map(c => c.text).join('\n');
+  const kvPairs = [];
+  const kvRx = /([A-ZÄÖÜ][a-zäöüA-ZÄÖÜ\s\-]{3,40})[\s:]+(\d[\d.,\s]*(?:Mrd|Mio|€|\$|%|Tsd|T|M|B)?[^.\n]{0,10})/g;
+  let m;
+  while ((m = kvRx.exec(allText)) !== null && kvPairs.length < 20) {
+    kvPairs.push({ key: m[1].trim(), value: m[2].trim() });
+  }
+
+  const header = de ? `# 🔒 Strict-Mode-Analyse (vollständig lokal)\n\n` : `# 🔒 Strict Mode Analysis (fully local)\n\n`;
+  const note   = de
+    ? `> Kein Text wurde an einen Cloud-Dienst gesendet. Ergebnis basiert auf lokaler Strukturauswertung.\n\n`
+    : `> No text was sent to any cloud service. Result is based on local structural parsing.\n\n`;
+
+  const clsLine = clf ? `**${de ? 'Dokumenttyp' : 'Document type'}:** ${clf.summary}\n\n` : '';
+
+  const metaLine = metadata.length
+    ? `**${de ? 'Metadaten' : 'Metadata'}:** ${metadata[0].text}\n\n` : '';
+
+  const tocLines = sections.slice(0, 20).map((s, i) => `${i+1}. ${s.heading || (de ? '(ohne Titel)' : '(no title)')} [S.${s.page}]`).join('\n');
+  const toc = tocLines ? `## ${de ? 'Inhaltsverzeichnis (lokal erkannt)' : 'Table of Contents (locally detected)'}\n\n${tocLines}\n\n` : '';
+
+  let tableOut = '';
+  if (tables.length) {
+    tableOut = `## ${de ? 'Tabellen' : 'Tables'} (${tables.length})\n\n`;
+    tables.slice(0, 5).forEach((t, i) => {
+      tableOut += `**${de ? 'Tabelle' : 'Table'} ${i+1}${t.heading ? ` — "${t.heading}"` : ''} [S.${t.page}]**\n\n${t.text}\n\n`;
+    });
+  }
+
+  let kvOut = '';
+  if (kvPairs.length) {
+    kvOut = `## ${de ? 'Erkannte Schlüsselwerte' : 'Detected Key Values'}\n\n`;
+    kvOut += '| ' + (de ? 'Bezeichnung' : 'Label') + ' | ' + (de ? 'Wert' : 'Value') + ' |\n|---|---|\n';
+    kvPairs.forEach(kv => { kvOut += `| ${kv.key} | ${kv.value} |\n`; });
+    kvOut += '\n';
+  }
+
+  const stats = `## ${de ? 'Dokument-Statistik' : 'Document Statistics'}\n\n`
+    + `| ${de ? 'Merkmal' : 'Property'} | ${de ? 'Wert' : 'Value'} |\n|---|---|\n`
+    + `| ${de ? 'Seiten' : 'Pages'} | ${clf?.pageCount || '?'} |\n`
+    + `| ${de ? 'Abschnitte' : 'Sections'} | ${sections.length} |\n`
+    + `| ${de ? 'Tabellen' : 'Tables'} | ${tables.length} |\n`
+    + `| ${de ? 'Ø Zeichen/Seite' : 'Avg chars/page'} | ${clf?.avgCharsPerPage || '?'} |\n`
+    + `| ${de ? 'Dokumenttyp' : 'Doc type'} | ${clf?.docCategory || '?'} |\n\n`;
+
+  const strictNote = de
+    ? `---\n\n*🔒 Strict Mode: Keine KI-Interpretation. Für vollständige Analyse → wähle Privacy oder Cloud Mode.*`
+    : `---\n\n*🔒 Strict Mode: No AI interpretation. For full analysis → choose Privacy or Cloud mode.*`;
+
+  return header + note + clsLine + metaLine + toc + tableOut + kvOut + stats + strictNote;
+}
+
+// Zeigt PII-Preview-Panel (Privacy Mode) und wartet auf Nutzer-Entscheidung
+function showPIIPreview(piiFindings, onProceed) {
+  const de = currentLang === 'de';
+  let panel = document.getElementById('pii-preview-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'pii-preview-panel';
+    const formEl = document.querySelector('#step-form form') || document.getElementById('step-form');
+    if (formEl) formEl.insertBefore(panel, formEl.firstChild);
+  }
+  const listItems = piiFindings.map(f =>
+    `<li>${f.type}: ${f.examples.join(', ')}${f.count > 3 ? ` … (+${f.count - 3} ${de ? 'weitere' : 'more'})` : ''}</li>`
+  ).join('');
+
+  panel.innerHTML = `
+    <div class="pii-preview-title">⚠️ ${de ? 'Potenzielle PII erkannt — was tun?' : 'Potential PII detected — what to do?'}</div>
+    <ul class="pii-list">${listItems}</ul>
+    <div class="pii-actions">
+      <button class="btn-redact" onclick="window._piiChoice='redact';window._piiCallback&&window._piiCallback()">
+        ✂️ ${de ? 'Alles schwärzen &amp; senden' : 'Redact all &amp; send'}
+      </button>
+      <button class="btn-proceed-anyway" onclick="window._piiChoice='keep';window._piiCallback&&window._piiCallback()">
+        ${de ? 'Ungeschwärzt senden' : 'Send without redaction'}
+      </button>
+    </div>`;
+  panel.style.display = 'block';
+  window._piiCallback = () => {
+    panel.style.display = 'none';
+    onProceed(window._piiChoice === 'redact');
+  };
+}
+
+// =====================
 // ANALYSE-AGENTEN SYSTEM
 // Spezialisierte Agenten pro Dokumenttyp.
 // Ablauf: selectAgents → runAgentPipeline (sequenziell) → verifyCitationsClientSide
@@ -6416,6 +6575,32 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   // Prefetch server-side learnings so getLearningContext can include them
   await prefetchServerLearnings(docType);
 
+  // ── Privacy-Modus-Verarbeitung ────────────────────────────────────────────
+  const _privMode = getPrivacyMode();
+
+  // STRICT MODE: vollständig lokale Analyse — kein API-Call
+  if (_privMode === 'strict' && !isCreationTask && window._lastPDFChunks?.length > 0) {
+    const strictResult = runStrictLocalAnalysis(window._lastPDFChunks, taskDesc);
+    setProgress(100, currentLang === 'de' ? 'Lokal fertig!' : 'Local done!');
+    await new Promise(r => setTimeout(r, 300));
+    stopProgressAnimation();
+    return stripCodeFences(strictResult);
+  }
+
+  // PRIVACY MODE: PII erkennen, Nutzer entscheiden lassen, dann optional schwärzen
+  if (_privMode === 'privacy' && !isCreationTask && docText && docText.length > 50) {
+    const piiFindings = detectPII(docText);
+    if (piiFindings.length > 0) {
+      // Warte auf Nutzer-Entscheidung (redact oder keep)
+      await new Promise(resolve => {
+        showPIIPreview(piiFindings, (shouldRedact) => {
+          if (shouldRedact) docText = redactPII(docText);
+          resolve();
+        });
+      });
+    }
+  }
+
   // ── Agenten-Pipeline (bei PDF-Analyse mit extrahierten Chunks + Spezialist) ─
   // Läuft NUR bei Fallback-Pfad (kein fileUri) und wenn ein Spezialist erkannt wurde.
   // Bei Erfolg: Early-Return, überspringt den Standard-Einzel-Prompt-Pfad.
@@ -6658,6 +6843,7 @@ function initScrollReveal() {
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   setLang(currentLang);
+  setPrivacyMode(_currentPrivacyMode); // Gespeicherten Modus wiederherstellen
   initBrandColorSwatches();
 
   const hasResetToken = checkResetToken();

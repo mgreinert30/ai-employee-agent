@@ -1347,6 +1347,29 @@
           </div>
         </div>
 
+        <!-- PRIVACY MODE SELECTOR -->
+        <div class="privacy-mode-card" id="privacy-mode-card">
+          <div class="privacy-mode-label" data-de="🔐 Datenschutz-Modus" data-en="🔐 Privacy Mode">🔐 Datenschutz-Modus</div>
+          <div class="privacy-mode-btns">
+            <button type="button" class="privacy-mode-btn active" id="pm-cloud" onclick="setPrivacyMode('cloud')">
+              <span class="pm-icon">☁️</span>
+              <strong data-de="Cloud" data-en="Cloud">Cloud</strong>
+              <span data-de="Schnellste Analyse" data-en="Fastest analysis">Schnellste Analyse</span>
+            </button>
+            <button type="button" class="privacy-mode-btn" id="pm-privacy" onclick="setPrivacyMode('privacy')">
+              <span class="pm-icon">🛡️</span>
+              <strong data-de="Privacy" data-en="Privacy">Privacy</strong>
+              <span data-de="PII wird vor dem Senden erkannt &amp; schwärzt optional" data-en="PII detected &amp; optionally redacted before sending">PII erkannt &amp; geschwärzt</span>
+            </button>
+            <button type="button" class="privacy-mode-btn" id="pm-strict" onclick="setPrivacyMode('strict')">
+              <span class="pm-icon">🔒</span>
+              <strong data-de="Strict" data-en="Strict">Strict</strong>
+              <span data-de="Nur lokale Verarbeitung — kein Cloud-LLM" data-en="Local processing only — no cloud LLM">Nur lokal — kein Cloud</span>
+            </button>
+          </div>
+          <p class="privacy-mode-hint" id="privacy-mode-hint">☁️ Dokument wird vollständig an Google Gemini API gesendet. Für öffentliche Dokumente optimal.</p>
+        </div>
+
         <button type="submit" class="btn-form-cta" data-de="Preis berechnen &amp; starten →" data-en="Calculate price &amp; start →">Preis berechnen &amp; starten →</button>
         <p class="form-cta-note" data-de="🔒 Keine Zahlung erforderlich im nächsten Schritt" data-en="🔒 No payment required in the next step">🔒 Keine Zahlung erforderlich im nächsten Schritt</p>
       </form>
