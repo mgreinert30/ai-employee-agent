@@ -153,9 +153,7 @@ body {
 /* =====================
    LANG BAR
    ===================== */
-.lang-bar { background: var(--black); display: flex; justify-content: space-between; align-items: center; padding: 6px 24px; gap: 8px; }
-.lang-bar .header-right { margin-right: 0; }
-.lang-bar .btn-ghost, .lang-bar .btn-header-login, .lang-bar .btn-header-signup, .lang-bar .btn-owner { font-size: 12px; padding: 5px 12px; }
+.lang-bar { background: var(--black); display: flex; justify-content: flex-end; padding: 8px 24px; gap: 8px; }
 .lang-btn { background: transparent; color: #ffffff !important; border: 1px solid #334155; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 900 !important; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
 .lang-btn.active, .lang-btn:hover { background: linear-gradient(135deg, var(--blue), var(--electric)); color: white; border-color: transparent; }
 
