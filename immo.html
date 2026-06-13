@@ -319,6 +319,16 @@
 
     /* PRICE & PAYMENT STEPS */
     #immo-price-step,#immo-payment-step{min-height:calc(100vh - 80px);display:flex;align-items:center;justify-content:center;padding:32px 16px;}
+    .price-box{background:#fff;border-radius:20px;padding:42px 48px;box-shadow:0 8px 40px rgba(0,0,0,.12);border:1px solid rgba(37,99,235,.08);width:100%;max-width:560px;}
+    .price-icon{font-size:36px;margin-bottom:14px;}
+    .price-time{font-size:22px;font-weight:800;color:#0f172a;margin:0 0 10px;}
+    .price-amount{font-size:36px;font-weight:900;color:#2563eb;margin:0 0 24px;}
+    .price-features{border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 20px;font-size:15px;color:#334155;font-weight:500;margin-bottom:18px;letter-spacing:0.1px;}
+    .price-security{display:flex;align-items:center;gap:10px;font-size:14px;color:#475569;margin-bottom:28px;}
+    .price-security-icon{color:#2563eb;font-size:18px;flex-shrink:0;}
+    .price-buttons{display:flex;gap:14px;}
+    .price-buttons .btn-primary{flex:1;padding:15px 20px;font-size:16px;font-weight:700;}
+    .price-buttons .btn-secondary{flex:1;padding:15px 20px;font-size:16px;font-weight:600;}
     .payment-box{background:#fff;border-radius:18px;padding:42px;box-shadow:0 8px 40px rgba(0,0,0,.12);border:1px solid rgba(37,99,235,.08);width:100%;max-width:520px;}
     .payment-box h3{font-size:22px;font-weight:800;margin-bottom:6px;color:var(--dark);}
     .payment-amount-label{font-size:30px;font-weight:900;background:linear-gradient(135deg,#2563eb,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:26px;}
@@ -747,7 +757,11 @@
       <div class="price-icon">🏠</div>
       <p class="price-time">KI analysiert deine Immobilie in ca. 30 Sekunden</p>
       <p class="price-amount">€20,00</p>
-      <p class="price-note">BORIS-Bodenrichtwerte · Mietspiegel · ImmoScout24 · Vollständiger PDF-Bericht<br>Alle Daten werden nach Abschluss gelöscht.</p>
+      <div class="price-features">BORIS-Bodenrichtwerte &nbsp;•&nbsp; Mietspiegel &nbsp;•&nbsp; ImmoScout24 &nbsp;•&nbsp; Vollständiger PDF-Bericht</div>
+      <div class="price-security">
+        <span class="price-security-icon">🛡️</span>
+        <span>Alle Daten werden nach Abschluss gelöscht.</span>
+      </div>
       <div class="price-buttons">
         <button onclick="goToImmoPayment()" class="btn-primary">Weiter zur Zahlung →</button>
         <button onclick="cancelImmoPrice()" class="btn-secondary">Abbrechen</button>
