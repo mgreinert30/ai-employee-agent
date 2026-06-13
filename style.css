@@ -142,11 +142,12 @@ body {
 .btn-owner {
   background: linear-gradient(135deg, var(--gold), #d97706);
   color: white; border: none;
-  padding: 8px 18px; border-radius: 8px;
-  font-size: 13px; font-weight: 800; cursor: pointer;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 800; cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 4px 14px rgba(245,158,11,0.45);
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 .btn-owner:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245,158,11,0.55); }
 
@@ -167,7 +168,9 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .logo-text { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: #fff; white-space: nowrap; cursor: pointer; }
 .logo-text span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: inline-block; padding-right: 3px; }
 .logo span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.header-right .btn-ghost { font-size: 12px; padding: 6px 12px; white-space: nowrap; }
+.header-user { color: #64748b; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .header-user { color: #64748b; font-size: 14px; font-weight: 500; }
 .tagline { color: rgba(255,255,255,0.42); font-size: 14px; margin-top: 14px; text-align: center; letter-spacing: 0.3px; }
 
@@ -180,26 +183,29 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
+.site-nav::-webkit-scrollbar { height: 3px; }
+.site-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  gap: 2px;
   flex-wrap: nowrap;
+  flex-shrink: 0;
 }
-.nav-links::-webkit-scrollbar { display: none; }
 .nav-link {
   color: rgba(255,255,255,0.7);
   text-decoration: none;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 8px 14px;
+  padding: 6px 9px;
   border-radius: 7px;
   transition: background 0.15s, color 0.15s;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
   white-space: nowrap;
 }
 .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
@@ -1361,26 +1367,27 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 /* HEADER LOGIN/SIGNUP BUTTONS (guest state) */
 .btn-header-login {
   display: none;
-  padding: 10px 22px;
+  padding: 6px 14px;
   border: 1.5px solid rgba(255,255,255,0.4);
   background: transparent;
   color: #ffffff;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.18s;
+  white-space: nowrap;
 }
 .btn-header-login:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.7); }
 .btn-header-signup {
   display: none;
-  padding: 10px 22px;
+  padding: 6px 14px;
   background: var(--blue);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
