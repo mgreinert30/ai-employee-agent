@@ -299,7 +299,7 @@
       <span class="hero-agent-or" data-de="oder" data-en="or">oder</span>
       <div class="hero-agent-pill" onclick="document.querySelector('.character-section').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;">👩‍💼 <span data-de="Emma — Effizient & zuverlässig" data-en="Emma — Efficient & reliable">Emma — Effizient & zuverlässig</span></div>
       <div style="flex-basis:100%;height:0;"></div>
-      <a href="immo.html" class="hero-agent-pill" style="text-decoration:none;">🏠 <span>Immobilienbewertung — Schnell &amp; fundiert</span></a>
+      <a href="#immo-feature" class="hero-agent-pill" style="text-decoration:none;" onclick="event.preventDefault();document.getElementById('immo-feature').scrollIntoView({behavior:'smooth'})">🏠 <span>Immobilienbewertung — Schnell &amp; fundiert</span></a>
     </div>
     <div class="hero-ctas">
       <a id="hero-cta-primary" href="#" class="btn-primary btn-xl" onclick="showPage('pdf'); return false;" data-de="📄 PDF analysieren" data-en="📄 Analyse PDF">📄 PDF analysieren</a>
@@ -509,7 +509,7 @@
   </section>
 
   <!-- KI IMMOBILIENBEWERTER FEATURE SECTION -->
-  <section class="immo-feature-section">
+  <section class="immo-feature-section" id="immo-feature">
     <div class="immo-feature-inner">
       <div class="immo-feature-text">
         <span class="section-chip">🏠 KI-Tool · Neu</span>
