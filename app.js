@@ -2669,6 +2669,14 @@ function stripLeadingSymbol(s) {
 }
 
 // ── Rich HTML result renderer (on-screen) ──────────────────────────────────
+function inlineMarkdown(text) {
+  const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
 function stripCodeFences(text) {
   if (!text) return text;
   // Remove markdown code blocks like ```json ... ``` or ``` ... ```
@@ -2690,7 +2698,7 @@ function renderResultRich(text) {
         const el = document.createElement('div'); el.style.height = '8px'; container.appendChild(el); break;
       }
       case 'section': {
-        const el = document.createElement('div'); el.className = 'r-section'; el.textContent = b.text; container.appendChild(el); break;
+        const el = document.createElement('div'); el.className = 'r-section'; el.innerHTML = inlineMarkdown(b.text); container.appendChild(el); break;
       }
       case 'table': {
         const wrap = document.createElement('div'); wrap.className = 'r-table-wrap';
@@ -2725,29 +2733,31 @@ function renderResultRich(text) {
       }
       case 'risk': {
         const el = document.createElement('div'); el.className = `r-risk r-risk-${b.level}`;
-        el.textContent = b.text; container.appendChild(el); break;
+        el.innerHTML = inlineMarkdown(b.text); container.appendChild(el); break;
       }
       case 'insight': {
         const el = document.createElement('div'); el.className = 'r-insight';
         if (b.label) { const s = document.createElement('strong'); s.textContent = b.label + ': '; el.appendChild(s); }
-        el.appendChild(document.createTextNode(b.text)); container.appendChild(el); break;
+        const span = document.createElement('span'); span.innerHTML = inlineMarkdown(b.text); el.appendChild(span);
+        container.appendChild(el); break;
       }
       case 'labeled_bullet': {
         const el = document.createElement('div'); el.className = 'r-labeled-bullet';
         const s = document.createElement('strong'); s.textContent = b.label + ': '; el.appendChild(s);
-        el.appendChild(document.createTextNode(b.text)); container.appendChild(el); break;
+        const span = document.createElement('span'); span.innerHTML = inlineMarkdown(b.text); el.appendChild(span);
+        container.appendChild(el); break;
       }
       case 'bullet': {
-        const el = document.createElement('div'); el.className = 'r-bullet'; el.textContent = b.text; container.appendChild(el); break;
+        const el = document.createElement('div'); el.className = 'r-bullet'; el.innerHTML = inlineMarkdown(b.text); container.appendChild(el); break;
       }
       case 'numbered': {
-        const el = document.createElement('div'); el.className = 'r-numbered'; el.textContent = `${b.n}. ${b.text}`; container.appendChild(el); break;
+        const el = document.createElement('div'); el.className = 'r-numbered'; el.innerHTML = `${b.n}. ${inlineMarkdown(b.text)}`; container.appendChild(el); break;
       }
       case 'meta': {
-        const el = document.createElement('div'); el.className = 'r-meta'; el.textContent = b.text; container.appendChild(el); break;
+        const el = document.createElement('div'); el.className = 'r-meta'; el.innerHTML = inlineMarkdown(b.text); container.appendChild(el); break;
       }
       default: {
-        const el = document.createElement('p'); el.className = 'r-body'; el.textContent = b.text || ''; container.appendChild(el); break;
+        const el = document.createElement('p'); el.className = 'r-body'; el.innerHTML = inlineMarkdown(b.text || ''); container.appendChild(el); break;
       }
     }
   });
