@@ -12,7 +12,7 @@
   <meta name="robots" content="index, follow" />
   <title>AI Employee Agent — KI-Mitarbeiter ab €0,99 | DSGVO-konform</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=35" />
+  <link rel="stylesheet" href="style.css?v=36" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1793,7 +1793,19 @@
           <button class="faq-q" onclick="toggleFaq(this)">
             Was passiert mit meinen hochgeladenen Dokumenten? <span class="faq-arrow">›</span>
           </button>
-          <div class="faq-a">Deine Dokumente werden ausschließlich für die Analyse an die Google Gemini API übertragen und danach nach Abschluss gelöscht. Wir speichern keine Inhalte deiner Dateien auf unseren Servern. Der Dienst ist datensparsam konzipiert und nach DSGVO ausgerichtet.</div>
+          <div class="faq-a">Deine Dokumente werden ausschließlich für die Dauer der Analyse an die Google Gemini API übertragen und danach sofort gelöscht. Wir speichern keine Inhalte deiner Dateien auf unseren Servern. Google verarbeitet die Inhalte als Auftragsverarbeiter gemäß Art. 28 DSGVO — ein Data Processing Addendum ist abgeschlossen. Es findet kein KI-Training mit deinen Daten statt.</div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)">
+            Welche Dokumente sind geeignet — und wo sollte ich vorsichtig sein? <span class="faq-arrow">›</span>
+          </button>
+          <div class="faq-a">
+            Wir führen dich hier ehrlich — nicht nur verkaufsorientiert:<br><br>
+            <strong>✅ Gut geeignet:</strong> Öffentliche Berichte, Jahresabschlüsse, allgemeine Verträge, Rechnungen, Angebote, Protokolle, interne Berichte ohne besonders schutzwürdige Drittdaten. Die Cloud-Analyse ist hier schnell, günstig und sicher.<br><br>
+            <strong>⚠️ Mit Vorsicht nutzen:</strong> Dokumente mit personenbezogenen Daten von Kunden oder Mitarbeitern. Empfehlung: Namen, Adressen und Kontaktdaten vorher schwärzen — das dauert 2 Minuten und reduziert das Risiko deutlich.<br><br>
+            <strong>🔒 Nicht hochladen:</strong> Dokumente mit Gesundheitsdaten, biometrischen Merkmalen, strafrechtlich relevanten Daten (Art. 9/10 DSGVO), Staatsgeheimnissen oder Inhalten, für die keine interne Freigabe zur Cloud-Verarbeitung besteht. Für diese Fälle gibt es spezialisierte On-Premise-Lösungen — wir sind dann nicht das richtige Werkzeug.
+          </div>
         </div>
 
         <div class="faq-item">
@@ -2028,7 +2040,8 @@
           <p>Bei der Registrierung erheben wir: Name, E-Mail-Adresse. Diese Daten werden lokal im Browser gespeichert (localStorage) und nicht auf unseren Servern. Sie dienen der Identifizierung beim erneuten Aufruf. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</p>
 
           <p style="margin-top:12px;"><strong>3.3 Hochgeladene Dokumente und Aufgabenbeschreibungen</strong></p>
-          <p>PDFs, Bilder und Texte, die Sie für eine Analyse hochladen, werden ausschließlich für die Dauer der KI-Verarbeitung verarbeitet. Es erfolgt <strong>keine dauerhafte serverseitige Speicherung</strong>. Die Analyse wird direkt an die KI-API weitergeleitet und das Ergebnis an Ihren Browser zurückgesendet. Nach Abschluss der Sitzung werden alle hochgeladenen Daten gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+          <p>PDFs, Bilder und Texte, die Sie für eine Analyse hochladen, werden ausschließlich für die Dauer der KI-Verarbeitung an die Google Gemini API weitergeleitet. Es erfolgt <strong>keine dauerhafte serverseitige Speicherung</strong> durch uns. Das Ergebnis wird an Ihren Browser zurückgesendet; nach Abschluss der Sitzung werden alle übermittelten Inhalte gelöscht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.</p>
+          <p style="margin-top:10px;"><strong>Hinweis zur Dokumenteneignung:</strong> Dieser Dienst ist geeignet für allgemeine Geschäftsdokumente (Berichte, Verträge, Rechnungen). Für Dokumente mit personenbezogenen Kundendaten empfehlen wir, Klarnamen und Kontaktdaten vorab zu schwärzen. Dokumente mit besonderen Kategorien personenbezogener Daten gemäß Art. 9/10 DSGVO (Gesundheit, Biometrie, strafrechtliche Daten) sowie Inhalte, für die keine interne Freigabe zur Cloud-Verarbeitung vorliegt, sollten <strong>nicht</strong> hochgeladen werden. Für diese Fälle empfehlen wir spezialisierte On-Premise-Lösungen.</p>
 
           <p style="margin-top:12px;"><strong>3.4 Zahlungsdaten</strong></p>
           <p>Zahlungsdetails (z. B. PayPal-Adresse) werden ausschließlich lokal in Ihrem Browser gespeichert und nicht an unsere Server übertragen, sofern keine explizite Zahlungsabwicklung erfolgt. Wir empfehlen, keine vollständigen Bankdaten in Textfeldern einzutragen.</p>
@@ -2045,7 +2058,8 @@
           <p style="margin-top:8px;"><strong>Kein KI-Training:</strong> Gemäß den Google Gemini API-Nutzungsbedingungen für bezahlte (billing-enabled) Projekte werden Ihre Eingaben und Ergebnisse <strong>nicht für das Training von KI-Modellen oder zur Produktverbesserung genutzt</strong>. Google behält sich lediglich kurzzeitige technische Logs vor (Standard: bis zu 55 Tage), die ausschließlich Sicherheits- und Stabilitätszwecken dienen.</p>
           <p style="margin-top:8px;"><strong>Auftragsverarbeitung (AVV):</strong> Google LLC agiert als unser Auftragsverarbeiter im Sinne des Art. 28 DSGVO. Grundlage ist der Google Cloud Data Processing Addendum, der als standardisierter Auftragsverarbeitungsvertrag die Anforderungen der DSGVO erfüllt und unter <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener">cloud.google.com/terms/data-processing-addendum</a> einsehbar ist.</p>
           <p style="margin-top:8px;"><strong>Drittlandübermittlung:</strong> Google LLC ist gemäß dem EU-U.S. Data Privacy Framework zertifiziert. Ergänzend stützen wir die Übermittlung auf die von der EU-Kommission erlassenen Standardvertragsklauseln (SCC). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (SCC).</p>
-          <p style="margin-top:8px;"><strong>Geeignet für:</strong> Öffentliche Geschäftsberichte, Jahresabschlüsse, Verträge (ohne besonders sensible Drittdaten), Rechnungen, allgemeine Geschäftsdokumente. <strong>Nicht geeignet für:</strong> Gesundheitsdaten, biometrische Daten oder Daten mit strafrechtlicher Relevanz gemäß Art. 9/10 DSGVO. Für diese Kategorien nutzen Sie bitte spezialisierte, zertifizierte Dienste.</p>
+          <p style="margin-top:8px;"><strong>Drittlandübermittlung — Hinweis:</strong> Google LLC ist gemäß dem EU-U.S. Data Privacy Framework zertifiziert. Die Übermittlung stützt sich ergänzend auf EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO. Wir weisen darauf hin, dass bei der Nutzung US-amerikanischer Cloud-Dienste ein Restrisiko verbleibt, das sich aus dem US-Recht (insb. CLOUD Act) ergibt. Für besonders schutzbedürftige Daten empfehlen wir daher, diese vorab zu anonymisieren oder zu schwärzen.</p>
+          <p style="margin-top:8px;"><strong>Geeignet für:</strong> Öffentliche Berichte, Jahresabschlüsse, allgemeine Verträge, Rechnungen, interne Berichte ohne schutzwürdige Drittdaten. <strong>Mit Vorsicht (vorher schwärzen):</strong> Dokumente mit Kunden- oder Mitarbeiterdaten. <strong>Nicht geeignet:</strong> Gesundheitsdaten, biometrische Merkmale, strafrechtlich relevante Daten (Art. 9/10 DSGVO) oder Inhalte ohne interne Freigabe zur Cloud-Verarbeitung.</p>
 
           <p style="margin-top:12px;"><strong>4.3 Google Sign-In</strong></p>
           <p>Wir bieten die Möglichkeit, sich über Google Sign-In anzumelden. Dabei werden Daten (insb. E-Mail-Adresse, Name) von Google an uns übermittelt. Anbieter: Google LLC. Es gelten die Datenschutzbestimmungen von Google. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).</p>
