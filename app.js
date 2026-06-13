@@ -5355,9 +5355,22 @@ const AGENT_PROMPTS = {
     ? `Du bist der ComplianceAgent — Spezialist für rechtliche und regulatorische Konformität.\n\nFrage: "${q}"\n\nPrüfe auf:\n• Explizit genannte Normen (DSGVO, ISO, IFRS, HGB) und Einhaltung [Seite]\n• Problematische Klauseln oder Formulierungen [Seite]\n• Fehlende Pflichtangaben oder interne Widersprüche [Seite]\n• Rechtliche Risiken und Handlungsempfehlung\n\nJede Auffälligkeit mit Quelle: "(S. X, Abschnitt Y)"\n\n${content}`
     : `You are the ComplianceAgent — specialist in legal/regulatory compliance.\n\nQuestion: "${q}"\n\nCheck for:\n• Explicitly named standards (GDPR, ISO, IFRS) and compliance [Page]\n• Problematic clauses or phrasing [Page]\n• Missing mandatory disclosures or contradictions [Page]\n• Legal risks and recommended actions\n\nEvery finding with source: "(p. X, section Y)"\n\n${content}`,
 
-  summary: (agentOutputs, q, de) => de
-    ? `Du bist der SummaryAgent. Fasse die Spezialisten-Ergebnisse zu einer klaren Antwort zusammen.\n\nFrage: "${q}"\n\nAgenten-Ergebnisse:\n${agentOutputs}\n\nErstelle:\n1. Direkte Antwort auf die Frage (3–5 Sätze)\n2. Wichtigste Erkenntnisse (Stichpunkte — alle Seitenangaben behalten)\n3. Handlungsempfehlung (wenn relevant)\n\nAlle Seitenangaben der Agenten beibehalten — nicht weglassen.`
-    : `You are the SummaryAgent. Synthesise the specialist results into a clear answer.\n\nQuestion: "${q}"\n\nAgent results:\n${agentOutputs}\n\nCreate:\n1. Direct answer to the question (3–5 sentences)\n2. Key findings (bullet points — keep all page references)\n3. Recommended action (if relevant)\n\nKeep ALL page references from the agents — do not drop them.`,
+  summary: (agentOutputs, q, de, analysisLength) => {
+    const depthDE = {
+      short:  `LÄNGE: ca. 400–600 Wörter. Keine Grafiken. Max. 1 Tabelle. Nur die 4 Blöcke: Zusammenfassung, Wichtigste Erkenntnisse, Kritische Punkte/Risiken, Empfehlung.`,
+      medium: `LÄNGE: ca. 3000–5500 Wörter. TABELLEN PFLICHT für alle Zahlenreihen und Vergleiche. MINDESTENS 3 GRAFIKEN direkt im Text:\n[CHART:line|Titel|Jahr:Wert,Jahr:Wert|palette:finance]\n[CHART:bar|Titel|KatA:Wert,KatB:Wert|palette:growth]\n[CHART:pie|Titel|KatA:Wert,KatB:Wert|palette:corporate]`,
+      long:   `LÄNGE: MINDESTENS 8000 Wörter — vollständige Rundumanalyse, nichts auslassen. TABELLEN ÜBERALL PFLICHT — jede Liste, jeder Vergleich als Markdown-Tabelle. MINDESTENS 6 GRAFIKEN — bei jedem Abschnitt mit Zahlen eine Grafik erstellen:\n[CHART:line|Titel|Jahr:Wert,Jahr:Wert|palette:finance]\n[CHART:bar|Titel|KatA:Wert,KatB:Wert|palette:growth]\n[CHART:pie|Titel|KatA:Wert,KatB:Wert|palette:corporate]\nWeniger als 6 Grafiken = Aufgabe NICHT erfüllt.`,
+    };
+    const depthEN = {
+      short:  `LENGTH: approx. 400–600 words. No charts. Max. 1 table. Only 4 blocks: Summary, Key Findings, Critical Points/Risks, Recommendation.`,
+      medium: `LENGTH: approx. 3000–5500 words. TABLES MANDATORY for all data series and comparisons. MINIMUM 3 CHARTS directly in text:\n[CHART:line|Title|Year:Value,Year:Value|palette:finance]\n[CHART:bar|Title|CatA:Value,CatB:Value|palette:growth]\n[CHART:pie|Title|CatA:Value,CatB:Value|palette:corporate]`,
+      long:   `LENGTH: MINIMUM 8000 words — complete 360° analysis, leave nothing out. TABLES EVERYWHERE MANDATORY. MINIMUM 6 CHARTS — create a chart for every section with numbers:\n[CHART:line|Title|Year:Value,Year:Value|palette:finance]\n[CHART:bar|Title|CatA:Value,CatB:Value|palette:growth]\n[CHART:pie|Title|CatA:Value,CatB:Value|palette:corporate]\nFewer than 6 charts = task NOT completed.`,
+    };
+    const depth = de ? (depthDE[analysisLength] || depthDE.medium) : (depthEN[analysisLength] || depthEN.medium);
+    return de
+      ? `Du bist der SummaryAgent. Erstelle aus den Agenten-Ergebnissen eine vollständige, professionelle Analyse.\n\nFrage/Aufgabe: "${q}"\n\n${depth}\n\nAgenten-Ergebnisse:\n${agentOutputs}\n\nREGELN:\n• Alle Seitenangaben der Agenten beibehalten — nicht weglassen\n• Keine internen Agenten-Namen (TableExtractionAgent, ContractAgent etc.) im Output\n• Direkt mit TL;DR oder Executive Summary starten — kein Metadaten-Block\n• Zahlen interpretieren, nicht nur wiederholen\n• Widersprüche und Risiken explizit benennen`
+      : `You are the SummaryAgent. Create a complete, professional analysis from the agent results.\n\nQuestion/Task: "${q}"\n\n${depth}\n\nAgent results:\n${agentOutputs}\n\nRULES:\n• Keep ALL page references from agents — do not drop them\n• No internal agent names (TableExtractionAgent, ContractAgent etc.) in output\n• Start directly with TL;DR or Executive Summary — no metadata block\n• Interpret figures, do not just repeat them\n• Explicitly name contradictions and risks`;
+  },
 };
 
 // Wählt Agenten basierend auf Dokumentklassifikation und Aufgabe
@@ -5451,7 +5464,7 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
     const t0 = Date.now();
     const prompt = buildFn(context, taskDesc, de);
     try {
-      const res = await callAnalyseSSE(prompt, 'medium');
+      const res = await callAnalyseSSE(prompt, analysisLength || 'medium');
       results.push({ id, name: meta.name, icon: meta.icon, result: res });
       updateAgentStatus(id, 'done', Date.now() - t0);
     } catch (err) {
@@ -5466,7 +5479,7 @@ async function runAgentPipeline(taskDesc, docText, allChunks, clf, analysisLengt
   // Verhindert dass interne Agenten-Namen (ContractAgent etc.) im Output erscheinen
   setProgress(88, de ? '📝 Ergebnisse werden zusammengefasst...' : '📝 Summarising results...');
   const combined = results.map(r => r.result).join('\n\n---\n\n');
-  const sumPrompt = AGENT_PROMPTS.summary(combined, taskDesc, de);
+  const sumPrompt = AGENT_PROMPTS.summary(combined, taskDesc, de, analysisLength);
   let finalText;
   try {
     finalText = await callAnalyseSSE(sumPrompt, analysisLength || 'medium');
