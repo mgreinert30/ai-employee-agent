@@ -167,7 +167,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .logo-text { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: #fff; white-space: nowrap; cursor: pointer; }
 .logo-text span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; display: inline-block; padding-right: 3px; }
 .logo span { background: linear-gradient(90deg, var(--blue-light), var(--electric)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-right: 32px; }
+.header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-right: -24px; }
 .header-user { color: #64748b; font-size: 14px; font-weight: 500; }
 .tagline { color: rgba(255,255,255,0.42); font-size: 14px; margin-top: 14px; text-align: center; letter-spacing: 0.3px; }
 
