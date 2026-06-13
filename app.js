@@ -7348,7 +7348,8 @@ function appendChatMsg(role, text) {
   const div = document.createElement('div');
   div.className = `chat-msg ${role}`;
   const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  div.innerHTML = `<div class="chat-bubble">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div><div class="chat-time">${now}</div>`;
+  const safeText = inlineMarkdown(text).replace(/\n/g,'<br>');
+  div.innerHTML = `<div class="chat-bubble">${safeText}</div><div class="chat-time">${now}</div>`;
   msgs.appendChild(div);
   scrollChatBottom();
 }
