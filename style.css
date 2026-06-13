@@ -200,7 +200,7 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 .nav-link {
   color: rgba(255,255,255,0.7);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   padding: 6px 9px;
   border-radius: 7px;
