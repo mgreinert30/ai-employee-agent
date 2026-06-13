@@ -19,6 +19,7 @@ function buildPrompt(property) {
     balkon, garten, garage, aufzug, keller, kueche,
     smarthome, fussboden, dachterrasse, pool,
     mieteMinQm, mieteMaxQm,
+    kaufpreisProQm, mietpreisProQm,
   } = property;
 
   const ausstattungText = Array.isArray(ausstattung) && ausstattung.length > 0
@@ -27,7 +28,9 @@ function buildPrompt(property) {
 
   return `Du bist ein führender KI-Immobiliengutachter in Deutschland mit umfassendem Wissen über Immobilienrichtwerte (BORIS-Immobilienrichtwertkarte), Mietspiegel, Gutachterausschuss-Berichte, Bundesbank-Immobilienpreisindikator, Destatis-Statistiken, BBSR/INKAR Regionaldaten, Sprengnetter-Bewertungsansätze und aktuelle Marktdaten von ImmoScout24, Immowelt und Immonet.
 
-WICHTIG: Verwende ausschließlich die IMMOBILIENRICHTWERTE (Kaufpreissammlungen der Gutachterausschüsse — nicht die Bodenrichtwerte). Immobilienrichtwerte sind die amtlichen Durchschnittskaufpreise für bebaute Grundstücke nach Lage, Gebäudeart und Baujahr — also direkte Vergleichswerte für Immobilien.
+KRITISCH — BORIS-NUTZUNG: Verwende AUSSCHLIESSLICH die BORIS-IMMOBILIENRICHTWERTE (Kaufpreissammlungen der Gutachterausschüsse für BEBAUTE Grundstücke). NIEMALS Bodenrichtwerte verwenden — Bodenrichtwerte gelten für unbebautes Land und Bauprojekte, NICHT für bestehende Immobilien. Der BORIS-Immobilienrichtwert ist der amtliche Durchschnittskaufpreis für bebaute Grundstücke nach Lage, Gebäudeart und Baujahr — das ist der korrekte Referenzwert für diese Bewertung.
+
+KRITISCH — ALLE NUTZEREINGABEN ZWINGEND VERWENDEN: Jeder vom Nutzer angegebene Wert ist ein FESTER ANKER für die Berechnung. Du musst ALLE unten genannten Werte exakt verwenden und darauf aufbauend rechnen. Erfinde keine eigenen Basiszahlen, wenn der Nutzer konkrete Werte angegeben hat.
 
 Dein Wissen umfasst folgende deutsche Immobiliendatenquellen:
 - BORIS Deutschland (Immobilienrichtwerte) — amtliche Immobilienrichtwerte der Gutachterausschüsse (Kaufpreissammlungen für bebaute Grundstücke)
@@ -75,10 +78,12 @@ IMMOBILIEN-DATEN ZUR BEWERTUNG:
 - Fußbodenheizung: ${fussboden ? 'Ja' : 'Nein'}
 - Dachterrasse: ${dachterrasse ? 'Ja' : 'Nein'}
 - Pool: ${pool ? 'Ja' : 'Nein'}
-${(mieteMinQm || mieteMaxQm) ? `- Vom Nutzer angegebene Nettomiete: ${mieteMinQm ? mieteMinQm + ' €/m²' : ''}${mieteMinQm && mieteMaxQm ? ' – ' : ''}${mieteMaxQm ? mieteMaxQm + ' €/m²' : ''} (als Referenz für Mietwert-Berechnung verwenden)` : ''}
+${(mieteMinQm || mieteMaxQm) ? `- Vom Nutzer angegebene Nettomiete: ${mieteMinQm ? mieteMinQm + ' €/m²' : ''}${mieteMinQm && mieteMaxQm ? ' – ' : ''}${mieteMaxQm ? mieteMaxQm + ' €/m²' : ''} (PFLICHT: als festen Anker für Mietwert-Berechnung verwenden)` : ''}
+${kaufpreisProQm ? `- ⚠️ VOM NUTZER ANGEGEBENER KAUFPREIS PRO M²: ${kaufpreisProQm} €/m² — DIESER WERT IST EIN FESTER RECHENANKER. Berechne den Marktwert auf Basis dieser Zahl multipliziert mit der Wohnfläche (${flaeche ? flaeche + ' m²' : 'angegebene Fläche'}). Weiche nur ab, wenn BORIS-Richtwerte eine deutliche Korrektur (>20%) rechtfertigen und erkläre das.` : ''}
+${mietpreisProQm ? `- ⚠️ VOM NUTZER ANGEGEBENER MIETPREIS PRO M²: ${mietpreisProQm} €/m² — DIESER WERT IST EIN FESTER RECHENANKER. Berechne die monatliche Nettomiete auf Basis dieser Zahl multipliziert mit der Wohnfläche. Weiche nur ab, wenn der Mietspiegel eine deutliche Korrektur (>20%) rechtfertigt und erkläre das.` : ''}
 
 BEWERTUNGSAUFGABE:
-Analysiere diese Immobilie auf Basis deines umfassenden Wissens über den deutschen Immobilienmarkt (Stand 2025).
+Analysiere diese Immobilie auf Basis ALLER oben genannten Nutzereingaben. Jeder Wert (Fläche, Zimmer, Baujahr, Zustand, Ausstattung, Etage, Energieklasse, angegebene Preise) muss direkt in die Berechnung einfließen. Keine allgemeinen Schätzungen ohne Bezug zu den konkreten Angaben. Stand 2025.
 
 LAGEANALYSE (sehr wichtig):
 Die Bewertungsadresse lautet: ${strasse ? strasse + ', ' : ''}${plz ? plz + ' ' : ''}${stadt || ''}.
