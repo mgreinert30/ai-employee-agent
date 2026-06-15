@@ -12,12 +12,15 @@ const MODELS = [
 
 function buildPrompt(property) {
   const {
-    strasse, region, stadt, plz, typ, modus,
+    strasse, region, stadt, plz, typ, haupttyp, subtyp, modus,
+    bewertungsziel, bewertungszielLabel,
     flaeche, grundstueck, zimmer, baujahr, renovierung,
     zustand, ausstattung, ausstattungsqualitaet, energieklasse,
     etagen, etage, heiztechnik, moebliert,
     balkon, garten, garage, aufzug, keller, kueche,
     smarthome, fussboden, dachterrasse, pool,
+    hausgeld, hausgeldNichtUml,
+    erschliessung, bebaubarkeit, bodenrichtwert,
     mieteMinQm, mieteMaxQm,
     kaufpreisProQm, mietpreisProQm,
   } = property;
@@ -26,7 +29,19 @@ function buildPrompt(property) {
     ? ausstattung.join(', ')
     : 'keine besonderen Merkmale';
 
+  // Bewertungsziel-spezifische Anweisung für den KI-Fokus
+  const zielAnweisung = {
+    'market_value': 'FOKUS: Ermittle primär den Marktwert/Kaufpreis. Renditedaten sind sekundär.',
+    'sale_price':   'FOKUS: Ermittle einen realistischen Verkaufspreis inkl. Verhandlungsspielraum.',
+    'rental':       'FOKUS: Ermittle primär den Mietpreis (Kaltmiete). Kaufpreisangaben sind nachrangig.',
+    'investment':   'FOKUS: Renditeanalyse. Berechne Brutto- und Nettomietrendite, Cashflow und Eigenkapitalrendite.',
+    'offer_check':  'FOKUS: Prüfe, ob der angegebene Kaufpreis marktgerecht ist. Gib eine Ampelbewertung (günstig/fair/teuer/riskant).',
+    'buy_vs_rent':  'FOKUS: Vergleiche Kaufen vs. Mieten für diese Immobilie.',
+  }[bewertungsziel] || 'FOKUS: Vollständige Immobilienbewertung.';
+
   return `Du bist ein führender KI-Immobiliengutachter in Deutschland mit umfassendem Wissen über Immobilienrichtwerte (BORIS-Immobilienrichtwertkarte), Mietspiegel, Gutachterausschuss-Berichte, Bundesbank-Immobilienpreisindikator, Destatis-Statistiken, BBSR/INKAR Regionaldaten, Sprengnetter-Bewertungsansätze und aktuelle Marktdaten von ImmoScout24, Immowelt und Immonet.
+
+${zielAnweisung}
 
 KRITISCH — BORIS-NUTZUNG: Verwende AUSSCHLIESSLICH die BORIS-IMMOBILIENRICHTWERTE (Kaufpreissammlungen der Gutachterausschüsse für BEBAUTE Grundstücke). NIEMALS Bodenrichtwerte verwenden — Bodenrichtwerte gelten für unbebautes Land und Bauprojekte, NICHT für bestehende Immobilien. Der BORIS-Immobilienrichtwert ist der amtliche Durchschnittskaufpreis für bebaute Grundstücke nach Lage, Gebäudeart und Baujahr — das ist der korrekte Referenzwert für diese Bewertung.
 
@@ -48,7 +63,9 @@ Dein Wissen umfasst folgende deutsche Immobiliendatenquellen:
 - OpenStreetMap / Geoportal — Lageinformationen, Umgebungsanalyse
 
 IMMOBILIEN-DATEN ZUR BEWERTUNG:
-- Typ: ${typ || 'Wohnung'}
+- Bewertungsziel: ${bewertungszielLabel || modus || 'Kaufen'}
+- Immobilienart: ${haupttyp || 'Wohnung'}
+- Untertyp/Typ: ${typ || 'Eigentumswohnung'}
 - Modus: ${modus || 'Kaufen'}
 - EXAKTE ADRESSE: ${strasse ? strasse + ', ' : ''}${plz ? plz + ' ' : ''}${stadt || 'nicht angegeben'}
 - Straße: ${strasse || 'nicht angegeben'}
@@ -78,6 +95,10 @@ IMMOBILIEN-DATEN ZUR BEWERTUNG:
 - Fußbodenheizung: ${fussboden ? 'Ja' : 'Nein'}
 - Dachterrasse: ${dachterrasse ? 'Ja' : 'Nein'}
 - Pool: ${pool ? 'Ja' : 'Nein'}
+${hausgeld ? `- Hausgeld: ${hausgeld} €/Monat${hausgeldNichtUml ? ` (davon nicht umlagefähig: ${hausgeldNichtUml} €/Monat)` : ''}` : ''}
+${erschliessung ? `- Erschließungsstand: ${erschliessung}` : ''}
+${bebaubarkeit ? `- Bebaubarkeit: ${bebaubarkeit}` : ''}
+${bodenrichtwert ? `- Bodenrichtwert (Nutzerangabe): ${bodenrichtwert} €/m²` : ''}
 ${(mieteMinQm || mieteMaxQm) ? `- Vom Nutzer angegebene Nettomiete: ${mieteMinQm ? mieteMinQm + ' €/m²' : ''}${mieteMinQm && mieteMaxQm ? ' – ' : ''}${mieteMaxQm ? mieteMaxQm + ' €/m²' : ''} (PFLICHT: als festen Anker für Mietwert-Berechnung verwenden)` : ''}
 ${kaufpreisProQm ? `- ⚠️ VOM NUTZER ANGEGEBENER KAUFPREIS PRO M²: ${kaufpreisProQm} €/m² — DIESER WERT IST EIN FESTER RECHENANKER. Berechne den Marktwert auf Basis dieser Zahl multipliziert mit der Wohnfläche (${flaeche ? flaeche + ' m²' : 'angegebene Fläche'}). Weiche nur ab, wenn BORIS-Richtwerte eine deutliche Korrektur (>20%) rechtfertigen und erkläre das.` : ''}
 ${mietpreisProQm ? `- ⚠️ VOM NUTZER ANGEGEBENER MIETPREIS PRO M²: ${mietpreisProQm} €/m² — DIESER WERT IST EIN FESTER RECHENANKER. Berechne die monatliche Nettomiete auf Basis dieser Zahl multipliziert mit der Wohnfläche. Weiche nur ab, wenn der Mietspiegel eine deutliche Korrektur (>20%) rechtfertigt und erkläre das.` : ''}

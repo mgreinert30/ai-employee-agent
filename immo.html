@@ -425,7 +425,7 @@
   <div class="step-indicator" id="step-indicator">
     <div class="step-item">
       <div class="step-dot active" id="dot-1">1</div>
-      <div class="step-label active" id="lbl-1">Lage</div>
+      <div class="step-label active" id="lbl-1">Typ & Ziel</div>
     </div>
     <div class="step-line" id="line-1"></div>
     <div class="step-item">
@@ -444,12 +444,103 @@
     </div>
   </div>
 
-  <!-- STEP 1: LAGE & TYP -->
+  <!-- STEP 1: ZIEL, TYP & LAGE -->
   <div id="step-1">
     <div class="card">
-      <div class="card-title">Lage &amp; Immobilientyp</div>
-      <div class="card-subtitle">Wo befindet sich die Immobilie und um was handelt es sich?</div>
+      <div class="card-title">Bewertungsziel &amp; Immobilientyp</div>
+      <div class="card-subtitle">Was möchten Sie berechnen und um welche Immobilie handelt es sich?</div>
 
+      <!-- 1. BEWERTUNGSZIEL -->
+      <div class="form-group">
+        <label>Was möchten Sie berechnen? <span style="color:var(--red)">*</span></label>
+        <div class="radio-cards c2" style="gap:10px;">
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="market_value" checked onchange="setValuationGoal('market_value')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">🏷️</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Marktwert / Kaufpreis</div><div class="radio-card-sub">Verkehrswert, Kaufpreisempfehlung</div></div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="sale_price" onchange="setValuationGoal('sale_price')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">💰</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Verkaufspreis schätzen</div><div class="radio-card-sub">Für Verkäufer und Eigentümer</div></div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="rental" onchange="setValuationGoal('rental')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">🔑</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Mietpreis berechnen</div><div class="radio-card-sub">Kaltmiete, ortsübliche Miete</div></div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="investment" onchange="setValuationGoal('investment')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">📈</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Rendite / Kapitalanlage</div><div class="radio-card-sub">Brutto- und Nettomietrendite</div></div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="offer_check" onchange="setValuationGoal('offer_check')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">🔍</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Angebot prüfen</div><div class="radio-card-sub">Ist der Preis fair? Vergleichsanalyse</div></div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="ziel" value="buy_vs_rent" onchange="setValuationGoal('buy_vs_rent')" />
+            <div class="radio-card-inner" style="flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:14px 16px;">
+              <div class="radio-card-icon" style="font-size:20px;flex-shrink:0;">⚖️</div>
+              <div><div class="radio-card-label" style="font-size:13px;">Kaufen vs. Mieten</div><div class="radio-card-sub">Vergleichsrechnung</div></div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. HAUPTKATEGORIE -->
+      <div class="form-group" style="margin-top:4px;">
+        <label>Immobilientyp</label>
+        <div class="radio-cards c4">
+          <label class="radio-card">
+            <input type="radio" name="haupttyp" value="apartment" checked onchange="setHaupttyp('apartment')" />
+            <div class="radio-card-inner">
+              <div class="radio-card-icon">🏢</div>
+              <div class="radio-card-label">Wohnung</div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="haupttyp" value="house" onchange="setHaupttyp('house')" />
+            <div class="radio-card-inner">
+              <div class="radio-card-icon">🏠</div>
+              <div class="radio-card-label">Haus</div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="haupttyp" value="land" onchange="setHaupttyp('land')" />
+            <div class="radio-card-inner">
+              <div class="radio-card-icon">🌍</div>
+              <div class="radio-card-label">Grundstück</div>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="haupttyp" value="commercial" onchange="setHaupttyp('commercial')" />
+            <div class="radio-card-inner">
+              <div class="radio-card-icon">🏭</div>
+              <div class="radio-card-label">Gewerbe</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. UNTERTYP (dynamisch befüllt per JS) -->
+      <div id="subtype-section" style="display:none;" class="form-group" style="margin-top:4px;">
+        <label id="subtype-label">Wohnungstyp genauer wählen</label>
+        <div class="radio-cards c4" id="subtype-grid"></div>
+      </div>
+
+      <!-- 4. LAGE -->
       <div class="form-row">
         <div class="form-group">
           <label>Stadt <span style="color:var(--red)">*</span></label>
@@ -473,49 +564,6 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Immobilientyp</label>
-        <div class="radio-cards c4">
-          <label class="radio-card">
-            <input type="radio" name="typ" value="Eigentumswohnung" checked />
-            <div class="radio-card-inner">
-              <div class="radio-card-icon">🏢</div>
-              <div class="radio-card-label">Eigentumswohnung</div>
-            </div>
-          </label>
-          <label class="radio-card">
-            <input type="radio" name="typ" value="Einfamilienhaus" />
-            <div class="radio-card-inner">
-              <div class="radio-card-icon">🏠</div>
-              <div class="radio-card-label">Einfamilienhaus</div>
-            </div>
-          </label>
-          <label class="radio-card">
-            <input type="radio" name="typ" value="Mehrfamilienhaus" />
-            <div class="radio-card-inner">
-              <div class="radio-card-icon">🏘</div>
-              <div class="radio-card-label">Mehrfamilienhaus</div>
-            </div>
-          </label>
-          <label class="radio-card">
-            <input type="radio" name="typ" value="Grundstück" />
-            <div class="radio-card-inner">
-              <div class="radio-card-icon">🌍</div>
-              <div class="radio-card-label">Grundstück</div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Bewertungszweck</label>
-        <div class="toggle-group">
-          <button class="toggle-btn active" id="btn-kaufen" onclick="setModus('Kaufen')">🏷️ Kaufen</button>
-          <button class="toggle-btn" id="btn-mieten" onclick="setModus('Mieten')">🔑 Mieten</button>
-          <button class="toggle-btn" id="btn-invest" onclick="setModus('Investition')">📈 Investition</button>
-        </div>
-      </div>
-
       <div class="form-nav">
         <div></div>
         <button class="btn-primary" onclick="goToStep(2)">Weiter →</button>
@@ -529,19 +577,48 @@
       <div class="card-title">Objektdaten</div>
       <div class="card-subtitle">Kennzahlen und technische Details der Immobilie.</div>
 
-      <div class="form-row">
+      <div class="form-row" id="wohnflaeche-group">
         <div class="form-group">
-          <label>Wohnfläche m² <span style="color:var(--red)">*</span></label>
+          <label id="flaeche-label">Wohnfläche m² <span style="color:var(--red)">*</span></label>
           <input type="number" id="flaeche" placeholder="z.B. 85" min="1" />
           <div class="field-error" id="err-flaeche">Bitte gib die Wohnfläche ein.</div>
         </div>
-        <div class="form-group" id="grundstueck-group">
-          <label>Grundstücksfläche m² <span class="opt">(optional)</span></label>
+        <div class="form-group" id="grundstueck-group" style="display:none;">
+          <label id="grundstueck-label">Grundstücksfläche m² <span class="opt">(optional)</span></label>
           <input type="number" id="grundstueck" placeholder="z.B. 400" min="0" />
         </div>
       </div>
 
-      <div class="form-row">
+      <!-- NUR FÜR GRUNDSTÜCK: Spezielle Felder -->
+      <div id="land-fields" style="display:none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Grundstücksfläche m² <span style="color:var(--red)">*</span></label>
+            <input type="number" id="grundstueck-land" placeholder="z.B. 800" min="1" />
+          </div>
+          <div class="form-group">
+            <label>Erschließungsstand</label>
+            <select id="erschliessung">
+              <option value="">Nicht bekannt</option>
+              <option value="Vollerschlossen">Vollerschlossen</option>
+              <option value="Teilerschlossen">Teilerschlossen</option>
+              <option value="Nicht erschlossen">Nicht erschlossen</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bebaubarkeit <span class="opt">(optional)</span></label>
+            <input type="text" id="bebaubarkeit" placeholder='z.B. "WA, GRZ 0.4" oder "nicht bebaubar"' />
+          </div>
+          <div class="form-group">
+            <label>Bodenrichtwert €/m² <span class="opt">(optional)</span></label>
+            <input type="number" id="bodenrichtwert" placeholder="z.B. 320" min="0" step="10" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" id="zimmer-group">
         <div class="form-group">
           <label>Zimmer</label>
           <div class="counter-wrap">
@@ -557,13 +634,31 @@
       </div>
 
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group" id="kaufpreis-group">
           <label>Kaufpreis pro m² <span class="opt">(optional — eigene Angabe)</span></label>
           <input type="number" id="kaufpreis-qm" placeholder="z.B. 3200" min="0" step="10" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="mietpreis-group" style="display:none;">
           <label>Mietpreis pro m² <span class="opt">(optional — eigene Angabe)</span></label>
           <input type="number" id="mietpreis-qm" placeholder="z.B. 12,50" min="0" step="0.1" />
+        </div>
+      </div>
+
+      <!-- HAUSGELD (nur für Wohnungen) -->
+      <div id="hausgeld-group" style="display:none;" class="form-row">
+        <div class="form-group">
+          <label>Hausgeld/Monat <span class="opt">(optional)</span></label>
+          <div class="input-unit-wrap">
+            <input type="number" id="hausgeld" placeholder="z.B. 280" min="0" step="10" />
+            <span class="input-unit">€/Monat</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>davon nicht umlagefähig <span class="opt">(optional)</span></label>
+          <div class="input-unit-wrap">
+            <input type="number" id="hausgeld-nicht-uml" placeholder="z.B. 120" min="0" step="10" />
+            <span class="input-unit">€/Monat</span>
+          </div>
         </div>
       </div>
 
@@ -587,7 +682,7 @@
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row" id="etage-row">
         <div class="form-group">
           <label>Etagen im Gebäude <span class="opt">(optional)</span></label>
           <input type="number" id="etagen" placeholder="z.B. 4" min="1" max="100" />
@@ -718,7 +813,7 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="miete-section" style="display:none;">
         <label>Bekannte Nettomiete pro m² <span class="opt">(optional — fließt in KI-Bewertung ein)</span></label>
         <div class="form-row">
           <div class="input-unit-wrap">
@@ -1245,12 +1340,164 @@
 <script>
 /* ===== STATE ===== */
 let currentStep = 1;
-let modus = 'Kaufen';
+let valuationGoal = 'market_value';
+let haupttyp = 'apartment';
+let subtyp = 'Eigentumswohnung';
+let modus = 'Kaufen'; // backward compat für API
 let moebliert = false;
 let energieklasse = '';
 let lastResult = null;
 let formData = {};
 let uploadedImages = [];
+
+/* ===== BEWERTUNGSZIELE ===== */
+const VALUATION_GOALS = {
+  'market_value': { label: 'Marktwert / Kaufpreis', modus: 'Kaufen' },
+  'sale_price':   { label: 'Verkaufspreis schätzen', modus: 'Kaufen' },
+  'rental':       { label: 'Mietpreis berechnen',    modus: 'Mieten' },
+  'investment':   { label: 'Rendite / Kapitalanlage',modus: 'Investition' },
+  'offer_check':  { label: 'Angebot prüfen',         modus: 'Kaufen' },
+  'buy_vs_rent':  { label: 'Kaufen vs. Mieten',      modus: 'Kaufen' },
+};
+
+/* ===== IMMOBILIENARTEN MIT UNTERTYPEN ===== */
+const PROPERTY_TYPES = {
+  'apartment': {
+    label: 'Wohnung', icon: '🏢',
+    grundstueck: false, etage: true, hausgeld: true, zimmer: true,
+    subtypes: [
+      { val: 'Eigentumswohnung',    icon: '🏢', label: 'Eigentumswohnung',  sub: 'Standard ETW' },
+      { val: 'Etagenwohnung',       icon: '🏢', label: 'Etagenwohnung',     sub: 'OG-Wohnung' },
+      { val: 'Erdgeschosswohnung',  icon: '🏠', label: 'Erdgeschoss',       sub: 'EG-Wohnung' },
+      { val: 'Dachgeschosswohnung', icon: '🌇', label: 'Dachgeschoss',      sub: 'DG-Wohnung' },
+      { val: 'Maisonettewohnung',   icon: '🏗️', label: 'Maisonette',        sub: '2 Ebenen' },
+      { val: 'Penthouse',           icon: '⬆️', label: 'Penthouse',         sub: 'Toplage' },
+      { val: 'Loft',                icon: '🎨', label: 'Loft',              sub: 'Offener Grundriss' },
+      { val: 'Souterrainwohnung',   icon: '⬇️', label: 'Souterrain',        sub: 'Halbunterirdisch' },
+    ]
+  },
+  'house': {
+    label: 'Haus', icon: '🏠',
+    grundstueck: true, etage: false, hausgeld: false, zimmer: true,
+    subtypes: [
+      { val: 'Einfamilienhaus',     icon: '🏠', label: 'Einfamilienhaus',   sub: 'EFH' },
+      { val: 'Doppelhaushälfte',    icon: '🏘', label: 'Doppelhaushälfte',  sub: 'DHH' },
+      { val: 'Reihenendhaus',       icon: '🏚', label: 'Reihenendhaus',     sub: 'REH' },
+      { val: 'Reihenmittelhaus',    icon: '🏚', label: 'Reihenmittelhaus',  sub: 'RMH' },
+      { val: 'Mehrfamilienhaus',    icon: '🏢', label: 'Mehrfamilienhaus',  sub: 'MFH' },
+      { val: 'Zweifamilienhaus',    icon: '🏘', label: 'Zweifamilienhaus',  sub: 'ZFH' },
+      { val: 'Bungalow',            icon: '🏡', label: 'Bungalow',          sub: 'Einstöckig' },
+      { val: 'Stadtvilla',          icon: '🏛', label: 'Stadtvilla',        sub: 'Repräsentativ' },
+      { val: 'Villa',               icon: '🏰', label: 'Villa',             sub: 'Luxusimmobilie' },
+    ]
+  },
+  'land': {
+    label: 'Grundstück', icon: '🌍',
+    grundstueck: false, etage: false, hausgeld: false, zimmer: false,
+    subtypes: [
+      { val: 'Baugrundstück',              icon: '🏗', label: 'Baugrundstück',       sub: 'Bebaubar' },
+      { val: 'Freizeitgrundstück',         icon: '🌿', label: 'Freizeitgrundstück',  sub: 'Erholung' },
+      { val: 'Landwirtschaftliche Fläche', icon: '🌾', label: 'Landwirtschaft',      sub: 'Agrarfläche' },
+      { val: 'Gewerbegrundstück',          icon: '🏭', label: 'Gewerbegrundstück',   sub: 'Gewerblich' },
+      { val: 'Erbpachtgrundstück',         icon: '📜', label: 'Erbpacht',            sub: 'Erbbaurecht' },
+    ]
+  },
+  'commercial': {
+    label: 'Gewerbeimmobilie', icon: '🏭',
+    grundstueck: false, etage: true, hausgeld: false, zimmer: false,
+    subtypes: [
+      { val: 'Bürofläche',       icon: '💼', label: 'Bürofläche',     sub: 'Office' },
+      { val: 'Ladenlokal',       icon: '🏪', label: 'Ladenlokal',     sub: 'Retail' },
+      { val: 'Praxisfläche',     icon: '🏥', label: 'Praxisfläche',   sub: 'Medizin/Dienstl.' },
+      { val: 'Gastronomiefläche',icon: '🍽', label: 'Gastronomie',    sub: 'Restaurant/Café' },
+      { val: 'Lager/Halle',      icon: '📦', label: 'Lager / Halle',  sub: 'Logistik' },
+      { val: 'Hotel/Pension',    icon: '🏨', label: 'Hotel / Pension', sub: 'Beherbergung' },
+    ]
+  },
+};
+
+/* ===== FIELD-RULES ENGINE ===== */
+// Jedes Feld zeigt, wenn: goal-Bedingung UND type-Bedingung erfüllt.
+// Fehlt goals/types → keine Einschränkung für diese Dimension.
+const FIELD_RULES = {
+  'kaufpreis-group':   { goals: ['market_value', 'sale_price', 'investment', 'offer_check', 'buy_vs_rent'] },
+  'mietpreis-group':   { goals: ['rental', 'investment', 'offer_check'] },
+  'grundstueck-group': { types: ['house', 'commercial'] },
+  'hausgeld-group':    { types: ['apartment'] },
+  'etage-row':         { types: ['apartment', 'commercial'] },
+  'miete-section':     { goals: ['rental', 'investment', 'offer_check'] },
+  'zimmer-group':      { types: ['house', 'apartment'] },
+  'land-fields':       { types: ['land'] },
+  'wohnflaeche-group': { types: ['house', 'apartment', 'commercial'] },
+  'heiztechnik-group': { types: ['house', 'apartment', 'commercial'] },
+};
+
+function shouldShowField(fieldId) {
+  const rule = FIELD_RULES[fieldId];
+  if (!rule) return true;
+  const goalOK = !rule.goals || rule.goals.includes(valuationGoal);
+  const typeOK = !rule.types || rule.types.includes(haupttyp);
+  return goalOK && typeOK;
+}
+
+function updateAllFieldVisibility() {
+  Object.keys(FIELD_RULES).forEach(fieldId => {
+    const el = document.getElementById(fieldId);
+    if (el) el.style.display = shouldShowField(fieldId) ? '' : 'none';
+  });
+  // Flächenbezeichnung für Grundstück anpassen
+  const lbl = document.getElementById('flaeche-label');
+  if (lbl) {
+    lbl.innerHTML = haupttyp === 'land'
+      ? 'Grundstücksgröße m² <span style="color:var(--red)">*</span>'
+      : 'Wohnfläche m² <span style="color:var(--red)">*</span>';
+  }
+}
+
+/* ===== GOAL & TYPE SETTERS ===== */
+function setValuationGoal(goal) {
+  valuationGoal = goal;
+  modus = VALUATION_GOALS[goal]?.modus || 'Kaufen';
+  updateAllFieldVisibility();
+}
+
+function setHaupttyp(type) {
+  haupttyp = type;
+  subtyp = '';
+  updateSubtypeGrid(type);
+  updateAllFieldVisibility();
+}
+
+function updateSubtypeGrid(type) {
+  const sec  = document.getElementById('subtype-section');
+  const grid = document.getElementById('subtype-grid');
+  const lbl  = document.getElementById('subtype-label');
+  const typeDef = PROPERTY_TYPES[type];
+  if (!typeDef || typeDef.subtypes.length === 0) {
+    sec.style.display = 'none';
+    subtyp = type; // Fallback: Haupttyp-Label als Typ verwenden
+    return;
+  }
+  const typeLabels = {
+    'apartment': 'Wohnungstyp genauer wählen',
+    'house':     'Haustyp genauer wählen',
+    'land':      'Grundstücksart wählen',
+    'commercial':'Objektart wählen',
+  };
+  lbl.textContent = typeLabels[type] || 'Untertyp wählen';
+  grid.innerHTML = typeDef.subtypes.map((opt, i) => `
+    <label class="radio-card">
+      <input type="radio" name="subtyp" value="${opt.val}" ${i === 0 ? 'checked' : ''} onchange="subtyp=this.value" />
+      <div class="radio-card-inner">
+        <div class="radio-card-icon">${opt.icon}</div>
+        <div class="radio-card-label">${opt.label}</div>
+        <div class="radio-card-sub">${opt.sub}</div>
+      </div>
+    </label>
+  `).join('');
+  subtyp = typeDef.subtypes[0].val;
+  sec.style.display = 'block';
+}
 
 const LOADING_MSGS = [
   { text: '🔍 Analysiere Lage und Standortdaten...', pct: 12 },
@@ -1261,13 +1508,6 @@ const LOADING_MSGS = [
 ];
 
 /* ===== TOGGLES ===== */
-function setModus(val) {
-  modus = val;
-  ['kaufen','mieten','invest'].forEach(k => {
-    document.getElementById('btn-' + k).classList.toggle('active', k.charAt(0).toUpperCase() + k.slice(1) === val ||
-      (val === 'Investition' && k === 'invest'));
-  });
-}
 function setMoebliert(val) {
   moebliert = val;
   document.getElementById('btn-moebliert-ja').classList.toggle('active', val);
@@ -1378,19 +1618,30 @@ function resizeImage(file) {
 /* ===== COLLECT FORM DATA ===== */
 function collectFormData() {
   const ausstattung = Array.from(document.querySelectorAll('.cb-item input[type="checkbox"]:checked')).map(cb => cb.value);
+  // Für Grundstück: Grundstücksgröße aus land-fields oder grundstueck
+  const grundstueckVal = haupttyp === 'land'
+    ? (parseFloat(document.getElementById('grundstueck-land').value) || parseFloat(document.getElementById('grundstueck').value) || null)
+    : (parseFloat(document.getElementById('grundstueck').value) || null);
   return {
-    strasse: document.getElementById('strasse').value.trim() || null,
-    region: document.getElementById('region').value.trim() || null,
-    stadt: document.getElementById('stadt').value.trim(),
-    plz: document.getElementById('plz').value.trim(),
-    typ: document.querySelector('input[name="typ"]:checked')?.value || 'Eigentumswohnung',
+    strasse:   document.getElementById('strasse').value.trim() || null,
+    region:    document.getElementById('region').value.trim() || null,
+    stadt:     document.getElementById('stadt').value.trim(),
+    plz:       document.getElementById('plz').value.trim(),
+    typ:       subtyp || haupttyp,
+    haupttyp,
+    subtyp,
+    bewertungsziel: valuationGoal,
+    bewertungszielLabel: VALUATION_GOALS[valuationGoal]?.label || '',
     modus,
-    flaeche: parseFloat(document.getElementById('flaeche').value) || null,
-    grundstueck: parseFloat(document.getElementById('grundstueck').value) || null,
-    zimmer: parseFloat(document.getElementById('zimmer').value) || null,
-    baujahr: parseInt(document.getElementById('baujahr').value) || null,
+    flaeche:   parseFloat(document.getElementById('flaeche').value) || null,
+    grundstueck: grundstueckVal,
+    erschliessung: document.getElementById('erschliessung')?.value || null,
+    bebaubarkeit: document.getElementById('bebaubarkeit')?.value.trim() || null,
+    bodenrichtwert: parseFloat(document.getElementById('bodenrichtwert')?.value) || null,
+    zimmer:    parseFloat(document.getElementById('zimmer').value) || null,
+    baujahr:   parseInt(document.getElementById('baujahr').value) || null,
     renovierung: document.getElementById('renovierung').value.trim() || null,
-    zustand: document.querySelector('input[name="zustand"]:checked')?.value || 'Gepflegt',
+    zustand:   document.querySelector('input[name="zustand"]:checked')?.value || 'Gepflegt',
     ausstattungsqualitaet: document.querySelector('input[name="qualitaet"]:checked')?.value || 'Standard',
     ausstattung,
     balkon:      ausstattung.includes('Balkon/Terrasse'),
@@ -1408,6 +1659,8 @@ function collectFormData() {
     etage: document.getElementById('etage').value !== '' ? parseInt(document.getElementById('etage').value) : null,
     heiztechnik: document.getElementById('heiztechnik').value || null,
     moebliert,
+    hausgeld: parseFloat(document.getElementById('hausgeld')?.value) || null,
+    hausgeldNichtUml: parseFloat(document.getElementById('hausgeld-nicht-uml')?.value) || null,
     mieteMinQm: parseFloat(document.getElementById('miete-min').value) || null,
     mieteMaxQm: parseFloat(document.getElementById('miete-max').value) || null,
     kaufpreisProQm: parseFloat(document.getElementById('kaufpreis-qm').value) || null,
@@ -1790,8 +2043,12 @@ function renderResults(data, hasImages) {
 
 /* ===== RESET ===== */
 function resetForm() {
-  lastResult = null; formData = {}; modus = 'Kaufen'; moebliert = false; energieklasse = '';
-  ['strasse','region','stadt','plz','flaeche','grundstueck','baujahr','renovierung','etagen','etage','miete-min','miete-max'].forEach(id => {
+  lastResult = null; formData = {};
+  valuationGoal = 'market_value'; haupttyp = 'apartment'; subtyp = 'Eigentumswohnung';
+  modus = 'Kaufen'; moebliert = false; energieklasse = '';
+  ['strasse','region','stadt','plz','flaeche','grundstueck','grundstueck-land',
+   'baujahr','renovierung','etagen','etage','miete-min','miete-max',
+   'hausgeld','hausgeld-nicht-uml','erschliessung','bebaubarkeit','bodenrichtwert'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1799,12 +2056,19 @@ function resetForm() {
   document.getElementById('heiztechnik').value = '';
   document.getElementById('photo-preview').innerHTML = '';
   document.getElementById('photo-input').value = '';
-  document.querySelectorAll('input[name="typ"]')[0].checked = true;
+  // Reset goal radio
+  const zielDefault = document.querySelector('input[name="ziel"][value="market_value"]');
+  if (zielDefault) zielDefault.checked = true;
+  // Reset haupttyp radio
+  const typDefault = document.querySelector('input[name="haupttyp"][value="apartment"]');
+  if (typDefault) typDefault.checked = true;
   document.querySelectorAll('input[name="zustand"]')[2].checked = true;
   document.querySelectorAll('input[name="qualitaet"]')[1].checked = true;
   document.querySelectorAll('.cb-item input[type="checkbox"]').forEach(cb => cb.checked = false);
   document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('selected'));
-  setModus('Kaufen'); setMoebliert(false);
+  updateSubtypeGrid('apartment');
+  updateAllFieldVisibility();
+  setMoebliert(false);
   document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
   document.querySelectorAll('input.err').forEach(e => e.classList.remove('err'));
   document.getElementById('error-banner').style.display = 'none';
@@ -2134,14 +2398,9 @@ function calcMiete() {
 }
 
 /* ===== INIT ===== */
-document.querySelectorAll('input[name="typ"]').forEach(r => {
-  r.addEventListener('change', () => {
-    const gg = document.getElementById('grundstueck-group');
-    if (gg) gg.style.display = r.value === 'Eigentumswohnung' ? 'none' : 'block';
-  });
-});
-// Hide Grundstück initially
-document.getElementById('grundstueck-group').style.display = 'none';
+// Untertyp-Grid und Feldvisibilität für Standardwerte initialisieren
+updateSubtypeGrid('apartment');
+updateAllFieldVisibility();
 </script>
 </body>
 </html>
