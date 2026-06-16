@@ -2719,9 +2719,18 @@ function renderResultRich(text) {
         const wrap = document.createElement('div'); wrap.className = 'r-chart-wrap';
         const title = document.createElement('div'); title.className = 'r-chart-title'; title.textContent = b.title;
         wrap.appendChild(title);
-        const canvas = document.createElement('canvas'); canvas.height = 220; wrap.appendChild(canvas);
+        const chartH = b.chartType === 'bar' ? 280 : 220;
+        const canvas = document.createElement('canvas');
+        canvas.height = chartH;
+        canvas.style.display = 'block';
+        canvas.style.width = '100%';
+        wrap.appendChild(canvas);
+        if (b.chartType === 'bar' && b.data?.length) {
+          const legendEl = document.createElement('div'); legendEl.className = 'r-chart-legend';
+          wrap.appendChild(legendEl);
+        }
         container.appendChild(wrap);
-        setTimeout(() => renderChartOnCanvas(canvas, b), 30);
+        setTimeout(() => renderChartOnCanvas(canvas, b, wrap), 30);
         break;
       }
       case 'kpi': {
@@ -2794,30 +2803,57 @@ function hexToRgba(hex, alpha) {
   return r ? `rgba(${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)},${alpha})` : hex;
 }
 
-function renderChartOnCanvas(canvas, block) {
+function renderChartOnCanvas(canvas, block, wrapEl) {
   if (typeof Chart === 'undefined') return;
   const n      = block.data.length;
   const colors = getPaletteColors(block.palette || 'default', n);
 
+  const sharedTooltip = {
+    backgroundColor: 'rgba(15,23,42,0.92)',
+    titleColor: '#f1f5f9',
+    bodyColor: '#cbd5e1',
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 8,
+  };
+
   const baseOpts = {
     animation: { duration: 600, easing: 'easeOutQuart' },
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: block.chartType === 'pie',
-        position: 'bottom',
-        labels: { color: '#475569', font: { size: 12, weight: '600' }, padding: 16, boxWidth: 12, boxHeight: 12 }
+        position: 'right',
+        labels: { color: '#94a3b8', font: { size: 12, weight: '600' }, padding: 14, boxWidth: 12, boxHeight: 12 }
       },
-      tooltip: {
-        backgroundColor: 'rgba(15,23,42,0.92)',
-        titleColor: '#f1f5f9',
-        bodyColor: '#cbd5e1',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 8,
-      }
+      tooltip: sharedTooltip,
     },
+  };
+
+  // Inline plugin: value labels on top of each bar
+  const barLabelPlugin = {
+    id: 'barValueLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, data } = chart;
+      data.datasets.forEach((ds, i) => {
+        chart.getDatasetMeta(i).data.forEach((bar, j) => {
+          const v = ds.data[j];
+          if (v == null) return;
+          const disp = typeof v === 'number'
+            ? (Number.isInteger(v) ? v.toLocaleString('de-DE') : v.toFixed(1))
+            : String(v);
+          ctx.save();
+          ctx.fillStyle = '#e2e8f0';
+          ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(disp, bar.x, bar.y - 4);
+          ctx.restore();
+        });
+      });
+    }
   };
 
   if (block.chartType === 'pie') {
@@ -2846,12 +2882,32 @@ function renderChartOnCanvas(canvas, block) {
       },
       options: {
         ...baseOpts,
+        layout: { padding: { top: 24 } },
         scales: {
           x: { ticks: { color: '#64748b', font: { size: 11, weight: '600' } }, grid: { display: false }, border: { display: false } },
           y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' }, border: { display: false } }
         }
-      }
+      },
+      plugins: [barLabelPlugin]
     });
+    // Build legend below chart
+    if (wrapEl) {
+      const legendEl = wrapEl.querySelector('.r-chart-legend');
+      if (legendEl) {
+        block.data.forEach((d, i) => {
+          const item = document.createElement('div'); item.className = 'r-chart-legend-item';
+          const dot  = document.createElement('div'); dot.className = 'r-chart-legend-dot'; dot.style.background = colors[i % colors.length];
+          const lbl  = document.createElement('span'); lbl.className = 'r-chart-legend-label'; lbl.textContent = d.label;
+          const sep  = document.createElement('span'); sep.className = 'r-chart-legend-sep'; sep.textContent = ':';
+          const val  = document.createElement('span'); val.className = 'r-chart-legend-value';
+          val.textContent = typeof d.value === 'number'
+            ? (Number.isInteger(d.value) ? d.value.toLocaleString('de-DE') : d.value.toFixed(1))
+            : d.value;
+          item.appendChild(dot); item.appendChild(lbl); item.appendChild(sep); item.appendChild(val);
+          legendEl.appendChild(item);
+        });
+      }
+    }
   } else {
     // Line chart — gradient fill
     const ctx = canvas.getContext('2d');
@@ -5358,13 +5414,13 @@ const AGENT_PROMPTS = {
   summary: (agentOutputs, q, de, analysisLength) => {
     const depthDE = {
       short:  `LÄNGE: ca. 400–600 Wörter. Keine Grafiken. Max. 1 Tabelle. Nur die 4 Blöcke: Zusammenfassung, Wichtigste Erkenntnisse, Kritische Punkte/Risiken, Empfehlung.`,
-      medium: `LÄNGE: ca. 3000–5500 Wörter. TABELLEN PFLICHT für alle Zahlenreihen und Vergleiche. MINDESTENS 3 GRAFIKEN direkt im Text:\n[CHART:line|Titel|Jahr:Wert,Jahr:Wert|palette:finance]\n[CHART:bar|Titel|KatA:Wert,KatB:Wert|palette:growth]\n[CHART:pie|Titel|KatA:Wert,KatB:Wert|palette:corporate]`,
-      long:   `LÄNGE: MINDESTENS 8000 Wörter — vollständige Rundumanalyse, nichts auslassen. TABELLEN ÜBERALL PFLICHT — jede Liste, jeder Vergleich als Markdown-Tabelle. MINDESTENS 6 GRAFIKEN — bei jedem Abschnitt mit Zahlen eine Grafik erstellen:\n[CHART:line|Titel|Jahr:Wert,Jahr:Wert|palette:finance]\n[CHART:bar|Titel|KatA:Wert,KatB:Wert|palette:growth]\n[CHART:pie|Titel|KatA:Wert,KatB:Wert|palette:corporate]\nWeniger als 6 Grafiken = Aufgabe NICHT erfüllt.`,
+      medium: `LÄNGE: ca. 3000–5500 Wörter. TABELLEN PFLICHT für alle Zahlenreihen und Vergleiche. MINDESTENS 3 GRAFIKEN direkt im Text:\n[CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]\n[CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]\n[CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]\nWICHTIG: Jedes [CHART:bar] MUSS mindestens 4 Datenpunkte haben — nie weniger als 4 Balken.`,
+      long:   `LÄNGE: MINDESTENS 8000 Wörter — vollständige Rundumanalyse, nichts auslassen. TABELLEN ÜBERALL PFLICHT — jede Liste, jeder Vergleich als Markdown-Tabelle. MINDESTENS 6 GRAFIKEN — bei jedem Abschnitt mit Zahlen eine Grafik erstellen:\n[CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]\n[CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]\n[CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]\nWICHTIG: Jedes [CHART:bar] MUSS mindestens 4 Datenpunkte haben — nie weniger als 4 Balken.\nWeniger als 6 Grafiken = Aufgabe NICHT erfüllt.`,
     };
     const depthEN = {
       short:  `LENGTH: approx. 400–600 words. No charts. Max. 1 table. Only 4 blocks: Summary, Key Findings, Critical Points/Risks, Recommendation.`,
-      medium: `LENGTH: approx. 3000–5500 words. TABLES MANDATORY for all data series and comparisons. MINIMUM 3 CHARTS directly in text:\n[CHART:line|Title|Year:Value,Year:Value|palette:finance]\n[CHART:bar|Title|CatA:Value,CatB:Value|palette:growth]\n[CHART:pie|Title|CatA:Value,CatB:Value|palette:corporate]`,
-      long:   `LENGTH: MINIMUM 8000 words — complete 360° analysis, leave nothing out. TABLES EVERYWHERE MANDATORY. MINIMUM 6 CHARTS — create a chart for every section with numbers:\n[CHART:line|Title|Year:Value,Year:Value|palette:finance]\n[CHART:bar|Title|CatA:Value,CatB:Value|palette:growth]\n[CHART:pie|Title|CatA:Value,CatB:Value|palette:corporate]\nFewer than 6 charts = task NOT completed.`,
+      medium: `LENGTH: approx. 3000–5500 words. TABLES MANDATORY for all data series and comparisons. MINIMUM 3 CHARTS directly in text:\n[CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]\n[CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]\n[CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]\nIMPORTANT: Every [CHART:bar] MUST have at least 4 data points — never fewer than 4 bars.`,
+      long:   `LENGTH: MINIMUM 8000 words — complete 360° analysis, leave nothing out. TABLES EVERYWHERE MANDATORY. MINIMUM 6 CHARTS — create a chart for every section with numbers:\n[CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]\n[CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]\n[CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]\nIMPORTANT: Every [CHART:bar] MUST have at least 4 data points — never fewer than 4 bars.\nFewer than 6 charts = task NOT completed.`,
     };
     const depth = de ? (depthDE[analysisLength] || depthDE.medium) : (depthEN[analysisLength] || depthEN.medium);
     return de
@@ -6522,20 +6578,22 @@ Rules: Every sentence carries information value. No repetition. Complete sentenc
 • Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
 • TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle. Kein Fließtext für Daten.
 • GRAFIKEN PFLICHT — mindestens 3 Grafiken direkt im Text platzieren. Erstelle eine Grafik IMMER wenn du Zahlen, Vergleiche oder Entwicklungen beschreibst:
-  [CHART:line|Titel|Jahr:Wert,Jahr:Wert,...|palette:finance]
-  [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:growth]
-  [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:corporate]
+  [CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]
+  [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]
+  [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]
   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+  PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • Kennzahlen-Abschnitt vollständig mit allen Zahlen aus dem Dokument befüllen.
 • Risiken und Chancen jeweils mit Begründung und konkreter Handlungsempfehlung.`
       : `OUTPUT LENGTH: MEDIUM — TARGET approx. 3000-5500 words. Fill this scope completely — not shorter.
 • Every section thorough with context, reasoning and concrete figures.
 • TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table. No prose for data.
 • CHARTS MANDATORY — minimum 3 charts placed directly in the text. Create a chart WHENEVER you describe numbers, comparisons or trends:
-  [CHART:line|Title|Year:Value,Year:Value,...|palette:finance]
-  [CHART:bar|Title|CatA:Value,CatB:Value,...|palette:growth]
-  [CHART:pie|Title|CatA:Value,CatB:Value,...|palette:corporate]
+  [CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]
+  [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]
+  [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]
   Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+  MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • Fill the key metrics section completely with all figures from the document.
 • Risks and opportunities each with justification and concrete recommended action.`,
     long: isDE
@@ -6543,10 +6601,11 @@ Rules: Every sentence carries information value. No repetition. Complete sentenc
 • MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt. Kein Abschnitt kürzer als 5 Sätze.
 • TABELLEN ÜBERALL PFLICHT: JEDE Liste, JEDER Vergleich, JEDE Zahlenreihe, JEDE Aufzählung → sofort als Markdown-Tabelle. Absolut kein Fließtext für Daten oder Vergleiche.
 • GRAFIKEN ABSOLUT PFLICHT — mindestens 6 Grafiken direkt im Text, mehr ist besser. Erstelle eine Grafik bei JEDEM Abschnitt mit Zahlen oder Entwicklungen. Hast du am Ende weniger als 6 Grafiken, hast du die Aufgabe NICHT erfüllt:
-  [CHART:line|Titel|Jahr:Wert,Jahr:Wert,...|palette:finance]
-  [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:growth]
-  [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:corporate]
+  [CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]
+  [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]
+  [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]
   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+  PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausgeschrieben — keine Dimension darf verkürzt werden.
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
 • Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit konkretem Zeitrahmen.`
@@ -6554,10 +6613,11 @@ Rules: Every sentence carries information value. No repetition. Complete sentenc
 • MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained. No section shorter than 5 sentences.
 • TABLES EVERYWHERE MANDATORY: EVERY list, comparison, data series, enumeration → immediately as Markdown table. Absolutely no prose for data or comparisons.
 • CHARTS ABSOLUTELY MANDATORY — minimum 6 charts placed directly in text, more is better. Create a chart for EVERY section containing numbers or trends. If you end with fewer than 6 charts, you have NOT completed the task:
-  [CHART:line|Title|Year:Value,Year:Value,...|palette:finance]
-  [CHART:bar|Title|CatA:Value,CatB:Value,...|palette:growth]
-  [CHART:pie|Title|CatA:Value,CatB:Value,...|palette:corporate]
+  [CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]
+  [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]
+  [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]
   Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+  MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • DEEP ANALYSIS in all 5 dimensions fully written out — no dimension may be shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
 • Conclusion and action plan: prioritised, numbered measures with concrete timeline.`
@@ -6640,10 +6700,11 @@ KERNREGELN — NIEMALS BRECHEN:
 5. ANTWORTE AUF DEUTSCH.
 6. TL;DR PFLICHT: Beginne IMMER mit "TL;DR | Dringlichkeit: X/10 | 1. [Fakt + Seite] | 2. [Fakt + Seite] | 3. [Fakt + Seite]"
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind — bereits ab 2 Datenpunkten. Keine Ausnahmen.
-   • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,...|palette:X]
-   • Kategorien-Vergleich → [CHART:bar|Titel|KatA:Wert,KatB:Wert,...|palette:X]
-   • Anteile/Prozente → [CHART:pie|Titel|KatA:Wert,KatB:Wert,...|palette:X]
+9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind. Keine Ausnahmen.
+   • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,2022:Wert,2023:Wert|palette:X]
+   • Kategorien-Vergleich → [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:X]
+   • Anteile/Prozente → [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:X]
+   PFLICHT: Jedes [CHART:bar] muss MINDESTENS 4 Datenpunkte haben — nie weniger als 4 Balken.
    Paletten (passend zum Inhalt wählen): finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
    Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8|palette:finance]
 10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
@@ -6742,10 +6803,11 @@ CORE RULES — NEVER BREAK:
 5. RESPOND IN ENGLISH.
 6. TL;DR MANDATORY: Always begin with "TL;DR | Urgency: X/10 | 1. [fact + page] | 2. [fact + page] | 3. [fact + page]"
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
-9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10. Only when at least 4 real data points exist:
-   • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,...] (numbers only, no units)
-   • Category comparison → [CHART:bar|Title|CatA:Value,CatB:Value,CatC:Value,...]
-   • Proportions/percentages → [CHART:pie|Title|CatA:Value,CatB:Value,CatC:Value,...]
+9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10.
+   • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,2023:Value,...] (numbers only, no units)
+   • Category comparison → [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value,...]
+   • Proportions/percentages → [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value,...]
+   MANDATORY: Every [CHART:bar] must have AT LEAST 4 data points — never fewer than 4 bars.
    Example: [CHART:line|Revenue in M EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
 10. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
 11. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.

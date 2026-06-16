@@ -1447,9 +1447,15 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 #result-content .r-table td { padding: 7px 12px; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
 #result-content .r-table .r-odd td { background: rgba(255,255,255,0.02); }
 #result-content .r-table tr:last-child td { border-bottom: none; }
-#result-content .r-chart-wrap { margin: 14px 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(37,99,235,0.2); border-radius: 12px; padding: 14px 16px; }
+#result-content .r-chart-wrap { margin: 14px 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(37,99,235,0.2); border-radius: 12px; padding: 14px 16px; overflow: hidden; position: relative; }
 #result-content .r-chart-title { font-size: 13px; font-weight: 700; color: #93c5fd; margin-bottom: 10px; }
-#result-content .r-chart-wrap canvas { max-height: 260px; }
+#result-content .r-chart-wrap canvas { max-height: 300px; display: block; width: 100% !important; }
+#result-content .r-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); }
+#result-content .r-chart-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+#result-content .r-chart-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+#result-content .r-chart-legend-label { color: #cbd5e1; font-weight: 600; }
+#result-content .r-chart-legend-sep { color: #475569; }
+#result-content .r-chart-legend-value { color: #60a5fa; font-weight: 700; }
 
 /* ── Chat Widget ── */
 #chat-widget {
