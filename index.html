@@ -282,6 +282,10 @@
       <a href="#nav-preise"     class="mobile-nav-link" onclick="closeNavMobile()">Preise</a>
       <a href="#nav-faq"        class="mobile-nav-link" onclick="closeNavMobile()">FAQ</a>
       <a href="#nav-kontakt"    class="mobile-nav-link" onclick="closeNavMobile();event.preventDefault();document.getElementById('modal-support').classList.remove('hidden')">Kontakt</a>
+      <div class="mobile-drawer-auth">
+        <button onclick="closeNavMobile();showAuthModal(null)" class="btn-primary full-width" data-de="Anmelden" data-en="Log in">Anmelden</button>
+        <button onclick="closeNavMobile();showAuthModal(null);switchTab('signup')" class="btn-ghost full-width" data-de="Registrieren" data-en="Sign up">Registrieren</button>
+      </div>
     </div>
   </div>
 

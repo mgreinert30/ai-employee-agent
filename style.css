@@ -279,12 +279,21 @@ header { background: linear-gradient(135deg, var(--black) 0%, #0d1b3e 100%); col
 }
 .mobile-nav-link:first-of-type { color: #4ade80; }
 .mobile-nav-link:hover { color: white; }
+.mobile-drawer-auth {
+  margin-top: auto;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
 /* Mobile: hide desktop nav, show hamburger */
 @media (max-width: 768px) {
   .site-nav { display: none; }
   .hamburger-btn { display: flex; }
   [id^="nav-"], #other-services, #mini-spiel { scroll-margin-top: 80px; }
+  /* Auth-Buttons im Header verstecken — sie erscheinen im Mobile-Drawer */
+  #btn-header-login, #btn-header-signup { display: none !important; }
 }
 
 /* MY TASKS PANEL */
