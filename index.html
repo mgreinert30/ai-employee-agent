@@ -259,12 +259,31 @@
         <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
         <button onclick="showAuthModal(null)" class="btn-header-login" id="btn-header-login" data-de="Anmelden" data-en="Log in">Anmelden</button>
         <button onclick="showAuthModal(null);switchTab('signup')" class="btn-header-signup" id="btn-header-signup" data-de="Registrieren" data-en="Sign up">Registrieren</button>
+        <button class="hamburger-btn" id="hamburger-btn" onclick="toggleNavMobile()" aria-label="Menü öffnen">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
     <p class="tagline" data-de="Dein KI-Mitarbeiter. 24/7. Kein Gehalt. Keine Pausen. Kein Vertrag." data-en="Your AI employee. 24/7. No salary. No breaks. No contract.">
       Dein KI-Mitarbeiter. 24/7. Kein Gehalt. Keine Pausen. Kein Vertrag.
     </p>
   </header>
+
+  <!-- MOBILE NAV OVERLAY -->
+  <div id="mobile-nav-overlay" onclick="closeNavMobile()">
+    <div class="mobile-drawer" onclick="event.stopPropagation()">
+      <button class="mobile-drawer-close" onclick="closeNavMobile()">✕</button>
+      <a href="#nav-start"      class="mobile-nav-link" onclick="closeNavMobile()">Start</a>
+      <a href="#nav-demo"       class="mobile-nav-link" onclick="closeNavMobile()">Video</a>
+      <a href="#other-services" class="mobile-nav-link" onclick="closeNavMobile()" data-de="Weitere Dienste" data-en="More Services">Weitere Dienste</a>
+      <a href="#nav-team"       class="mobile-nav-link" onclick="closeNavMobile()" data-de="Unser Team" data-en="Our Team">Unser Team</a>
+      <a href="#nav-funktionen" class="mobile-nav-link" onclick="closeNavMobile()">Funktionen</a>
+      <a href="#mini-spiel"     class="mobile-nav-link" onclick="closeNavMobile()">Mini-Spiel</a>
+      <a href="#nav-preise"     class="mobile-nav-link" onclick="closeNavMobile()">Preise</a>
+      <a href="#nav-faq"        class="mobile-nav-link" onclick="closeNavMobile()">FAQ</a>
+      <a href="#nav-kontakt"    class="mobile-nav-link" onclick="closeNavMobile();event.preventDefault();document.getElementById('modal-support').classList.remove('hidden')">Kontakt</a>
+    </div>
+  </div>
 
   <!-- MY TASKS PANEL -->
   <div id="my-tasks-panel" style="display:none;">

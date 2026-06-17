@@ -7535,13 +7535,13 @@ function closeGameOverlay() {
 // SITE NAVIGATION — burger menu + active link highlight
 // =====================
 function toggleNavMobile() {
-  const links = document.getElementById('nav-links');
-  if (links) links.classList.toggle('nav-open');
+  const overlay = document.getElementById('mobile-nav-overlay');
+  if (overlay) overlay.classList.toggle('open');
 }
 
 function closeNavMobile() {
-  const links = document.getElementById('nav-links');
-  if (links) links.classList.remove('nav-open');
+  const overlay = document.getElementById('mobile-nav-overlay');
+  if (overlay) overlay.classList.remove('open');
 }
 
 // Highlight the active nav link based on scroll position
