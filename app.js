@@ -4,7 +4,7 @@
 // =====================
 // APP VERSION — bump this on every update to force re-login
 // =====================
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 
 // =====================
 // ANALYSE-TOKEN — serverseitig signiert, 15 Min gültig
