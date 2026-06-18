@@ -40,7 +40,7 @@
       <div class="cookie-option cookie-option-main">
         <div class="cookie-option-top">
           <p class="cookie-option-desc">
-            Wir nutzen ausschließlich technisch notwendige Cookies — für deine Anmeldung, Einstellungen und Sitzungsschutz. Wenn du eine KI-Analyse startest, wird dein Dokument temporär an die <strong>Google Gemini API</strong> übertragen und danach gelöscht. Wir speichern keine Dokumentinhalte.
+            Wir nutzen ausschließlich technisch notwendige Cookies — für deine Anmeldung, Einstellungen und Sitzungsschutz. Wenn du eine KI-Analyse startest, kann dein Dokument zur Verarbeitung an die <strong>Google Gemini API</strong> übertragen werden. Wir speichern hochgeladene Dokumentinhalte nicht dauerhaft. Google kann technische Protokoll- oder Sicherheitsdaten nach eigenen Bedingungen zeitlich begrenzt speichern.
           </p>
           <p class="cookie-option-desc" style="margin-top:8px;">
             Betreiber: AI Employee GbR, Neusser Str. 82, 40219 Düsseldorf · <a href="#" onclick="openDatenschutz();return false;" class="cookie-inline-link">Details in der Datenschutzerklärung</a>
@@ -254,9 +254,8 @@
       <div class="header-right">
         <span id="header-username" class="header-user"></span>
         <!-- Owner Panel button injected by JS only after server-side owner authentication -->
-        <button onclick="toggleMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
-        <button onclick="openAccount()" class="btn-ghost" id="btn-my-account" data-de="Mein Konto" data-en="My Account" style="display:none;">Mein Konto</button>
-        <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
+        <!-- Logged-in nav buttons injected by JS only after authentication -->
+        <span id="auth-nav-logged-in"></span>
         <button onclick="showAuthModal(null)" class="btn-header-login" id="btn-header-login" data-de="Anmelden" data-en="Log in">Anmelden</button>
         <button onclick="showAuthModal(null);switchTab('signup')" class="btn-header-signup" id="btn-header-signup" data-de="Registrieren" data-en="Sign up">Registrieren</button>
         <button class="hamburger-btn" id="hamburger-btn" onclick="toggleNavMobile()" aria-label="Menü öffnen">
@@ -799,7 +798,7 @@
       <p data-de="Lade jetzt ein Dokument hoch — das Ergebnis siehst du in 2–5 Minuten. Keine Anmeldung nötig für den ersten Test." data-en="Upload a document now — you'll see the result in 2–5 minutes. No sign-up needed for the first test.">Lade jetzt ein Dokument hoch — das Ergebnis siehst du in 2–5 Minuten.</p>
       <div class="cta-banner-btns">
         <a href="#" class="btn-primary btn-xl" onclick="showPage('pdf'); return false;" data-de="📄 Jetzt kostenlos testen →" data-en="📄 Try for free now →">📄 Jetzt kostenlos testen →</a>
-        <span class="cta-banner-note" data-de="Ab €0,99 · Kein Abo · Kein Datenspeicher" data-en="From €0.99 · No subscription · No data storage">Ab €0,99 · Kein Abo · Kein Datenspeicher</span>
+        <span class="cta-banner-note" data-de="Ab €0,99 · Kein Abo · Keine dauerhafte Speicherung" data-en="From €0.99 · No subscription · No permanent storage">Ab €0,99 · Kein Abo · Keine dauerhafte Speicherung</span>
       </div>
     </div>
   </section>
@@ -826,7 +825,7 @@
       <div class="step">
         <div class="step-number">4</div>
         <h3 data-de="Agent wird gelöscht" data-en="Agent gets deleted">Agent wird gelöscht</h3>
-        <p data-de="Nach Abschluss wird der Agent vollständig von deinem PC entfernt. Kein Zugriff mehr. Keine Daten gespeichert." data-en="After completion the agent is fully removed from your PC. No access. No data kept.">Agent wird vollständig von deinem PC entfernt. Keine Daten gespeichert.</p>
+        <p data-de="Nach Abschluss wird der Agent vollständig von deinem PC entfernt. Kein Zugriff mehr. Wir speichern hochgeladene Inhalte nicht dauerhaft." data-en="After completion the agent is fully removed from your PC. No access. We do not permanently store uploaded content.">Agent wird vollständig von deinem PC entfernt. Wir speichern hochgeladene Inhalte nicht dauerhaft.</p>
       </div>
     </div>
   </section>

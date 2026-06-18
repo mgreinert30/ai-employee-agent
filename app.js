@@ -243,9 +243,7 @@ function updateHeroCTA() {
 function showGuest() {
   document.getElementById('btn-header-login').style.display  = 'inline-block';
   document.getElementById('btn-header-signup').style.display = 'inline-block';
-  document.getElementById('btn-logout').style.display        = 'none';
-  document.getElementById('btn-my-tasks').style.display      = 'none';
-  document.getElementById('btn-my-account').style.display    = 'none';
+  document.getElementById('auth-nav-logged-in').innerHTML    = '';
   const ownerBtn = document.getElementById('btn-owner-panel');
   if (ownerBtn) ownerBtn.remove();
   document.getElementById('header-username').textContent     = '';
@@ -254,11 +252,10 @@ function showGuest() {
 
 function showLoggedIn() {
   document.getElementById('header-username').textContent = currentLang === 'de' ? `Hallo, ${currentUser.name}` : `Hello, ${currentUser.name}`;
-  document.getElementById('btn-logout').style.display        = 'inline-block';
-  document.getElementById('btn-my-tasks').style.display      = 'inline-block';
   document.getElementById('btn-header-login').style.display  = 'none';
   document.getElementById('btn-header-signup').style.display = 'none';
   const isVerifiedOwner = currentUser?.isOwner === true;
+
   // Remove any existing owner button first
   const existingOwnerBtn = document.getElementById('btn-owner-panel');
   if (existingOwnerBtn) existingOwnerBtn.remove();
@@ -271,7 +268,14 @@ function showLoggedIn() {
     ownerBtn.onclick = openOwnerDashboard;
     document.getElementById('header-username').insertAdjacentElement('afterend', ownerBtn);
   }
-  document.getElementById('btn-my-account').style.display   = isVerifiedOwner ? 'none' : 'inline-block';
+
+  // Inject logged-in nav buttons — never present in static HTML
+  const de = currentLang === 'de';
+  document.getElementById('auth-nav-logged-in').innerHTML =
+    `<button onclick="toggleMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks">${de ? 'Meine Aufgaben' : 'My Tasks'}</button>` +
+    (isVerifiedOwner ? '' : `<button onclick="openAccount()" class="btn-ghost" id="btn-my-account" data-de="Mein Konto" data-en="My Account">${de ? 'Mein Konto' : 'My Account'}</button>`) +
+    `<button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out">${de ? 'Abmelden' : 'Log out'}</button>`;
+
   renderTestimonials();
   updateHeroCTA();
 }
@@ -293,8 +297,7 @@ function handleLogout() {
   localStorage.removeItem('ai_agent_user');
   currentUser = null;
   document.getElementById('header-username').textContent = '';
-  document.getElementById('btn-logout').style.display = 'none';
-  document.getElementById('btn-my-tasks').style.display = 'none';
+  document.getElementById('auth-nav-logged-in').innerHTML = '';
   showAuthModal(null);
 }
 
