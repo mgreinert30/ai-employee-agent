@@ -29,7 +29,7 @@ async function getAccessToken() {
     body: 'grant_type=client_credentials',
   });
   const d = await r.json();
-  if (!d.access_token) throw new Error('PayPal-Authentifizierung fehlgeschlagen');
+  if (!d.access_token) throw new Error(`PayPal-Auth fehlgeschlagen (HTTP ${r.status}): ${d.error_description || d.error || JSON.stringify(d).slice(0, 120)}`);
   return d.access_token;
 }
 
