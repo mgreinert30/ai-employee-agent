@@ -1409,7 +1409,7 @@
       <div class="price-icon" id="price-icon">🤖</div>
       <p id="price-time-text" class="price-time"></p>
       <p id="price-amount" class="price-amount"></p>
-      <p class="price-note" data-de="Alle deine Daten werden nach Abschluss gelöscht." data-en="All your data will be deleted after the job is done.">Alle deine Daten werden nach Abschluss gelöscht.</p>
+      <p class="price-note" data-de="Wir speichern deine Dokumente nicht dauerhaft. KI-Ergebnisse können Fehler enthalten." data-en="We do not store your documents permanently. AI results may contain errors.">Wir speichern deine Dokumente nicht dauerhaft. KI-Ergebnisse können Fehler enthalten.</p>
       <div class="price-buttons">
         <button onclick="goToPayment()" class="btn-primary" data-de="Weiter zur Zahlung →" data-en="Continue to payment →">Weiter zur Zahlung →</button>
         <button onclick="cancelTask()" class="btn-secondary" data-de="Abbrechen" data-en="Cancel">Abbrechen</button>
@@ -1419,51 +1419,45 @@
     <!-- STEP 3: PAYMENT -->
     <div id="step-payment" style="display:none;">
       <div class="payment-box">
-        <h3 data-de="Zahlungsmethode" data-en="Payment Method">Zahlungsmethode</h3>
+        <h3 data-de="Zahlung abschließen" data-en="Complete Payment">Zahlung abschließen</h3>
         <p id="payment-amount-label" class="payment-amount-label"></p>
-        <div id="saved-payment" style="display:none;">
-          <div class="saved-method">
-            <span id="saved-method-icon"></span>
-            <span id="saved-method-label"></span>
-            <button onclick="changPaymentMethod()" class="btn-link" data-de="Ändern" data-en="Change">Ändern</button>
-          </div>
-          <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Jetzt bezahlen" data-en="Pay now">Jetzt bezahlen</button>
+        <p class="payment-hint" style="text-align:center;margin-bottom:16px;" data-de="Die Analyse wird sofort nach bestätigter Zahlung freigeschaltet." data-en="Analysis is unlocked immediately after confirmed payment.">Die Analyse wird sofort nach bestätigter Zahlung freigeschaltet.</p>
+        <div class="payment-options">
+          <button onclick="selectPayment('paypal')" class="payment-option" id="opt-paypal">
+            <span class="payment-logo">🅿️</span>
+            <span>PayPal</span>
+          </button>
+          <button onclick="selectPayment('bank')" class="payment-option" id="opt-bank">
+            <span class="payment-logo">🏦</span>
+            <span data-de="Banküberweisung" data-en="Bank Transfer">Banküberweisung</span>
+          </button>
         </div>
-        <div id="new-payment">
-          <div class="payment-options">
-            <button onclick="selectPayment('paypal')" class="payment-option" id="opt-paypal">
-              <span class="payment-logo">🅿️</span>
-              <span>PayPal</span>
-            </button>
-            <button onclick="selectPayment('bank')" class="payment-option" id="opt-bank">
-              <span class="payment-logo">🏦</span>
-              <span data-de="Banküberweisung" data-en="Bank Transfer">Banküberweisung</span>
-            </button>
-          </div>
-          <div id="paypal-form" style="display:none;">
-            <label data-de="Deine PayPal E-Mail-Adresse" data-en="Your PayPal email address">Deine PayPal E-Mail-Adresse</label>
-            <input type="email" id="paypal-email" placeholder="deine@paypal.com" />
-            <p class="payment-hint" data-de="Du erhältst eine Zahlungsanfrage an diese Adresse." data-en="You will receive a payment request at this address.">Du erhältst eine Zahlungsanfrage an diese Adresse.</p>
-            <div class="remember-row">
-              <input type="checkbox" id="save-paypal" checked />
-              <label for="save-paypal" data-de="PayPal-Adresse speichern" data-en="Save PayPal address">PayPal-Adresse speichern</label>
-            </div>
-            <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Mit PayPal bezahlen" data-en="Pay with PayPal">Mit PayPal bezahlen</button>
-          </div>
-          <div id="bank-form" style="display:none;">
-            <label data-de="Kontoinhaber" data-en="Account holder">Kontoinhaber</label>
-            <input type="text" id="bank-name" placeholder="Max Mustermann" />
-            <label>IBAN</label>
-            <input type="text" id="bank-iban" placeholder="DE89 3704 0044 0532 0130 00" />
-            <div class="bank-info-box" data-de="Nach Bestätigung erhältst du unsere Bankdaten per E-Mail." data-en="After confirmation you will receive our bank details by email.">Nach Bestätigung erhältst du unsere Bankdaten per E-Mail.</div>
-            <div class="remember-row">
-              <input type="checkbox" id="save-bank" checked />
-              <label for="save-bank" data-de="Bankdaten speichern" data-en="Save bank details">Bankdaten speichern</label>
-            </div>
-            <button onclick="confirmPayment()" class="btn-primary full-width" data-de="Per Überweisung bezahlen" data-en="Pay by bank transfer">Per Überweisung bezahlen</button>
-          </div>
+
+        <!-- PayPal Checkout (SDK-Buttons) -->
+        <div id="paypal-form" style="display:none;margin-top:16px;">
+          <div id="paypal-loading" style="text-align:center;padding:20px 0;color:#94a3b8;font-size:13px;" data-de="PayPal wird geladen…" data-en="Loading PayPal…">PayPal wird geladen…</div>
+          <div id="paypal-button-container"></div>
+          <div id="paypal-error" style="display:none;color:#ef4444;font-size:13px;margin-top:10px;text-align:center;padding:8px;background:rgba(239,68,68,0.06);border-radius:8px;"></div>
+          <p class="payment-hint" style="text-align:center;margin-top:12px;font-size:12px;" data-de="🔒 Sichere Zahlung via PayPal — Analyse wird direkt nach Zahlungsbestätigung freigeschaltet." data-en="🔒 Secure payment via PayPal — analysis unlocked immediately after confirmation.">🔒 Sichere Zahlung via PayPal — Analyse wird direkt nach Zahlungsbestätigung freigeschaltet.</p>
         </div>
-        <button onclick="cancelTask()" class="btn-link center-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
+
+        <!-- Banküberweisung (manuelle Prüfung) -->
+        <div id="bank-form" style="display:none;margin-top:16px;">
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#78350f;line-height:1.7;">
+            ⚠️ <strong data-de="Manuelle Prüfung erforderlich" data-en="Manual verification required">Manuelle Prüfung erforderlich</strong><br>
+            <span data-de="Banküberweisung wird nach Zahlungseingang manuell geprüft (1–2 Werktage). Die Analyse wird erst danach freigeschaltet." data-en="Bank transfer is verified manually after receipt (1–2 business days). Analysis will be unlocked afterwards.">Banküberweisung wird nach Zahlungseingang manuell geprüft (1–2 Werktage). Die Analyse wird erst danach freigeschaltet.</span>
+          </div>
+          <label data-de="Dein Name" data-en="Your name">Dein Name</label>
+          <input type="text" id="bank-name" placeholder="Max Mustermann" />
+          <div class="remember-row">
+            <input type="checkbox" id="save-bank" checked />
+            <label for="save-bank" data-de="Daten für nächste Zahlung speichern" data-en="Save for next payment">Für nächste Zahlung speichern</label>
+          </div>
+          <button onclick="confirmBankTransfer()" class="btn-primary full-width" data-de="Banküberweisung anfordern" data-en="Request bank transfer">Banküberweisung anfordern</button>
+          <div id="bank-transfer-sent" style="display:none;margin-top:14px;text-align:center;color:#4ade80;font-size:14px;font-weight:600;line-height:1.6;" data-de="✓ Anfrage gespeichert. Du erhältst unsere Bankdaten per E-Mail. Die Analyse wird nach Zahlungseingang freigeschaltet." data-en="✓ Request saved. You will receive our bank details by email. Analysis will be unlocked after payment receipt.">✓ Anfrage gespeichert. Du erhältst unsere Bankdaten per E-Mail. Die Analyse wird nach Zahlungseingang freigeschaltet.</div>
+        </div>
+
+        <button onclick="cancelTask()" class="btn-link center-link" style="margin-top:20px;" data-de="← Zurück" data-en="← Back">← Zurück</button>
       </div>
     </div>
 
@@ -2022,8 +2016,8 @@
           <p>Diese Website wird gehostet von Vercel Inc., 340 Pine Street, Suite 900, San Francisco, CA 94104, USA. Vercel agiert als Auftragsverarbeiter gemäß Art. 28 DSGVO und ist gemäß EU-U.S. Data Privacy Framework zertifiziert. Ein Auftragsverarbeitungsvertrag ist über die Vercel-Plattform abrufbar. Datenschutzerklärung: <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">vercel.com/legal/privacy-policy</a></p>
 
           <p style="margin-top:12px;"><strong>4.2 KI-Verarbeitung: Google Gemini API</strong></p>
-          <p>Für die KI-gestützte Analyse verwenden wir die Google Gemini API (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Die von Ihnen eingereichten Inhalte (Dokumente, Texte) werden ausschließlich zur KI-Verarbeitung an Google übermittelt und danach sofort gelöscht — es findet keine dauerhafte Speicherung durch uns oder Google statt.</p>
-          <p style="margin-top:8px;"><strong>Kein KI-Training:</strong> Gemäß den Google Gemini API-Nutzungsbedingungen für bezahlte (billing-enabled) Projekte werden Ihre Eingaben und Ergebnisse <strong>nicht für das Training von KI-Modellen oder zur Produktverbesserung genutzt</strong>. Google behält sich lediglich kurzzeitige technische Logs vor (Standard: bis zu 55 Tage), die ausschließlich Sicherheits- und Stabilitätszwecken dienen.</p>
+          <p>Für die KI-gestützte Analyse verwenden wir die Google Gemini API (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Die von Ihnen eingereichten Inhalte (Dokumente, Texte) werden ausschließlich zur KI-Verarbeitung an Google übermittelt. Nach Abschluss der Verarbeitung speichern wir diese Inhalte nicht dauerhaft auf unseren Servern. Google kann technische Protokolldaten nach eigenen Datenschutzbedingungen für einen begrenzten Zeitraum verarbeiten (Standard: bis zu 55 Tage für Sicherheits- und Stabilitätszwecke).</p>
+          <p style="margin-top:8px;"><strong>Kein KI-Training:</strong> Gemäß den Google Gemini API-Nutzungsbedingungen für bezahlte (billing-enabled) Projekte werden Ihre Eingaben und Ergebnisse <strong>nicht für das Training von KI-Modellen oder zur Produktverbesserung genutzt</strong>.</p>
           <p style="margin-top:8px;"><strong>Auftragsverarbeitung (AVV):</strong> Google LLC agiert als unser Auftragsverarbeiter im Sinne des Art. 28 DSGVO. Grundlage ist der Google Cloud Data Processing Addendum, der als standardisierter Auftragsverarbeitungsvertrag die Anforderungen der DSGVO erfüllt und unter <a href="https://cloud.google.com/terms/data-processing-addendum" target="_blank" rel="noopener">cloud.google.com/terms/data-processing-addendum</a> einsehbar ist.</p>
           <p style="margin-top:8px;"><strong>Drittlandübermittlung:</strong> Google LLC ist gemäß dem EU-U.S. Data Privacy Framework zertifiziert. Ergänzend stützen wir die Übermittlung auf die von der EU-Kommission erlassenen Standardvertragsklauseln (SCC). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (SCC).</p>
           <p style="margin-top:8px;"><strong>Drittlandübermittlung — Hinweis:</strong> Google LLC ist gemäß dem EU-U.S. Data Privacy Framework zertifiziert. Die Übermittlung stützt sich ergänzend auf EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO. Wir weisen darauf hin, dass bei der Nutzung US-amerikanischer Cloud-Dienste ein Restrisiko verbleibt, das sich aus dem US-Recht (insb. CLOUD Act) ergibt. Für besonders schutzbedürftige Daten empfehlen wir daher, diese vorab zu anonymisieren oder zu schwärzen.</p>
@@ -2171,7 +2165,7 @@
 
         <div class="legal-section">
           <h3>3. Hochgeladene Inhalte</h3>
-          <p>Du bist selbst verantwortlich für die Inhalte, die du hochlädst. Bitte lade keine sensiblen personenbezogenen Daten hoch (z. B. Ausweiskopien, Krankenakten, Passwörter). Hochgeladene Dokumente werden nach Abschluss der Analyse sofort gelöscht und nicht dauerhaft gespeichert.</p>
+          <p>Du bist selbst verantwortlich für die Inhalte, die du hochlädst. Bitte lade keine sensiblen personenbezogenen Daten hoch (z. B. Ausweiskopien, Krankenakten, Passwörter). Hochgeladene Dokumente werden von uns nicht dauerhaft gespeichert. Die Verarbeitung erfolgt über die Google Gemini API, die eigene Datenschutzbedingungen hat. KI-Ergebnisse können Fehler enthalten und ersetzen keine fachliche Beratung.</p>
         </div>
 
         <div class="legal-section">

@@ -1,6 +1,8 @@
 // Vercel Serverless Function — start a Gemini resumable upload session
 // Returns an uploadUrl the browser uses to send PDF bytes directly to Google,
 // bypassing Vercel's 4.5 MB body limit entirely.
+import { verifyToken, rejectToken } from './_token.js';
+
 export const config = {
   api: { bodyParser: { sizeLimit: '4kb' } },
 };
@@ -23,6 +25,13 @@ export default async function handler(req, res) {
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
+
+  // Token-Prüfung — Upload-URL nur mit gültigem Analyse-Token ausgeben
+  const token = req.headers['x-analysis-token'] || req.body?.analysisToken;
+  if (token !== 'free-trial') {
+    const tokenCheck = verifyToken(token, 'analyse');
+    if (!tokenCheck.valid) return rejectToken(res, tokenCheck.reason);
+  }
 
   const { filename, mimeType, fileSize } = req.body || {};
   if (!filename || !mimeType || !fileSize) {

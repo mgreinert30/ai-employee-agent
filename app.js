@@ -5,6 +5,41 @@
 // APP VERSION — bump this on every update to force re-login
 // =====================
 const APP_VERSION = '1.0';
+
+// =====================
+// ANALYSE-TOKEN — serverseitig signiert, 15 Min gültig
+// =====================
+let _currentAnalysisToken = null;
+function getAnalysisToken() {
+  return _currentAnalysisToken || sessionStorage.getItem('ai_analysis_token') || null;
+}
+function setAnalysisToken(t) {
+  _currentAnalysisToken = t;
+  if (t) sessionStorage.setItem('ai_analysis_token', t);
+  else sessionStorage.removeItem('ai_analysis_token');
+}
+function clearAnalysisToken() { setAnalysisToken(null); }
+
+// =====================
+// PAYPAL SDK LOADER
+// =====================
+let _ppLoaded = false, _ppLoading = false;
+async function loadPayPalSDK() {
+  if (_ppLoaded) return true;
+  if (_ppLoading) return new Promise(r => setTimeout(() => r(_ppLoaded), 3000));
+  _ppLoading = true;
+  try {
+    const cfg = await fetch('/api/public-config').then(r => r.json());
+    if (!cfg.paypalClientId) { _ppLoading = false; return false; }
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = `https://www.paypal.com/sdk/js?client-id=${cfg.paypalClientId}&currency=EUR&components=buttons`;
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    _ppLoaded = true; _ppLoading = false; return true;
+  } catch { _ppLoading = false; return false; }
+}
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ISO code → language name in DE and EN
@@ -1985,14 +2020,17 @@ function cancelTask() { showStep('step-form'); }
 // =====================
 // PAYMENT
 // =====================
-function goToPayment() {
-  // Free trial — skip payment entirely, mark used, go straight to task
+async function goToPayment() {
+  clearAnalysisToken();
+  // Free trial — skip payment entirely
   if (currentEstimate?.isFree) {
     markFreeTrialUsed();
     updateHeroCTA();
     const desc = document.getElementById('task-description').value;
     saveSale(desc, '0.00', 'free_trial');
     saveTaskToHistory(desc, '0.00');
+    // Free trial doesn't need a real token — use a special marker
+    setAnalysisToken('free-trial');
     const resolvedType = currentShortcutType || detectTaskType(desc);
     if (resolvedType === 'email') {
       window.skippedSetup = true;
@@ -2008,32 +2046,84 @@ function goToPayment() {
 
   showStep('step-payment');
   document.getElementById('payment-amount-label').textContent = `€${currentEstimate.price.toFixed(2)}`;
+  // Pre-select PayPal if user previously used it
   const saved = getSavedPayment();
-  if (saved) {
-    document.getElementById('saved-payment').style.display = 'block';
-    document.getElementById('new-payment').style.display = 'none';
-    document.getElementById('saved-method-icon').textContent = saved.type === 'paypal' ? '🅿️' : '🏦';
-    document.getElementById('saved-method-label').textContent = saved.type === 'paypal' ? `PayPal — ${saved.value}` : (currentLang === 'de' ? `Banküberweisung — ${saved.value}` : `Bank Transfer — ${saved.value}`);
-    selectedPaymentMethod = saved;
-  } else {
-    document.getElementById('saved-payment').style.display = 'none';
-    document.getElementById('new-payment').style.display = 'block';
-  }
+  if (saved?.type === 'paypal') await selectPayment('paypal');
 }
 
-function selectPayment(type) {
+async function selectPayment(type) {
   selectedPaymentMethod = type;
   document.getElementById('opt-paypal').classList.toggle('selected', type === 'paypal');
   document.getElementById('opt-bank').classList.toggle('selected', type === 'bank');
   document.getElementById('paypal-form').style.display = type === 'paypal' ? 'block' : 'none';
   document.getElementById('bank-form').style.display = type === 'bank' ? 'block' : 'none';
+
+  if (type === 'paypal') {
+    const loadEl = document.getElementById('paypal-loading');
+    const errEl  = document.getElementById('paypal-error');
+    if (loadEl) loadEl.style.display = 'block';
+    if (errEl)  errEl.style.display  = 'none';
+    const ok = await loadPayPalSDK();
+    if (loadEl) loadEl.style.display = 'none';
+    if (!ok || !window.paypal) {
+      if (errEl) { errEl.style.display = 'block'; errEl.textContent = currentLang === 'de' ? 'PayPal konnte nicht geladen werden. Bitte Seite neu laden.' : 'PayPal could not be loaded. Please refresh.'; }
+      return;
+    }
+    renderPayPalButtons(currentEstimate.price);
+  }
 }
 
-function changPaymentMethod() {
-  document.getElementById('saved-payment').style.display = 'none';
-  document.getElementById('new-payment').style.display = 'block';
-  selectedPaymentMethod = null;
-  if (currentUser) localStorage.removeItem(`ai_payment_${currentUser.email}`);
+function renderPayPalButtons(amount) {
+  const c = document.getElementById('paypal-button-container');
+  if (!c || !window.paypal) return;
+  c.innerHTML = '';
+  const errEl = document.getElementById('paypal-error');
+  window.paypal.Buttons({
+    createOrder: async () => {
+      const r = await fetch('/api/paypal-create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amount.toFixed(2), description: 'AI Employee Agent — Analyse' }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.orderID) throw new Error(d.error || 'Order-Erstellung fehlgeschlagen');
+      return d.orderID;
+    },
+    onApprove: async (data) => {
+      if (c) c.innerHTML = `<p style="text-align:center;color:#94a3b8;font-size:14px;">${currentLang === 'de' ? 'Zahlung wird bestätigt…' : 'Confirming payment…'}</p>`;
+      const sid = currentUser?.email || 'anon';
+      const r = await fetch('/api/paypal-capture-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderID: data.orderID, amount: amount.toFixed(2), sessionId: sid }),
+      });
+      const result = await r.json();
+      if (!r.ok || !result.token) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = result.error || 'Zahlungsbestätigung fehlgeschlagen'; }
+        renderPayPalButtons(amount);
+        return;
+      }
+      setAnalysisToken(result.token);
+      savePayment('paypal');
+      const desc = document.getElementById('task-description').value;
+      saveSale(desc, amount.toFixed(2), 'paypal');
+      saveTaskToHistory(desc, amount.toFixed(2));
+      proceedAfterPayment();
+    },
+    onError: (err) => {
+      if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'PayPal-Fehler: ' + (err.message || 'Unbekannter Fehler'); }
+    },
+    style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' },
+  }).render('#paypal-button-container');
+}
+
+function confirmBankTransfer() {
+  const name = document.getElementById('bank-name')?.value.trim();
+  if (!name) { alert(currentLang === 'de' ? 'Bitte Name eingeben.' : 'Please enter your name.'); return; }
+  if (document.getElementById('save-bank')?.checked) savePayment('bank');
+  const desc = document.getElementById('task-description').value;
+  saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
+  document.getElementById('bank-transfer-sent').style.display = 'block';
 }
 
 function getSavedPayment() {
@@ -2048,30 +2138,8 @@ function savePayment(type) {
   localStorage.setItem(`ai_payment_${currentUser.email}`, JSON.stringify({ type }));
 }
 
-function confirmPayment() {
-  if (typeof selectedPaymentMethod === 'string') {
-    if (selectedPaymentMethod === 'paypal') {
-      const email = document.getElementById('paypal-email').value;
-      if (!email) { alert(currentLang === 'de' ? 'Bitte PayPal E-Mail eingeben.' : 'Please enter PayPal email.'); return; }
-      if (document.getElementById('save-paypal').checked) savePayment('paypal');
-
-      // Open PayPal payment to owner's account if configured
-      const ownerPaypal = getOwnerPaypalUsername();
-      if (ownerPaypal) {
-        window.open(`https://paypal.me/${ownerPaypal}/${currentEstimate.price.toFixed(2)}EUR`, '_blank');
-      }
-    } else if (selectedPaymentMethod === 'bank') {
-      const iban = document.getElementById('bank-iban').value;
-      if (!iban) { alert(currentLang === 'de' ? 'Bitte IBAN eingeben.' : 'Please enter IBAN.'); return; }
-      if (document.getElementById('save-bank').checked) savePayment('bank');
-    }
-  }
+function proceedAfterPayment() {
   const desc = document.getElementById('task-description').value;
-  const method = typeof selectedPaymentMethod === 'string' ? selectedPaymentMethod : selectedPaymentMethod?.type || 'unknown';
-  saveSale(desc, currentEstimate.price.toFixed(2), method);
-  saveTaskToHistory(desc, currentEstimate.price.toFixed(2));
-  
-  // Email tasks → Gmail connect step (no local agent needed)
   const resolvedType = currentShortcutType || detectTaskType(desc);
   if (resolvedType === 'email') {
     window.skippedSetup = true;
@@ -2079,17 +2147,12 @@ function confirmPayment() {
     showStep('step-gmail');
     return;
   }
-
-  // Document/report/reply creation → skip setup & apps, go straight to AI generation
-  const taskType = resolvedType;
-  if (taskType === 'document' || taskType === 'report' || taskType === 'reply') {
+  if (resolvedType === 'document' || resolvedType === 'report' || resolvedType === 'reply') {
     window.skippedSetup = true;
     startTask();
     return;
   }
-
   applySmartPermissions();
-
   window.skippedSetup = true;
   goToAppSelection();
 }
@@ -6922,7 +6985,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
         // Step A: get a resumable upload URL from our server (keeps API key secret)
         const initRes = await fetch('/api/initiate-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Analysis-Token': getAnalysisToken() || '' },
           body: JSON.stringify({ filename: pdfFile.name, mimeType: 'application/pdf', fileSize: arrayBuf.byteLength }),
         });
 
@@ -7149,7 +7212,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   try {
     fetchRes = await fetch('/api/analyse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Analysis-Token': getAnalysisToken() || '' },
       body: JSON.stringify(analyseBody),
       signal: abortCtrl.signal,
     });

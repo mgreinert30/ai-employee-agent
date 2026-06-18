@@ -1,0 +1,15 @@
+# Environment variables — NIEMALS committen
+.env
+.env.local
+.env.production
+.env.development
+
+# Vercel
+.vercel
+
+# Node modules (falls vorhanden)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
