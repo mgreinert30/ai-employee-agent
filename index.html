@@ -889,7 +889,7 @@
               <div class="rh-metrics-row">
                 <div class="rh-metric"><span class="rh-metric-val">+24%</span><span class="rh-metric-lbl" data-de="Umsatz" data-en="Revenue">Umsatz</span></div>
                 <div class="rh-metric"><span class="rh-metric-val">-18%</span><span class="rh-metric-lbl" data-de="Kosten" data-en="Costs">Kosten</span></div>
-                <div class="rh-metric"><span class="rh-metric-val">3</span><span class="rh-metric-lbl" data-de="Handlungsempf." data-en="Actions">Handlungsempf.</span></div>
+                <div class="rh-metric"><span class="rh-metric-val">3</span><span class="rh-metric-lbl" data-de="Empfehlungen" data-en="Actions">Empfehlungen</span></div>
               </div>
             </div>
             <div class="rh-doc-section">
@@ -1142,10 +1142,10 @@
       <!-- Hidden shortcuts kept for JS compatibility -->
       <div class="task-shortcuts" style="display:none;">
         <button type="button" class="task-shortcut" onclick="selectShortcut('pdf')">📄 PDF analysieren</button>
-        <button type="button" class="task-shortcut" onclick="selectShortcut('email')">📧 E-Mails sortieren</button>
         <button type="button" class="task-shortcut" onclick="selectShortcut('report')">📊 Bericht erstellen</button>
-        <button type="button" class="task-shortcut" onclick="selectShortcut('reply')">✉️ E-Mail schreiben</button>
-        <button type="button" class="task-shortcut" onclick="selectShortcut('document')">📝 Dokument erstellen</button>
+        <button type="button" class="task-shortcut task-shortcut-soon" disabled title="Demnächst verfügbar">📧 E-Mails sortieren <span style="font-size:10px;opacity:0.6;">(Demnächst)</span></button>
+        <button type="button" class="task-shortcut task-shortcut-soon" disabled title="Demnächst verfügbar">✉️ E-Mail schreiben <span style="font-size:10px;opacity:0.6;">(Demnächst)</span></button>
+        <button type="button" class="task-shortcut task-shortcut-soon" disabled title="Demnächst verfügbar">📝 Dokument erstellen <span style="font-size:10px;opacity:0.6;">(Demnächst)</span></button>
       </div>
       <form onsubmit="submitTask(event)">
 
@@ -1487,7 +1487,7 @@
           <span class="setup-icon" id="gmail-step-icon">📬</span>
           <div>
             <h3 data-de="E-Mail-Anbieter wählen" data-en="Choose email provider">E-Mail-Anbieter wählen</h3>
-            <p data-de="Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. Alle Daten werden danach verworfen." data-en="Connect your mailbox — the AI reads, sorts and analyses your emails. All data is discarded afterwards.">Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. Alle Daten werden danach verworfen.</p>
+            <p data-de="Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. E-Mail-Inhalte werden nur zur Analyse verarbeitet und von uns nicht dauerhaft gespeichert. Je nach Anbieter können technische Protokoll- oder Sicherheitsdaten nach deren Bedingungen verarbeitet werden." data-en="Connect your mailbox — the AI reads, sorts and analyses your emails. Email content is only processed for analysis and not permanently stored by us. Depending on the provider, technical log or security data may be processed under their terms.">Verbinde dein Postfach — die KI liest, sortiert und analysiert deine E-Mails. E-Mail-Inhalte werden nur zur Analyse verarbeitet und von uns nicht dauerhaft gespeichert.</p>
           </div>
         </div>
 
@@ -1516,7 +1516,7 @@
 
         <div class="setup-note" style="margin-top:20px;">
           <span>🔒</span>
-          <p data-de="Nur Lese-Zugriff auf deine E-Mails. Kein Schreiben, kein Löschen. Alle Daten werden nach der Analyse sofort verworfen." data-en="Read-only access to your emails. No writing, no deleting. All data is discarded after analysis.">Nur Lese-Zugriff. Alle Daten werden nach der Analyse sofort verworfen.</p>
+          <p data-de="Nur Lese-Zugriff auf deine E-Mails. Kein Schreiben, kein Löschen. E-Mail-Inhalte werden von uns nicht dauerhaft gespeichert." data-en="Read-only access to your emails. No writing, no deleting. Email content is not permanently stored by us.">Nur Lese-Zugriff. Kein Schreiben, kein Löschen. E-Mail-Inhalte werden von uns nicht dauerhaft gespeichert.</p>
         </div>
         <button onclick="cancelTask()" class="btn-link center-link" data-de="← Zurück" data-en="← Back">← Zurück</button>
       </div>
@@ -1536,7 +1536,7 @@
         <p id="calendar-status" style="display:none;text-align:center;margin-top:12px;font-size:14px;color:var(--gray);"></p>
         <div class="setup-note" style="margin-top:20px;">
           <span>🔒</span>
-          <p data-de="Nur Lesezugriff. Keine Änderungen. Alle Daten werden nach der Analyse sofort verworfen." data-en="Read-only access. No changes. All data discarded after analysis.">Nur Lesezugriff. Keine Änderungen. Alle Daten sofort verworfen.</p>
+          <p data-de="Nur Lesezugriff auf deine Kalendertermine. Keine Änderungen. Termindetails werden von uns nicht dauerhaft gespeichert." data-en="Read-only access to your calendar events. No changes. Event details are not permanently stored by us.">Nur Lesezugriff. Keine Änderungen. Termindetails werden von uns nicht dauerhaft gespeichert.</p>
         </div>
         <button onclick="cancelTask()" class="btn-link center-link">← Zurück</button>
       </div>
