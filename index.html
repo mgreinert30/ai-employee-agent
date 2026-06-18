@@ -66,7 +66,7 @@
         </div>
         <div class="cookie-detail-section">
           <h4 class="cookie-detail-title">KI-Verarbeitung — Google Gemini API</h4>
-          <p class="cookie-detail-text">Wenn du eine KI-Analyse startest, werden deine Dokumente temporär an die Google Gemini API (USA) übertragen. Google agiert dabei als unser Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Es findet keine dauerhafte Speicherung oder Profilbildung statt — und laut Googles bezahlter API-Bedingungen kein Training von KI-Modellen mit deinen Daten. Rechtsgrundlage für die Drittlandübermittlung: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (Standardvertragsklauseln). Google ist zudem nach dem EU-U.S. Data Privacy Framework zertifiziert.</p>
+          <p class="cookie-detail-text">Wenn du eine KI-Analyse startest, werden deine Dokumente zur Verarbeitung an die Google Gemini API (USA) übertragen. Google agiert dabei als unser Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Wir speichern hochgeladene Dokumentinhalte nicht dauerhaft auf unseren Servern. Google kann technische Protokoll- oder Sicherheitsdaten nach eigenen Bedingungen zeitlich begrenzt speichern. Laut Googles bezahlter API-Bedingungen findet kein Training von KI-Modellen mit deinen Daten statt. Rechtsgrundlage für die Drittlandübermittlung: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO (Standardvertragsklauseln). Google ist zudem nach dem EU-U.S. Data Privacy Framework zertifiziert.</p>
         </div>
         <div class="cookie-detail-section">
           <h4 class="cookie-detail-title">Deine Rechte</h4>
@@ -253,7 +253,7 @@
       </nav>
       <div class="header-right">
         <span id="header-username" class="header-user"></span>
-        <button onclick="openOwnerDashboard()" class="btn-owner" id="btn-owner-panel" style="display:none;" data-de="⚙️ Owner Panel" data-en="⚙️ Owner Panel">⚙️ Owner Panel</button>
+        <!-- Owner Panel button injected by JS only after server-side owner authentication -->
         <button onclick="toggleMyTasks()" class="btn-ghost" id="btn-my-tasks" data-de="Meine Aufgaben" data-en="My Tasks" style="display:none;">Meine Aufgaben</button>
         <button onclick="openAccount()" class="btn-ghost" id="btn-my-account" data-de="Mein Konto" data-en="My Account" style="display:none;">Mein Konto</button>
         <button onclick="handleLogout()" class="btn-ghost" id="btn-logout" data-de="Abmelden" data-en="Log out" style="display:none;">Abmelden</button>
@@ -313,7 +313,7 @@
       Kein Prompt-Chaos. Kein Abo. Keine dauerhafte Datenspeicherung — DSGVO-konform, sicher, sofort einsatzbereit. Ab €0,99 pro Aufgabe.
     </p>
     <div class="hero-badges">
-      <span class="hero-badge">✅ <span data-de="Daten nach Abschluss automatisch gelöscht" data-en="Data automatically deleted after completion">Daten nach Abschluss automatisch gelöscht</span></span>
+      <span class="hero-badge">✅ <span data-de="Keine dauerhafte Speicherung hochgeladener Inhalte" data-en="No permanent storage of uploaded content">Keine dauerhafte Speicherung hochgeladener Inhalte</span></span>
       <span class="hero-badge">🔒 <span data-de="DSGVO-konform" data-en="GDPR compliant">DSGVO-konform</span></span>
       <span class="hero-badge">💶 <span data-de="Faire Preise" data-en="Fair pricing">Faire Preise</span></span>
     </div>
@@ -470,12 +470,12 @@
         <div class="trust-card">
           <div class="trust-card-icon">📡</div>
           <h3 data-de="Wo laufen die Daten?" data-en="Where does the data go?">Wo laufen die Daten?</h3>
-          <p data-de="Dein Dokument wird ausschließlich an die Google Gemini API (USA) gesendet — nur für die KI-Analyse. Keine Speicherung, kein Tracking, keine Weitergabe an Dritte. Rechtsgrundlage: &lt;a href=&quot;https://dsgvo-gesetz.de/art-49-dsgvo/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; style=&quot;color:var(--primary);text-decoration:underline;&quot;&gt;Art. 49 Abs. 1 lit. a DSGVO.&lt;/a&gt;" data-en="Your document is sent only to the Google Gemini API (USA) — solely for AI analysis. No storage, no tracking, no sharing with third parties. Legal basis: &lt;a href=&quot;https://dsgvo-gesetz.de/art-49-dsgvo/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; style=&quot;color:var(--primary);text-decoration:underline;&quot;&gt;Art. 49(1)(a) GDPR.&lt;/a&gt;">Dein Dokument wird nur an die <strong>Google Gemini API</strong> (USA) gesendet — ausschließlich für die Analyse. Keine weitere Speicherung, kein Tracking, keine Weitergabe. Rechtsgrundlage: <a href="https://dsgvo-gesetz.de/art-49-dsgvo/" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline;">Art. 49 Abs. 1 lit. a DSGVO.</a></p>
+          <p data-de="Dein Dokument wird ausschließlich an die Google Gemini API (USA) gesendet — nur für die KI-Analyse. Wir speichern hochgeladene Inhalte nicht dauerhaft. Kein Tracking, keine Weitergabe an Dritte. Rechtsgrundlage: &lt;a href=&quot;https://dsgvo-gesetz.de/art-49-dsgvo/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; style=&quot;color:var(--primary);text-decoration:underline;&quot;&gt;Art. 49 Abs. 1 lit. a DSGVO.&lt;/a&gt;" data-en="Your document is sent only to the Google Gemini API (USA) — solely for AI analysis. We do not permanently store uploaded content. No tracking, no sharing with third parties. Legal basis: &lt;a href=&quot;https://dsgvo-gesetz.de/art-49-dsgvo/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot; style=&quot;color:var(--primary);text-decoration:underline;&quot;&gt;Art. 49(1)(a) GDPR.&lt;/a&gt;">Dein Dokument wird nur an die <strong>Google Gemini API</strong> (USA) gesendet — ausschließlich für die Analyse. <strong>Wir speichern hochgeladene Inhalte nicht dauerhaft.</strong> Kein Tracking, keine Weitergabe. Rechtsgrundlage: <a href="https://dsgvo-gesetz.de/art-49-dsgvo/" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline;">Art. 49 Abs. 1 lit. a DSGVO.</a></p>
         </div>
         <div class="trust-card">
           <div class="trust-card-icon">🗑️</div>
           <h3 data-de="Wann werden Daten gelöscht?" data-en="When is data deleted?">Wann werden Daten gelöscht?</h3>
-          <p data-de="Unmittelbar nach Abschluss der Analyse. Google löscht temporäre Daten nach der Verarbeitung gemäß API-Nutzungsbedingungen. Wir selbst speichern keine Dokumentinhalte." data-en="Immediately after the analysis is complete. Google deletes temporary data after processing per API terms. We never store document contents ourselves.">Unmittelbar nach Abschluss der Analyse. Google löscht temporäre Daten nach der Verarbeitung. <strong>Wir speichern keine Dokumentinhalte.</strong></p>
+          <p data-de="Wir speichern hochgeladene Inhalte nach Abschluss der Verarbeitung nicht dauerhaft. Google kann technische Protokoll- oder Verarbeitungsdaten nach eigenen Bedingungen zeitlich begrenzt speichern." data-en="We do not permanently store uploaded content after processing is complete. Google may retain technical log or processing data for a limited period under its own terms.">Wir speichern hochgeladene Inhalte nach Abschluss der Verarbeitung <strong>nicht dauerhaft</strong>. Google kann technische Protokoll- oder Verarbeitungsdaten nach eigenen Bedingungen zeitlich begrenzt speichern.</p>
         </div>
         <div class="trust-card">
           <div class="trust-card-icon">🚫</div>
@@ -494,9 +494,9 @@
   <!-- OTHER SERVICES SECTION -->
   <section class="other-services" id="other-services">
     <div class="os-inner">
-      <span class="section-chip chip-dark" data-de="🚧 In Entwicklung" data-en="🚧 In Development">🚧 In Entwicklung</span>
-      <h2 data-de="Weitere Dienste" data-en="More Services">Weitere Dienste <span class="beta-label">Beta</span></h2>
-      <p class="os-subtitle" data-de="Diese Dienste befinden sich in aktiver Entwicklung und werden schrittweise freigeschaltet. PDF-Analyse ist das vollständig ausgereifte Hauptprodukt." data-en="These services are in active development and will be unlocked step by step. PDF Analysis is the fully mature main product.">Diese Dienste befinden sich in aktiver Entwicklung. Das Hauptprodukt — <strong>PDF-Analyse</strong> — ist bereits vollständig verfügbar.</p>
+      <span class="section-chip chip-dark" data-de="🛠️ Weitere Dienste" data-en="🛠️ More Services">🛠️ Weitere Dienste</span>
+      <h2 data-de="Was kommt als Nächstes?" data-en="What's coming next?">Was kommt als Nächstes?</h2>
+      <p class="os-subtitle" data-de="Bericht erstellen ist bereits vollständig verfügbar. Die weiteren Dienste befinden sich in aktiver Entwicklung und werden schrittweise freigeschaltet." data-en="Create Report is already fully available. The other services are in active development and will be unlocked step by step.">Bericht erstellen ist bereits <strong>vollständig verfügbar</strong>. Die weiteren Dienste befinden sich in aktiver Entwicklung.</p>
       <div class="os-grid">
         <div class="os-card os-card-beta">
           <div class="os-beta-badge" data-de="Demnächst" data-en="Coming soon">Demnächst</div>
@@ -890,7 +890,7 @@
               <div class="rh-metrics-row">
                 <div class="rh-metric"><span class="rh-metric-val">+24%</span><span class="rh-metric-lbl" data-de="Umsatz" data-en="Revenue">Umsatz</span></div>
                 <div class="rh-metric"><span class="rh-metric-val">-18%</span><span class="rh-metric-lbl" data-de="Kosten" data-en="Costs">Kosten</span></div>
-                <div class="rh-metric"><span class="rh-metric-val">3 Maß.</span><span class="rh-metric-lbl" data-de="Empfehlungen" data-en="Actions">Empfehlungen</span></div>
+                <div class="rh-metric"><span class="rh-metric-val">3</span><span class="rh-metric-lbl" data-de="Handlungsempf." data-en="Actions">Handlungsempf.</span></div>
               </div>
             </div>
             <div class="rh-doc-section">
@@ -1357,7 +1357,7 @@
             <div class="form-trust-icon">🛡️</div>
             <div>
               <strong data-de="Sicher &amp; vertraulich" data-en="Safe &amp; confidential">Sicher &amp; vertraulich</strong>
-              <p data-de="Verschlüsselte Übertragung, keine Speicherung deiner Daten." data-en="Encrypted transfer, no storage of your data.">Verschlüsselte Übertragung, keine Speicherung deiner Daten.</p>
+              <p data-de="Verschlüsselte Übertragung. Wir speichern hochgeladene Inhalte nicht dauerhaft." data-en="Encrypted transfer. We do not permanently store uploaded content.">Verschlüsselte Übertragung. Wir speichern hochgeladene Inhalte nicht dauerhaft.</p>
             </div>
           </div>
           <div class="form-trust-item">
@@ -1755,7 +1755,7 @@
           <button class="faq-q" onclick="toggleFaq(this)">
             Was passiert mit meinen hochgeladenen Dokumenten? <span class="faq-arrow">›</span>
           </button>
-          <div class="faq-a">Deine Dokumente werden ausschließlich für die Dauer der Analyse an die Google Gemini API übertragen und danach sofort gelöscht. Wir speichern keine Inhalte deiner Dateien auf unseren Servern. Google verarbeitet die Inhalte als Auftragsverarbeiter gemäß Art. 28 DSGVO — ein Data Processing Addendum ist abgeschlossen. Es findet kein KI-Training mit deinen Daten statt.</div>
+          <div class="faq-a">Deine Dokumente werden zur KI-Analyse an die Google Gemini API übertragen. Wir speichern hochgeladene Inhalte auf unseren Servern nicht dauerhaft. Google verarbeitet die Inhalte als Auftragsverarbeiter gemäß Art. 28 DSGVO — ein Data Processing Addendum ist abgeschlossen. Google kann technische Protokoll- oder Sicherheitsdaten nach eigenen Bedingungen für einen begrenzten Zeitraum speichern. Es findet kein KI-Training mit deinen Daten statt (bei bezahlter API). Bitte lade keine besonders sensiblen oder gesetzlich besonders geschützten Daten hoch, wenn du mit dieser Cloud-Verarbeitung nicht einverstanden bist.</div>
         </div>
 
         <div class="faq-item">

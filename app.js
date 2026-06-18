@@ -119,6 +119,7 @@ function loadAuth() {
     showGuest();
   } else {
     currentUser = JSON.parse(saved);
+    delete currentUser.isOwner; // isOwner is never trusted from client-side storage
     showLoggedIn();
   }
 }
@@ -164,7 +165,7 @@ async function handleLogin(e) {
     const adminData = await adminRes.json();
     if (adminData.ok) {
       currentUser = { name: 'Mark', email, isOwner: true };
-      if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+      if (remember) localStorage.setItem('ai_agent_user', JSON.stringify({ name: 'Mark', email })); // never persist isOwner
       updateActivity();
       hideAuthModal();
       showLoggedIn();
@@ -245,7 +246,8 @@ function showGuest() {
   document.getElementById('btn-logout').style.display        = 'none';
   document.getElementById('btn-my-tasks').style.display      = 'none';
   document.getElementById('btn-my-account').style.display    = 'none';
-  document.getElementById('btn-owner-panel').style.display   = 'none';
+  const ownerBtn = document.getElementById('btn-owner-panel');
+  if (ownerBtn) ownerBtn.remove();
   document.getElementById('header-username').textContent     = '';
   updateHeroCTA();
 }
@@ -257,7 +259,18 @@ function showLoggedIn() {
   document.getElementById('btn-header-login').style.display  = 'none';
   document.getElementById('btn-header-signup').style.display = 'none';
   const isVerifiedOwner = currentUser?.isOwner === true;
-  document.getElementById('btn-owner-panel').style.display  = isVerifiedOwner ? 'inline-block' : 'none';
+  // Remove any existing owner button first
+  const existingOwnerBtn = document.getElementById('btn-owner-panel');
+  if (existingOwnerBtn) existingOwnerBtn.remove();
+  // Only inject owner button after server-confirmed authentication
+  if (isVerifiedOwner) {
+    const ownerBtn = document.createElement('button');
+    ownerBtn.id = 'btn-owner-panel';
+    ownerBtn.className = 'btn-owner';
+    ownerBtn.textContent = '⚙️ Owner Panel';
+    ownerBtn.onclick = openOwnerDashboard;
+    document.getElementById('header-username').insertAdjacentElement('afterend', ownerBtn);
+  }
   document.getElementById('btn-my-account').style.display   = isVerifiedOwner ? 'none' : 'inline-block';
   renderTestimonials();
   updateHeroCTA();
@@ -2489,7 +2502,7 @@ const FUN_FACTS = {
     'Professionelle Berater brauchen Tage für eine Analyse — deine KI schafft es in Minuten.',
     'Die KI erkennt Widersprüche im Dokument, die Menschen bei 100+ Seiten leicht übersehen.',
     'Jede Analyse wird komplett neu berechnet — keine gecachten oder veralteten Ergebnisse.',
-    'Alle Daten werden nach der Analyse sofort gelöscht — deine Dokumente bleiben privat.',
+    'Wir speichern hochgeladene Inhalte nicht dauerhaft — deine Dokumente bleiben privat.',
     'Du kannst das Ergebnis direkt als PDF weitergeben — fertig formatiert und professionell.',
     'Die KI bewertet Risiken nach denselben Prinzipien wie erfahrene Unternehmensberater.',
     'Tipp: Je präziser deine Aufgabenbeschreibung, desto gezielter die Analyse.',
@@ -2501,7 +2514,7 @@ const FUN_FACTS = {
     'Professional consultants take days for an analysis — your AI does it in minutes.',
     'The AI spots contradictions in the document that humans easily miss across 100+ pages.',
     'Every analysis is calculated fresh — no cached or outdated results.',
-    'All data is deleted immediately after analysis — your documents stay private.',
+    'We do not permanently store uploaded content — your documents stay private.',
     'You can share the result directly as a PDF — fully formatted and professional.',
     'The AI evaluates risks using the same principles as experienced business consultants.',
     'Tip: The more precise your task description, the more targeted the analysis.',
