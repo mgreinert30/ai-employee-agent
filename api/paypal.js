@@ -21,7 +21,7 @@ function paypalBase() {
 
 async function getAccessToken() {
   const creds = Buffer.from(
-    `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_SECRET}`
+    `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
   ).toString('base64');
   const r = await fetch(`${paypalBase()}/v1/oauth2/token`, {
     method: 'POST',
@@ -57,8 +57,8 @@ export default async function handler(req, res) {
 
   // ── create-order ────────────────────────────────────────────────────────────
   if (action === 'create-order') {
-    const { PAYPAL_CLIENT_ID, PAYPAL_SECRET } = process.env;
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
+    const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt <= 0) return res.status(400).json({ error: 'Ungültiger Betrag' });
     try {
@@ -84,8 +84,8 @@ export default async function handler(req, res) {
 
   // ── capture-order ────────────────────────────────────────────────────────────
   if (action === 'capture-order') {
-    const { PAYPAL_CLIENT_ID, PAYPAL_SECRET } = process.env;
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
+    const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
     if (!orderID || typeof orderID !== 'string') return res.status(400).json({ error: 'orderID fehlt' });
     try {
       const accessToken = await getAccessToken();
