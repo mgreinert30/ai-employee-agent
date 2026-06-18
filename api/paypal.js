@@ -13,24 +13,32 @@ function isRateLimited(ip, max = 10, ms = 60000) {
   return ++r.n > max;
 }
 
-function paypalBase() {
-  return process.env.PAYPAL_ENV === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com';
-}
+const PAYPAL_BASES = {
+  live:    'https://api-m.paypal.com',
+  sandbox: 'https://api-m.sandbox.paypal.com',
+};
 
+// Returns { token, base } — auto-detects sandbox vs live from the credentials
 async function getAccessToken() {
   const creds = Buffer.from(
     `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
   ).toString('base64');
-  const r = await fetch(`${paypalBase()}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=client_credentials',
-  });
-  const d = await r.json();
-  if (!d.access_token) throw new Error(`PayPal-Auth fehlgeschlagen (HTTP ${r.status}): ${d.error_description || d.error || JSON.stringify(d).slice(0, 120)}`);
-  return d.access_token;
+
+  // Try configured env first, then the other one as fallback
+  const preferred = process.env.PAYPAL_ENV === 'live' ? 'live' : 'sandbox';
+  const fallback  = preferred === 'live' ? 'sandbox' : 'live';
+
+  for (const env of [preferred, fallback]) {
+    const base = PAYPAL_BASES[env];
+    const r = await fetch(`${base}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'grant_type=client_credentials',
+    });
+    const d = await r.json();
+    if (d.access_token) return { token: d.access_token, base };
+  }
+  throw new Error('PayPal-Authentifizierung fehlgeschlagen — Client ID oder Secret ungültig');
 }
 
 export default async function handler(req, res) {
@@ -62,8 +70,8 @@ export default async function handler(req, res) {
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt <= 0) return res.status(400).json({ error: 'Ungültiger Betrag' });
     try {
-      const token = await getAccessToken();
-      const orderRes = await fetch(`${paypalBase()}/v2/checkout/orders`, {
+      const { token, base } = await getAccessToken();
+      const orderRes = await fetch(`${base}/v2/checkout/orders`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,8 +96,8 @@ export default async function handler(req, res) {
     if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
     if (!orderID || typeof orderID !== 'string') return res.status(400).json({ error: 'orderID fehlt' });
     try {
-      const accessToken = await getAccessToken();
-      const captureRes = await fetch(`${paypalBase()}/v2/checkout/orders/${orderID}/capture`, {
+      const { token: accessToken, base } = await getAccessToken();
+      const captureRes = await fetch(`${base}/v2/checkout/orders/${orderID}/capture`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       });
