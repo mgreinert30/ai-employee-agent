@@ -1738,6 +1738,11 @@ document.addEventListener('click', e => {
 function selectShortcut(type) {
   if (!currentUser) { requireLogin(() => selectShortcut(type)); return; }
   currentShortcutType = type;
+  if (type === 'pdf') {
+    showPage('pdf');
+  } else {
+    showPage('services');
+  }
   const descriptions = {
     de: {
       pdf:      'Analysiere die hochgeladenen PDF-Dateien vollständig und erstelle einen professionellen Bericht mit den wichtigsten Erkenntnissen, Zusammenfassung und Handlungsempfehlungen.',
