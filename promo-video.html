@@ -1,694 +1,620 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AI Employee Agent — Werbevideo</title>
+<meta charset="UTF-8"/>
+<title>AI Employee Agent — Promo</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  width:1280px;height:720px;overflow:hidden;
+  background:#020c1b;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  color:#fff;
+}
 
-  body {
-    width: 1280px;
-    height: 720px;
-    overflow: hidden;
-    background: #020c1b;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: white;
-  }
+/* ─── CANVAS LAYER ─── */
+#bg-canvas{position:absolute;inset:0;z-index:0;}
 
-  /* ── SCENE SYSTEM ── */
-  .scene {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.6s ease;
-    pointer-events: none;
-  }
-  .scene.active { opacity: 1; }
+/* ─── SCENE SYSTEM ─── */
+.scene{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  opacity:0;z-index:10;
+  pointer-events:none;
+  will-change:opacity,transform;
+}
+.scene.entering{animation:sceneIn .55s cubic-bezier(.22,1,.36,1) forwards;}
+.scene.leaving {animation:sceneOut .45s cubic-bezier(.55,0,1,.45) forwards;}
+.scene.visible {opacity:1;}
+@keyframes sceneIn  {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sceneOut {from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-14px)}}
 
-  /* ── SHARED BG ── */
-  .bg-grad {
-    background: radial-gradient(ellipse at 50% 0%, #0d3a6e 0%, #020c1b 70%);
-  }
-  .bg-dark {
-    background: linear-gradient(135deg, #020c1b 0%, #0a1628 100%);
-  }
-  .bg-blue {
-    background: linear-gradient(135deg, #0d2a5e 0%, #1a4a9f 100%);
-  }
-  .bg-green {
-    background: linear-gradient(135deg, #022c1e 0%, #064e3b 100%);
-  }
+/* ─── PROGRESS BAR ─── */
+#bar{
+  position:fixed;bottom:0;left:0;height:3px;width:0%;z-index:9999;
+  background:linear-gradient(90deg,#2563eb,#06b6d4,#a78bfa);
+  box-shadow:0 0 12px rgba(37,99,235,.9);
+  transition:width .08s linear;
+}
 
-  /* ── PARTICLES ── */
-  .particles {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .particle {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(37,99,235,0.15);
-    animation: float linear infinite;
-  }
-  @keyframes float {
-    from { transform: translateY(100vh) scale(0); opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 1; }
-    to   { transform: translateY(-20px) scale(1); opacity: 0; }
-  }
+/* ─── SHARED CHIPS ─── */
+.chip{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(37,99,235,.18);
+  border:1px solid rgba(37,99,235,.45);
+  color:#93c5fd;font-size:12px;font-weight:700;
+  padding:5px 16px;border-radius:100px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:20px;
+  animation:fadeUp .5s ease both;
+}
 
-  /* ── GRID LINES ── */
-  .grid-bg {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
-    background-size: 60px 60px;
-  }
+/* ─── GLOW ORBS ─── */
+.orb{
+  position:absolute;border-radius:50%;
+  filter:blur(80px);opacity:.25;pointer-events:none;
+  animation:drift 8s ease-in-out infinite alternate;
+}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(30px,20px)}}
 
-  /* ── PROGRESS BAR ── */
-  #progress-bar {
-    position: fixed;
-    bottom: 0; left: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #2563eb, #06b6d4);
-    width: 0%;
-    transition: width 0.1s linear;
-    z-index: 9999;
-    box-shadow: 0 0 10px rgba(37,99,235,0.8);
-  }
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp  {from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn  {from{opacity:0}to{opacity:1}}
+@keyframes popIn   {from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+@keyframes slideL  {from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideR  {from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse   {0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.5)}50%{box-shadow:0 0 0 18px rgba(37,99,235,0)}}
+@keyframes shimmer {from{background-position:-400px 0}to{background-position:400px 0}}
+@keyframes countUp {from{transform:scale(1.4);color:#60a5fa}to{transform:scale(1)}}
+@keyframes lineGrow{from{width:0}to{width:100%}}
+@keyframes blink   {0%,100%{opacity:1}50%{opacity:0}}
+@keyframes glow    {0%,100%{text-shadow:0 0 20px rgba(96,165,250,.3)}50%{text-shadow:0 0 40px rgba(96,165,250,.9),0 0 80px rgba(6,182,212,.4)}}
 
-  /* ── TYPOGRAPHY ── */
-  .chip {
-    display: inline-block;
-    background: rgba(37,99,235,0.2);
-    border: 1px solid rgba(37,99,235,0.4);
-    color: #93c5fd;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 6px 18px;
-    border-radius: 100px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-  }
+/* ─── GRADIENT TEXT ─── */
+.g{
+  background:linear-gradient(135deg,#60a5fa,#06b6d4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.g2{
+  background:linear-gradient(135deg,#a78bfa,#ec4899);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.red{color:#f87171 !important;-webkit-text-fill-color:#f87171 !important;}
+.green{color:#34d399 !important;-webkit-text-fill-color:#34d399 !important;}
 
-  .headline {
-    font-size: 72px;
-    font-weight: 900;
-    line-height: 1.05;
-    text-align: center;
-    letter-spacing: -2px;
-  }
-  .headline .grad {
-    background: linear-gradient(135deg, #60a5fa, #06b6d4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .headline .red { color: #f87171; -webkit-text-fill-color: #f87171; }
+/* ════════════════════════════════════
+   SCENE 1 — LOGO INTRO
+════════════════════════════════════ */
+#s1{background:radial-gradient(ellipse at 50% 30%,#0d2e5c 0%,#020c1b 65%);}
+#s1 .orb1{width:500px;height:500px;background:#1d4ed8;top:-100px;left:-100px;}
+#s1 .orb2{width:400px;height:400px;background:#0891b2;bottom:-80px;right:-80px;animation-delay:-4s;}
+#s1 .logo-ring{
+  width:140px;height:140px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:64px;margin-bottom:28px;
+  box-shadow:0 0 0 12px rgba(37,99,235,.15),0 0 60px rgba(37,99,235,.4);
+  animation:popIn .7s cubic-bezier(.34,1.56,.64,1) both,pulse 2s 1s ease infinite;
+}
+#s1 .brand{
+  font-size:64px;font-weight:900;letter-spacing:-2px;
+  animation:fadeUp .6s .3s ease both;
+}
+#s1 .brand span{color:#60a5fa;}
+#s1 .tagline{
+  font-size:16px;color:rgba(255,255,255,.4);
+  letter-spacing:4px;text-transform:uppercase;
+  margin-top:14px;
+  animation:fadeUp .6s .6s ease both;
+}
+#s1 .divider{
+  width:0;height:1px;background:linear-gradient(90deg,transparent,#2563eb,transparent);
+  margin:20px auto;
+  animation:lineGrow .8s .8s ease both;
+}
 
-  .subline {
-    font-size: 22px;
-    color: rgba(255,255,255,0.6);
-    text-align: center;
-    margin-top: 20px;
-    max-width: 700px;
-    line-height: 1.5;
-  }
+/* ════════════════════════════════════
+   SCENE 2 — PROBLEM
+════════════════════════════════════ */
+#s2{background:radial-gradient(ellipse at 20% 50%,#1a0a0a 0%,#020c1b 60%);}
+#s2 .orb1{width:380px;height:380px;background:#7f1d1d;top:50px;left:-120px;opacity:.2;}
+#s2 .headline{font-size:58px;font-weight:900;letter-spacing:-2px;line-height:1.08;text-align:center;animation:fadeUp .5s ease both;}
+#s2 .sub{font-size:20px;color:rgba(255,255,255,.5);text-align:center;margin-top:12px;max-width:640px;animation:fadeUp .5s .15s ease both;}
+#s2 .pain-list{list-style:none;margin-top:32px;display:flex;flex-direction:column;gap:14px;}
+#s2 .pain-list li{
+  display:flex;align-items:center;gap:14px;
+  font-size:22px;color:rgba(255,255,255,.8);
+  background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);
+  padding:14px 24px;border-radius:12px;
+  animation:slideL .45s ease both;
+}
+#s2 .pain-list li:nth-child(1){animation-delay:.1s}
+#s2 .pain-list li:nth-child(2){animation-delay:.25s}
+#s2 .pain-list li:nth-child(3){animation-delay:.4s}
+#s2 .pain-list li:nth-child(4){animation-delay:.55s}
+#s2 .pain-icon{font-size:26px;flex-shrink:0;}
 
-  /* ── SCENE 1: LOGO INTRO ── */
-  #s1 .logo-wrap {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    animation: zoomIn 0.8s ease forwards;
-  }
-  @keyframes zoomIn {
-    from { transform: scale(0.5); opacity: 0; }
-    to   { transform: scale(1);   opacity: 1; }
-  }
-  #s1 .logo-icon {
-    width: 100px; height: 100px;
-    background: white;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 52px;
-    box-shadow: 0 0 60px rgba(37,99,235,0.5);
-  }
-  #s1 .logo-text {
-    font-size: 56px;
-    font-weight: 900;
-    letter-spacing: -1px;
-  }
-  #s1 .logo-text span { color: #60a5fa; }
-  #s1 .tagline {
-    margin-top: 32px;
-    font-size: 20px;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    animation: fadeUp 0.8s 0.5s ease forwards;
-    opacity: 0;
-  }
-  @keyframes fadeUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
+/* ════════════════════════════════════
+   SCENE 3 — PRICE SHOCK
+════════════════════════════════════ */
+#s3{background:radial-gradient(ellipse at 50% 20%,#0d3060 0%,#020c1b 65%);}
+#s3 .orb1{width:500px;height:500px;background:#1d4ed8;top:-80px;right:-100px;opacity:.2;}
+#s3 .compare{display:flex;align-items:center;gap:40px;margin-top:36px;}
+#s3 .ccard{
+  padding:36px 44px;border-radius:22px;text-align:center;min-width:280px;
+  animation:fadeUp .5s ease both;
+}
+#s3 .ccard-bad{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+  animation-delay:.1s;
+}
+#s3 .ccard-good{
+  background:rgba(37,99,235,.12);border:2px solid rgba(37,99,235,.5);
+  transform:scale(1.06);animation-delay:.3s;
+  box-shadow:0 0 40px rgba(37,99,235,.25);
+}
+#s3 .ccard-icon{font-size:52px;margin-bottom:14px;}
+#s3 .ccard-label{font-size:16px;font-weight:600;color:rgba(255,255,255,.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;}
+#s3 .ccard-price{font-size:52px;font-weight:900;line-height:1;animation:countUp .6s .5s ease both;}
+#s3 .ccard-sub{font-size:13px;color:rgba(255,255,255,.4);margin-top:8px;}
+#s3 .vs{font-size:32px;font-weight:900;color:rgba(255,255,255,.2);animation:fadeIn .4s .2s both;}
+#s3 .saving{
+  margin-top:28px;display:inline-block;
+  background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(6,182,212,.2));
+  border:1px solid rgba(37,99,235,.4);
+  padding:10px 28px;border-radius:100px;
+  font-size:15px;font-weight:700;color:#93c5fd;
+  animation:fadeUp .5s .7s both;
+  letter-spacing:.5px;
+}
 
-  /* ── SCENE 2: PROBLEM ── */
-  #s2 .problem-list {
-    list-style: none;
-    margin-top: 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  #s2 .problem-list li {
-    font-size: 26px;
-    color: rgba(255,255,255,0.75);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    animation: slideRight 0.5s ease forwards;
-    opacity: 0;
-  }
-  #s2 .problem-list li:nth-child(1) { animation-delay: 0.2s; }
-  #s2 .problem-list li:nth-child(2) { animation-delay: 0.5s; }
-  #s2 .problem-list li:nth-child(3) { animation-delay: 0.8s; }
-  #s2 .problem-list li:nth-child(4) { animation-delay: 1.1s; }
-  @keyframes slideRight {
-    from { transform: translateX(-40px); opacity: 0; }
-    to   { transform: translateX(0);     opacity: 1; }
-  }
-  #s2 .pain { color: #f87171; font-size: 28px; }
+/* ════════════════════════════════════
+   SCENE 4 — FEATURES
+════════════════════════════════════ */
+#s4{background:linear-gradient(180deg,#020c1b 0%,#040e20 100%);}
+#s4 .feat-row{display:flex;gap:20px;margin-top:32px;}
+#s4 .fcard{
+  flex:1;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:20px;padding:28px 24px;
+  position:relative;overflow:hidden;
+  animation:fadeUp .5s ease both;
+  transition:border-color .3s;
+}
+#s4 .fcard::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+#s4 .fcard:nth-child(1){animation-delay:.1s;--accent:#2563eb;}
+#s4 .fcard:nth-child(2){animation-delay:.25s;--accent:#06b6d4;}
+#s4 .fcard:nth-child(3){animation-delay:.4s;--accent:#a78bfa;}
+#s4 .fcard-icon{font-size:44px;margin-bottom:16px;}
+#s4 .fcard-title{font-size:22px;font-weight:800;margin-bottom:8px;}
+#s4 .fcard-desc{font-size:14px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:16px;}
+#s4 .fcard-price{
+  display:inline-block;
+  background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.35);
+  color:#93c5fd;font-size:15px;font-weight:800;
+  padding:6px 16px;border-radius:100px;
+}
+#s4 .fcard:nth-child(2) .fcard-price{background:rgba(6,182,212,.15);border-color:rgba(6,182,212,.3);color:#67e8f9;}
+#s4 .fcard:nth-child(3) .fcard-price{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.3);color:#c4b5fd;}
 
-  /* ── SCENE 3: SOLUTION ── */
-  #s3 .vs-row {
-    display: flex;
-    align-items: center;
-    gap: 48px;
-    margin-top: 40px;
-  }
-  #s3 .vs-col {
-    text-align: center;
-    padding: 32px 40px;
-    border-radius: 20px;
-    min-width: 260px;
-  }
-  #s3 .vs-bad {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    animation: fadeUp 0.6s 0.2s ease forwards; opacity: 0;
-  }
-  #s3 .vs-good {
-    background: rgba(37,99,235,0.15);
-    border: 1px solid rgba(37,99,235,0.5);
-    animation: fadeUp 0.6s 0.6s ease forwards; opacity: 0;
-    transform: scale(1.05);
-  }
-  #s3 .vs-icon { font-size: 48px; margin-bottom: 12px; }
-  #s3 .vs-label { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-  #s3 .vs-price { font-size: 36px; font-weight: 900; }
-  #s3 .vs-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; }
-  #s3 .vs-sep {
-    font-size: 36px;
-    font-weight: 900;
-    color: rgba(255,255,255,0.3);
-    animation: fadeUp 0.6s 0.4s ease forwards; opacity: 0;
-  }
+/* ════════════════════════════════════
+   SCENE 5 — HOW IT WORKS
+════════════════════════════════════ */
+#s5{background:radial-gradient(ellipse at 60% 40%,#0a2a5e 0%,#020c1b 65%);}
+#s5 .steps{display:flex;gap:0;margin-top:40px;width:900px;position:relative;}
+#s5 .steps::before{
+  content:'';position:absolute;top:36px;left:60px;right:60px;height:2px;
+  background:linear-gradient(90deg,#2563eb,#06b6d4,#a78bfa);
+  animation:lineGrow .8s .3s ease both;
+  z-index:0;
+}
+#s5 .step{
+  flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:14px;position:relative;z-index:1;
+  animation:fadeUp .5s ease both;
+}
+#s5 .step:nth-child(1){animation-delay:.2s}
+#s5 .step:nth-child(2){animation-delay:.5s}
+#s5 .step:nth-child(3){animation-delay:.8s}
+#s5 .step-num{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:900;
+  box-shadow:0 0 24px rgba(37,99,235,.5);
+  border:3px solid rgba(255,255,255,.1);
+}
+#s5 .step-icon{font-size:32px;margin-bottom:4px;}
+#s5 .step-title{font-size:20px;font-weight:800;}
+#s5 .step-desc{font-size:14px;color:rgba(255,255,255,.5);line-height:1.5;max-width:220px;}
+#s5 .step-time{
+  margin-top:8px;font-size:13px;font-weight:700;
+  color:#34d399;background:rgba(52,211,153,.1);
+  border:1px solid rgba(52,211,153,.25);
+  padding:3px 12px;border-radius:100px;
+}
 
-  /* ── SCENE 4: FEATURES ── */
-  #s4 .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-top: 40px;
-    width: 900px;
-  }
-  #s4 .feat-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
-    padding: 28px 24px;
-    text-align: center;
-    animation: fadeUp 0.5s ease forwards;
-    opacity: 0;
-  }
-  #s4 .feat-card:nth-child(1) { animation-delay: 0.1s; }
-  #s4 .feat-card:nth-child(2) { animation-delay: 0.3s; }
-  #s4 .feat-card:nth-child(3) { animation-delay: 0.5s; }
-  #s4 .feat-icon { font-size: 42px; margin-bottom: 14px; }
-  #s4 .feat-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-  #s4 .feat-desc { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.5; }
-  #s4 .feat-price {
-    margin-top: 12px;
-    display: inline-block;
-    background: rgba(37,99,235,0.25);
-    border: 1px solid rgba(37,99,235,0.4);
-    color: #93c5fd;
-    font-size: 13px;
-    font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 100px;
-  }
+/* ════════════════════════════════════
+   SCENE 6 — TRUST
+════════════════════════════════════ */
+#s6{background:linear-gradient(135deg,#020c1b 0%,#041208 100%);}
+#s6 .orb1{width:400px;height:400px;background:#064e3b;bottom:-80px;left:-60px;opacity:.25;}
+#s6 .trust-row{display:flex;gap:20px;margin-top:32px;width:960px;}
+#s6 .tcard{
+  flex:1;background:rgba(16,185,129,.05);
+  border:1px solid rgba(16,185,129,.18);
+  border-radius:18px;padding:28px 22px;text-align:center;
+  animation:fadeUp .5s ease both;
+  position:relative;overflow:hidden;
+}
+#s6 .tcard::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%,rgba(16,185,129,.08),transparent 70%);
+}
+#s6 .tcard:nth-child(1){animation-delay:.1s}
+#s6 .tcard:nth-child(2){animation-delay:.25s}
+#s6 .tcard:nth-child(3){animation-delay:.4s}
+#s6 .tcard:nth-child(4){animation-delay:.55s}
+#s6 .tcard-icon{font-size:38px;margin-bottom:12px;position:relative;z-index:1;}
+#s6 .tcard-title{font-size:17px;font-weight:800;color:#34d399;margin-bottom:7px;position:relative;z-index:1;}
+#s6 .tcard-desc{font-size:13px;color:rgba(255,255,255,.5);line-height:1.55;position:relative;z-index:1;}
 
-  /* ── SCENE 5: DEMO ── */
-  #s5 .demo-box {
-    width: 780px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    overflow: hidden;
-    margin-top: 32px;
-    animation: fadeUp 0.6s 0.2s ease forwards;
-    opacity: 0;
-  }
-  #s5 .demo-header {
-    background: rgba(37,99,235,0.15);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  #s5 .demo-dot { width: 12px; height: 12px; border-radius: 50%; }
-  #s5 .demo-body { padding: 24px; }
-  #s5 .demo-step {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 20px;
-    animation: slideRight 0.5s ease forwards;
-    opacity: 0;
-  }
-  #s5 .demo-step:nth-child(1) { animation-delay: 0.4s; }
-  #s5 .demo-step:nth-child(2) { animation-delay: 0.8s; }
-  #s5 .demo-step:nth-child(3) { animation-delay: 1.2s; }
-  #s5 .demo-num {
-    width: 32px; height: 32px;
-    background: #2563eb;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 800;
-    flex-shrink: 0;
-  }
-  #s5 .demo-text strong { display: block; font-size: 18px; margin-bottom: 2px; }
-  #s5 .demo-text span { font-size: 14px; color: rgba(255,255,255,0.5); }
+/* ════════════════════════════════════
+   SCENE 7 — CTA
+════════════════════════════════════ */
+#s7{background:radial-gradient(ellipse at 50% 40%,#0c2d6b 0%,#020c1b 65%);}
+#s7 .orb1{width:600px;height:600px;background:#1e3a8a;top:-100px;left:50%;transform:translateX(-50%);opacity:.3;}
+#s7 .ring{
+  position:absolute;border-radius:50%;
+  border:1px solid rgba(37,99,235,.2);
+  animation:ripple 3s ease-out infinite;
+}
+@keyframes ripple{
+  0%{width:100px;height:100px;opacity:.8;top:50%;left:50%;transform:translate(-50%,-50%)}
+  100%{width:700px;height:700px;opacity:0;top:50%;left:50%;transform:translate(-50%,-50%)}
+}
+#s7 .ring:nth-child(2){animation-delay:1s}
+#s7 .ring:nth-child(3){animation-delay:2s}
+#s7 .cta-inner{position:relative;z-index:5;text-align:center;display:flex;flex-direction:column;align-items:center;}
+#s7 .cta-headline{font-size:70px;font-weight:900;letter-spacing:-3px;line-height:1.05;animation:fadeUp .5s ease both;}
+#s7 .cta-sub{font-size:20px;color:rgba(255,255,255,.5);margin-top:14px;animation:fadeUp .5s .15s both;}
+#s7 .cta-btn{
+  margin-top:36px;
+  display:inline-flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,#2563eb,#0891b2);
+  color:#fff;font-size:22px;font-weight:800;
+  padding:18px 48px;border-radius:100px;
+  animation:fadeUp .5s .3s both,pulse 2s .8s ease infinite;
+  box-shadow:0 8px 40px rgba(37,99,235,.5);
+  letter-spacing:.3px;
+}
+#s7 .cta-url{
+  margin-top:20px;font-size:17px;
+  color:rgba(255,255,255,.35);letter-spacing:3px;
+  animation:fadeUp .5s .5s both;
+}
+#s7 .cta-badges{
+  display:flex;gap:12px;margin-top:20px;
+  animation:fadeUp .5s .45s both;
+}
+#s7 .cta-badge{
+  font-size:13px;font-weight:600;color:rgba(255,255,255,.6);
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  padding:5px 14px;border-radius:100px;
+}
 
-  /* ── SCENE 6: TRUST ── */
-  #s6 .trust-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    margin-top: 40px;
-    width: 860px;
-  }
-  #s6 .trust-card {
-    background: rgba(16,185,129,0.07);
-    border: 1px solid rgba(16,185,129,0.2);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    animation: fadeUp 0.5s ease forwards;
-    opacity: 0;
-  }
-  #s6 .trust-card:nth-child(1) { animation-delay: 0.1s; }
-  #s6 .trust-card:nth-child(2) { animation-delay: 0.3s; }
-  #s6 .trust-card:nth-child(3) { animation-delay: 0.5s; }
-  #s6 .trust-icon { font-size: 36px; margin-bottom: 12px; }
-  #s6 .trust-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; color: #10b981; }
-  #s6 .trust-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+/* ─── TYPEWRITER CURSOR ─── */
+.cursor{
+  display:inline-block;width:3px;height:.85em;
+  background:#60a5fa;vertical-align:text-bottom;margin-left:2px;
+  animation:blink .7s step-end infinite;
+}
 
-  /* ── SCENE 7: CTA ── */
-  #s7 .cta-ring {
-    position: absolute;
-    width: 500px; height: 500px;
-    border-radius: 50%;
-    border: 1px solid rgba(37,99,235,0.15);
-    animation: pulse 2s ease infinite;
-  }
-  #s7 .cta-ring:nth-child(2) { width: 400px; height: 400px; animation-delay: 0.5s; }
-  #s7 .cta-ring:nth-child(3) { width: 300px; height: 300px; animation-delay: 1s; }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 0.3; }
-    50%       { transform: scale(1.05); opacity: 0.6; }
-  }
-  #s7 .cta-content { position: relative; z-index: 10; text-align: center; }
-  #s7 .cta-btn {
-    display: inline-block;
-    margin-top: 32px;
-    background: linear-gradient(135deg, #2563eb, #06b6d4);
-    color: white;
-    font-size: 24px;
-    font-weight: 800;
-    padding: 18px 48px;
-    border-radius: 100px;
-    text-decoration: none;
-    animation: fadeUp 0.6s 0.4s ease forwards;
-    opacity: 0;
-    box-shadow: 0 0 40px rgba(37,99,235,0.5);
-    letter-spacing: 0.5px;
-  }
-  #s7 .url {
-    margin-top: 20px;
-    font-size: 18px;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 2px;
-    animation: fadeUp 0.6s 0.8s ease forwards;
-    opacity: 0;
-  }
-
-  /* ── SCENE 8: OUTRO ── */
-  #s8 .outro-logo {
-    animation: zoomIn 0.8s ease forwards;
-    text-align: center;
-  }
-  #s8 .outro-logo .icon {
-    font-size: 80px;
-    display: block;
-    margin-bottom: 16px;
-    filter: drop-shadow(0 0 30px rgba(37,99,235,0.8));
-  }
-  #s8 .outro-logo .name {
-    font-size: 48px;
-    font-weight: 900;
-  }
-  #s8 .outro-logo .name span { color: #60a5fa; }
-  #s8 .outro-sub {
-    margin-top: 16px;
-    font-size: 16px;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 3px;
-    animation: fadeUp 0.6s 0.5s ease forwards;
-    opacity: 0;
-  }
-
-  /* ── TIMER OVERLAY ── */
-  #timer {
-    position: fixed;
-    top: 20px; right: 20px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.2);
-    font-variant-numeric: tabular-nums;
-    z-index: 9999;
-    letter-spacing: 1px;
-  }
-
-  /* ── START SCREEN ── */
-  #start-screen {
-    position: fixed;
-    inset: 0;
-    background: #020c1b;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    cursor: pointer;
-    transition: opacity 0.5s;
-  }
-  #start-screen h1 { font-size: 36px; font-weight: 900; margin-bottom: 12px; }
-  #start-screen p  { font-size: 16px; color: rgba(255,255,255,0.4); }
-  #start-screen .play-btn {
-    margin-top: 32px;
-    width: 80px; height: 80px;
-    background: linear-gradient(135deg, #2563eb, #06b6d4);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-    box-shadow: 0 0 40px rgba(37,99,235,0.5);
-  }
+/* ─── START SCREEN ─── */
+#start{
+  position:fixed;inset:0;z-index:99999;
+  background:#020c1b;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:opacity .5s;
+}
+#start h1{font-size:32px;font-weight:900;margin-bottom:8px;}
+#start p{font-size:15px;color:rgba(255,255,255,.35);}
+#start .play{
+  width:90px;height:90px;border-radius:50%;margin:32px 0 16px;
+  background:linear-gradient(135deg,#2563eb,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;box-shadow:0 0 50px rgba(37,99,235,.6);
+  animation:pulse 2s ease infinite;
+}
 </style>
 </head>
 <body>
 
+<canvas id="bg-canvas"></canvas>
+<div id="bar"></div>
+
 <!-- START SCREEN -->
-<div id="start-screen" onclick="startVideo()">
-  <h1>AI Employee Agent — Werbevideo</h1>
+<div id="start" onclick="boot()">
+  <h1>AI Employee Agent — Promo Video</h1>
   <p>1280 × 720 · 60 Sekunden · Für Screen-Recording optimiert</p>
-  <div class="play-btn">▶</div>
-  <p style="margin-top:16px;font-size:13px;color:rgba(255,255,255,0.25);">Klicken zum Starten</p>
+  <div class="play">▶</div>
+  <p style="font-size:13px;color:rgba(255,255,255,.2);">Klicken zum Starten</p>
 </div>
 
-<div id="progress-bar"></div>
-<div id="timer">0:00</div>
-
-<!-- PARTICLES -->
-<div class="particles" id="particles"></div>
-
-<!-- ══════════════════════════════════════════════
-     SCENE 1 — LOGO INTRO (0–6s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-grad" id="s1">
-  <div class="grid-bg"></div>
-  <div class="logo-wrap">
-    <div class="logo-icon">🤖</div>
-    <div>
-      <div class="logo-text">AI <span>Employee</span></div>
-    </div>
-  </div>
-  <div class="tagline">Dein KI-Mitarbeiter</div>
+<!-- S1: LOGO INTRO -->
+<div class="scene" id="s1">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="logo-ring">🤖</div>
+  <div class="brand">AI <span>Employee</span></div>
+  <div class="divider" style="width:320px;"></div>
+  <div class="tagline">Dein KI-Mitarbeiter · 24/7 · Ab €0,99</div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCENE 2 — PROBLEM (6–15s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-dark" id="s2">
-  <div class="grid-bg"></div>
-  <div class="chip">Das Problem</div>
-  <div class="headline" style="font-size:54px;">Du hast <span class="grad">zu wenig Zeit</span><br>für zu viele Aufgaben.</div>
-  <ul class="problem-list">
-    <li><span class="pain">⏰</span> Stundenlanges Analysieren von PDFs</li>
-    <li><span class="pain">📝</span> Berichte schreiben kostet Stunden</li>
-    <li><span class="pain">🏠</span> Immobilienbewertungen dauern Tage</li>
-    <li><span class="pain">💸</span> Mitarbeiter kosten €42.000–€60.000 / Jahr</li>
+<!-- S2: PROBLEM -->
+<div class="scene" id="s2">
+  <div class="orb orb1"></div>
+  <div class="chip">⚡ Das Problem</div>
+  <div class="headline">Du hast <span class="red">zu wenig Zeit</span><br>für zu viele Aufgaben.</div>
+  <div class="sub">Während du kämpfst, läuft die Konkurrenz weiter.</div>
+  <ul class="pain-list">
+    <li><span class="pain-icon">⏰</span> Stundenlange PDF-Analysen rauben deine Zeit</li>
+    <li><span class="pain-icon">📝</span> Berichte schreiben — immer wieder von vorne</li>
+    <li><span class="pain-icon">🏠</span> Immobilienbewertungen dauern Tage</li>
+    <li><span class="pain-icon">💸</span> Ein Mitarbeiter kostet <strong style="color:#f87171">€42.000 – €60.000 / Jahr</strong></li>
   </ul>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCENE 3 — SOLUTION / PRICE SHOCK (15–24s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-grad" id="s3">
-  <div class="grid-bg"></div>
-  <div class="chip">Die Lösung</div>
-  <div class="headline">Gleiche Arbeit.<br><span class="grad">99% weniger Kosten.</span></div>
-  <div class="vs-row">
-    <div class="vs-col vs-bad">
-      <div class="vs-icon">👤</div>
-      <div class="vs-label">Mitarbeiter</div>
-      <div class="vs-price" style="color:#f87171;">€42.000</div>
-      <div class="vs-sub">pro Jahr</div>
+<!-- S3: PRICE SHOCK -->
+<div class="scene" id="s3">
+  <div class="orb orb1"></div>
+  <div class="chip">💡 Die Lösung</div>
+  <div style="font-size:60px;font-weight:900;letter-spacing:-2px;text-align:center;animation:fadeUp .5s both;">
+    Gleiche Arbeit.<br><span class="g">99 % weniger Kosten.</span>
+  </div>
+  <div class="compare">
+    <div class="ccard ccard-bad">
+      <div class="ccard-icon">👤</div>
+      <div class="ccard-label">Mitarbeiter</div>
+      <div class="ccard-price red" id="cnt-bad">€42.000</div>
+      <div class="ccard-sub">pro Jahr · Gehalt, Nebenkosten, Urlaub</div>
     </div>
-    <div class="vs-sep">VS</div>
-    <div class="vs-col vs-good">
-      <div class="vs-icon">🤖</div>
-      <div class="vs-label">KI-Mitarbeiter</div>
-      <div class="vs-price" style="color:#60a5fa;">Ab €0,99</div>
-      <div class="vs-sub">pro Aufgabe · kein Abo</div>
+    <div class="vs">VS</div>
+    <div class="ccard ccard-good">
+      <div class="ccard-icon">🤖</div>
+      <div class="ccard-label">KI-Mitarbeiter</div>
+      <div class="ccard-price green" id="cnt-good">Ab €0,99</div>
+      <div class="ccard-sub">pro Aufgabe · kein Abo · kein Vertrag</div>
+    </div>
+  </div>
+  <div class="saving">✨ Bis zu €59.999 sparen — ab heute</div>
+</div>
+
+<!-- S4: FEATURES -->
+<div class="scene" id="s4">
+  <div class="chip">🚀 Was dein KI-Mitarbeiter kann</div>
+  <div style="font-size:54px;font-weight:900;letter-spacing:-2px;text-align:center;animation:fadeUp .5s both;">
+    3 Dienste. <span class="g">Sofort einsatzbereit.</span>
+  </div>
+  <div class="feat-row" style="width:980px;">
+    <div class="fcard">
+      <div class="fcard-icon">📄</div>
+      <div class="fcard-title">PDF-Analyse</div>
+      <div class="fcard-desc">80 Seiten in unter 3 Minuten. Risiken, Kennzahlen & Handlungsempfehlungen — sofort auf dem Punkt.</div>
+      <span class="fcard-price">Kurz €1,99 · Mittel €2,99 · Lang €4,99</span>
+    </div>
+    <div class="fcard">
+      <div class="fcard-icon">📊</div>
+      <div class="fcard-title">Berichterstellung</div>
+      <div class="fcard-desc">Professionelle Berichte auf Knopfdruck. Wähle Länge und Detail — fertig in Minuten, nicht Stunden.</div>
+      <span class="fcard-price">Kurz €1,49 · Mittel €2,49 · Lang €4,49</span>
+    </div>
+    <div class="fcard">
+      <div class="fcard-icon">🏠</div>
+      <div class="fcard-title">Immobilienwert</div>
+      <div class="fcard-desc">Marktwert, Mietpreise & Preisprognose für 5 Jahre — in 20 Sekunden. Mit vollständigem PDF-Bericht.</div>
+      <span class="fcard-price">Einmalig €20,00</span>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCENE 4 — FEATURES (24–36s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-dark" id="s4">
-  <div class="grid-bg"></div>
-  <div class="chip">Was er kann</div>
-  <div class="headline" style="font-size:52px;">3 Dienste. <span class="grad">Sofort einsatzbereit.</span></div>
-  <div class="feature-grid">
-    <div class="feat-card">
-      <div class="feat-icon">📄</div>
-      <div class="feat-title">PDF-Analyse</div>
-      <div class="feat-desc">80 Seiten analysiert in unter 3 Minuten. Risiken, Kennzahlen & Empfehlungen.</div>
-      <span class="feat-price">ab €1,99</span>
+<!-- S5: HOW IT WORKS -->
+<div class="scene" id="s5">
+  <div class="chip">🎯 So einfach geht's</div>
+  <div style="font-size:56px;font-weight:900;letter-spacing:-2px;text-align:center;animation:fadeUp .5s both;">
+    Ergebnis in <span class="g">unter 3 Minuten</span>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-icon">📤</div>
+      <div class="step-title">Hochladen</div>
+      <div class="step-desc">PDF oder Aufgabe eingeben — kostenlos loslegen</div>
+      <div class="step-time">⚡ 10 Sekunden</div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">📊</div>
-      <div class="feat-title">Berichterstellung</div>
-      <div class="feat-desc">Professionelle Berichte auf Knopfdruck — kurz, mittel oder vollständig.</div>
-      <span class="feat-price">ab €1,49</span>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-icon">🤖</div>
+      <div class="step-title">KI arbeitet</div>
+      <div class="step-desc">Alex oder Emma analysiert im Hintergrund — du lehnst dich zurück</div>
+      <div class="step-time">🔄 1–3 Minuten</div>
     </div>
-    <div class="feat-card">
-      <div class="feat-icon">🏠</div>
-      <div class="feat-title">Immobilienwert</div>
-      <div class="feat-desc">Marktwert, Mietpreise & Preisprognose — in 20 Sekunden mit PDF-Bericht.</div>
-      <span class="feat-price">€20,00</span>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-icon">✅</div>
+      <div class="step-title">Fertig</div>
+      <div class="step-desc">Ergebnis lesen & als PDF herunterladen — Daten sofort gelöscht</div>
+      <div class="step-time">🗑️ Daten weg</div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCENE 5 — HOW IT WORKS (36–46s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-blue" id="s5">
-  <div class="chip">So einfach geht's</div>
-  <div class="headline" style="font-size:52px;">Ergebnis in <span class="grad">unter 3 Minuten</span></div>
-  <div class="demo-box">
-    <div class="demo-header">
-      <div class="demo-dot" style="background:#ef4444;"></div>
-      <div class="demo-dot" style="background:#f59e0b;"></div>
-      <div class="demo-dot" style="background:#10b981;"></div>
-      <span style="margin-left:8px;font-size:13px;color:rgba(255,255,255,0.4);">a-i-employee.de</span>
+<!-- S6: TRUST -->
+<div class="scene" id="s6">
+  <div class="orb orb1"></div>
+  <div class="chip">🔒 Sicherheit & Vertrauen</div>
+  <div style="font-size:56px;font-weight:900;letter-spacing:-2px;text-align:center;animation:fadeUp .5s both;">
+    Made in <span class="g">Germany.</span> DSGVO-konform.
+  </div>
+  <div class="trust-row">
+    <div class="tcard">
+      <div class="tcard-icon">🇩🇪</div>
+      <div class="tcard-title">Deutscher Anbieter</div>
+      <div class="tcard-desc">Betrieben aus Deutschland — nach deutschem Recht und DSGVO.</div>
     </div>
-    <div class="demo-body">
-      <div class="demo-step">
-        <div class="demo-num">1</div>
-        <div class="demo-text">
-          <strong>Dokument hochladen</strong>
-          <span>PDF, Word oder direkt Text eingeben — kostenlos starten</span>
-        </div>
-      </div>
-      <div class="demo-step">
-        <div class="demo-num">2</div>
-        <div class="demo-text">
-          <strong>KI-Mitarbeiter wählen & Aufgabe starten</strong>
-          <span>Alex oder Emma analysiert sofort im Hintergrund</span>
-        </div>
-      </div>
-      <div class="demo-step">
-        <div class="demo-num">3</div>
-        <div class="demo-text">
-          <strong>Ergebnis erhalten & als PDF herunterladen</strong>
-          <span>Fertig — Daten werden nach Abschluss sofort gelöscht</span>
-        </div>
-      </div>
+    <div class="tcard">
+      <div class="tcard-icon">🗑️</div>
+      <div class="tcard-title">Daten sofort gelöscht</div>
+      <div class="tcard-desc">Nach Abschluss werden deine Dokumente vollständig entfernt.</div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-icon">🚫</div>
+      <div class="tcard-title">Kein KI-Training</div>
+      <div class="tcard-desc">Deine Daten werden niemals zum Training von KI-Modellen genutzt.</div>
+    </div>
+    <div class="tcard">
+      <div class="tcard-icon">💶</div>
+      <div class="tcard-title">Kein Abo</div>
+      <div class="tcard-desc">Nur zahlen wenn du nutzt. Keine Bindung, keine versteckten Kosten.</div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCENE 6 — TRUST (46–54s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-dark" id="s6">
-  <div class="grid-bg"></div>
-  <div class="chip">Sicherheit & Vertrauen</div>
-  <div class="headline" style="font-size:52px;">Made in <span class="grad">Germany.</span><br>DSGVO-konform.</div>
-  <div class="trust-grid">
-    <div class="trust-card">
-      <div class="trust-icon">🔒</div>
-      <div class="trust-title">SSL-verschlüsselt</div>
-      <div class="trust-desc">Alle Daten werden sicher übertragen und sofort nach Abschluss gelöscht.</div>
+<!-- S7: CTA -->
+<div class="scene" id="s7">
+  <div class="orb orb1"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="cta-inner">
+    <div class="chip">🎉 Jetzt kostenlos starten</div>
+    <div class="cta-headline">Spare <span class="g">5+ Stunden</span><br>pro Woche.</div>
+    <div class="cta-sub">Kein Abo · Kein Risiko · Ergebnis in Minuten</div>
+    <div class="cta-badges">
+      <span class="cta-badge">✅ DSGVO-konform</span>
+      <span class="cta-badge">🔒 SSL-verschlüsselt</span>
+      <span class="cta-badge">⚡ Sofort nutzbar</span>
+      <span class="cta-badge">💶 Ab €0,99</span>
     </div>
-    <div class="trust-card">
-      <div class="trust-icon">🚫</div>
-      <div class="trust-title">Kein KI-Training</div>
-      <div class="trust-desc">Deine Dokumente werden niemals zum Training von KI-Modellen verwendet.</div>
-    </div>
-    <div class="trust-card">
-      <div class="trust-icon">💶</div>
-      <div class="trust-title">Kein Abo</div>
-      <div class="trust-desc">Nur zahlen wenn du nutzt. Keine Bindung, keine versteckten Kosten.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════
-     SCENE 7 — CTA (54–60s)
-══════════════════════════════════════════════ -->
-<div class="scene bg-grad" id="s7">
-  <div class="grid-bg"></div>
-  <div class="cta-ring"></div>
-  <div class="cta-ring"></div>
-  <div class="cta-ring"></div>
-  <div class="cta-content">
-    <div class="chip">Jetzt kostenlos starten</div>
-    <div class="headline">Spare <span class="grad">5+ Stunden</span><br>pro Woche.</div>
-    <div class="subline">Kein Abo. Kein Risiko. Ergebnis in Minuten.</div>
     <div class="cta-btn">🚀 Jetzt kostenlos testen</div>
-    <div class="url">a-i-employee.de</div>
+    <div class="cta-url">A-I-EMPLOYEE.DE</div>
   </div>
 </div>
 
 <script>
-const TOTAL = 60000;
+/* ════════════════════════════
+   CANVAS PARTICLE SYSTEM
+════════════════════════════ */
+const cv = document.getElementById('bg-canvas');
+const cx = cv.getContext('2d');
+cv.width = 1280; cv.height = 720;
 
-const scenes = [
-  { id: 's1', start:  0,    end:  6000 },
-  { id: 's2', start:  5400, end: 15000 },
-  { id: 's3', start: 14400, end: 24000 },
-  { id: 's4', start: 23400, end: 36000 },
-  { id: 's5', start: 35400, end: 46000 },
-  { id: 's6', start: 45400, end: 54000 },
-  { id: 's7', start: 53400, end: 60000 },
+const pts = Array.from({length:60},()=>({
+  x: Math.random()*1280, y: Math.random()*720,
+  vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4,
+  r: Math.random()*2+.5,
+  a: Math.random()
+}));
+
+function drawCanvas(){
+  cx.clearRect(0,0,1280,720);
+  // connections
+  for(let i=0;i<pts.length;i++){
+    for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<140){
+        cx.strokeStyle=`rgba(37,99,235,${.12*(1-d/140)})`;
+        cx.lineWidth=.8;
+        cx.beginPath();cx.moveTo(pts[i].x,pts[i].y);cx.lineTo(pts[j].x,pts[j].y);cx.stroke();
+      }
+    }
+  }
+  pts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0||p.x>1280)p.vx*=-1;
+    if(p.y<0||p.y>720)p.vy*=-1;
+    cx.beginPath();
+    cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    cx.fillStyle=`rgba(96,165,250,${p.a*.6})`;
+    cx.fill();
+  });
+  requestAnimationFrame(drawCanvas);
+}
+drawCanvas();
+
+/* ════════════════════════════
+   SCENE TIMELINE  (ms)
+════════════════════════════ */
+const TOTAL = 60000;
+const timeline = [
+  {id:'s1', from:    0, to:  6500},
+  {id:'s2', from:  6000, to: 15500},
+  {id:'s3', from: 15000, to: 24500},
+  {id:'s4', from: 24000, to: 36500},
+  {id:'s5', from: 36000, to: 46500},
+  {id:'s6', from: 46000, to: 54500},
+  {id:'s7', from: 54000, to: 60000},
 ];
 
-// Generate particles
-const pc = document.getElementById('particles');
-for (let i = 0; i < 18; i++) {
-  const p = document.createElement('div');
-  p.className = 'particle';
-  const size = 40 + Math.random() * 120;
-  p.style.cssText = `
-    width:${size}px; height:${size}px;
-    left:${Math.random()*100}%;
-    animation-duration:${8 + Math.random()*12}s;
-    animation-delay:${Math.random()*-15}s;
-  `;
-  pc.appendChild(p);
+let t0 = null;
+let activeId = null;
+
+function boot(){
+  const s = document.getElementById('start');
+  s.style.opacity='0';
+  setTimeout(()=>{ s.style.display='none'; t0=performance.now(); tick(); },500);
 }
 
-let startTime = null;
-let raf = null;
-
-function startVideo() {
-  document.getElementById('start-screen').style.opacity = '0';
-  setTimeout(() => {
-    document.getElementById('start-screen').style.display = 'none';
-    startTime = performance.now();
-    tick();
-  }, 500);
-}
-
-function tick() {
-  const elapsed = performance.now() - startTime;
-  const pct = Math.min(elapsed / TOTAL * 100, 100);
-
-  // Progress bar
-  document.getElementById('progress-bar').style.width = pct + '%';
-
-  // Timer
-  const sec = Math.floor(elapsed / 1000);
-  const ms  = Math.floor((elapsed % 1000) / 100);
-  document.getElementById('timer').textContent =
-    '0:' + String(sec).padStart(2,'0') + '.' + ms;
-
-  // Scenes
-  scenes.forEach(s => {
-    const el = document.getElementById(s.id);
-    const active = elapsed >= s.start && elapsed < s.end;
-    el.classList.toggle('active', active);
-
-    // Reset animations when scene activates
-    if (active && !el.dataset.played) {
-      el.dataset.played = '1';
-      el.querySelectorAll('[style*="animation"]').forEach(a => {
-        const n = a.style.animationName || '';
-        a.style.animation = 'none';
-        a.offsetHeight; // reflow
-        a.style.animation = '';
-      });
-    }
-    if (!active) delete el.dataset.played;
-  });
-
-  if (elapsed < TOTAL) {
-    raf = requestAnimationFrame(tick);
-  } else {
-    // Loop
-    startTime = performance.now();
-    scenes.forEach(s => delete document.getElementById(s.id).dataset.played);
-    raf = requestAnimationFrame(tick);
+function showScene(id){
+  if(activeId === id) return;
+  // hide old
+  if(activeId){
+    const old = document.getElementById(activeId);
+    old.classList.remove('visible','entering');
+    old.classList.add('leaving');
+    setTimeout(()=>{ old.classList.remove('leaving'); },450);
   }
+  // show new
+  const el = document.getElementById(id);
+  el.style.opacity='';
+  el.classList.remove('leaving','visible');
+  el.classList.add('entering');
+  // re-trigger child animations
+  el.querySelectorAll('*').forEach(c=>{
+    const a = c.style.animation || getComputedStyle(c).animation;
+    if(a && a!=='none'){
+      c.style.animation='none';
+      void c.offsetWidth;
+      c.style.animation='';
+    }
+  });
+  setTimeout(()=>{
+    el.classList.remove('entering');
+    el.classList.add('visible');
+  },550);
+  activeId = id;
+}
+
+function tick(){
+  const elapsed = performance.now()-t0;
+  const looped  = elapsed % TOTAL;
+
+  // progress bar
+  document.getElementById('bar').style.width = (looped/TOTAL*100)+'%';
+
+  // scene
+  for(const sc of timeline){
+    if(looped>=sc.from && looped<sc.to){ showScene(sc.id); break; }
+  }
+
+  requestAnimationFrame(tick);
 }
 </script>
 </body>
