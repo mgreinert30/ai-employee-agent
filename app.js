@@ -29,7 +29,7 @@ async function loadPayPalSDK() {
   if (_ppLoading) return new Promise(r => setTimeout(() => r(_ppLoaded), 3000));
   _ppLoading = true;
   try {
-    const cfg = await fetch('/api/public-config').then(r => r.json());
+    const cfg = await fetch('/api/paypal').then(r => r.json());
     if (!cfg.paypalClientId) { _ppLoading = false; return false; }
     await new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -2080,10 +2080,10 @@ function renderPayPalButtons(amount) {
   const errEl = document.getElementById('paypal-error');
   window.paypal.Buttons({
     createOrder: async () => {
-      const r = await fetch('/api/paypal-create-order', {
+      const r = await fetch('/api/paypal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amount.toFixed(2), description: 'AI Employee Agent — Analyse' }),
+        body: JSON.stringify({ action: 'create-order', amount: amount.toFixed(2), description: 'AI Employee Agent — Analyse' }),
       });
       const d = await r.json();
       if (!r.ok || !d.orderID) throw new Error(d.error || 'Order-Erstellung fehlgeschlagen');
@@ -2092,10 +2092,10 @@ function renderPayPalButtons(amount) {
     onApprove: async (data) => {
       if (c) c.innerHTML = `<p style="text-align:center;color:#94a3b8;font-size:14px;">${currentLang === 'de' ? 'Zahlung wird bestätigt…' : 'Confirming payment…'}</p>`;
       const sid = currentUser?.email || 'anon';
-      const r = await fetch('/api/paypal-capture-order', {
+      const r = await fetch('/api/paypal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderID: data.orderID, amount: amount.toFixed(2), sessionId: sid }),
+        body: JSON.stringify({ action: 'capture-order', orderID: data.orderID, amount: amount.toFixed(2), sessionId: sid }),
       });
       const result = await r.json();
       if (!r.ok || !result.token) {
