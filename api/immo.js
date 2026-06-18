@@ -3,6 +3,15 @@ export const config = {
   api: { bodyParser: { sizeLimit: '10mb' } },
 };
 
+const rateLimitMap = new Map();
+function isRateLimited(ip, max = 5, windowMs = 60000) {
+  const now = Date.now();
+  const rec = rateLimitMap.get(ip);
+  if (!rec || now - rec.t > windowMs) { rateLimitMap.set(ip, { t: now, n: 1 }); return false; }
+  rec.n++;
+  return rec.n > max;
+}
+
 const MODELS = [
   { name: 'gemini-2.5-flash',      api: 'v1beta', thinkingBudget: 0   },
   { name: 'gemini-2.5-flash-lite', api: 'v1beta', thinkingBudget: 0   },
@@ -277,6 +286,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+  if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

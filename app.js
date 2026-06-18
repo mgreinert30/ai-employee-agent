@@ -84,7 +84,6 @@ function loadAuth() {
     showGuest();
   } else {
     currentUser = JSON.parse(saved);
-    if (currentUser.email === OWNER_EMAIL) currentUser.isOwner = true;
     showLoggedIn();
   }
 }
@@ -120,18 +119,23 @@ async function handleLogin(e) {
   const password = document.getElementById('login-password').value;
   const remember = document.getElementById('remember-me').checked;
 
-  // Check if this is the owner account (password verified via SHA-256 hash)
-  if (email === OWNER_EMAIL) {
-    const ok = await checkOwnerPassword(password);
-    if (ok) {
-      currentUser = { name: 'Mark', email: OWNER_EMAIL, isOwner: true };
+  // Check owner account via secure server-side verification
+  try {
+    const adminRes = await fetch('/api/admin-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const adminData = await adminRes.json();
+    if (adminData.ok) {
+      currentUser = { name: 'Mark', email, isOwner: true };
       if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
       updateActivity();
       hideAuthModal();
       showLoggedIn();
       return;
     }
-  }
+  } catch (_) {}
 
   // Regular user login
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
@@ -347,21 +351,7 @@ function renderTaskHistory() {
   c.innerHTML = tasks.slice().reverse().map(t => `<div class="task-history-item"><div><div class="task-desc">${t.description}</div><div class="task-date">${t.date}</div></div><div class="task-price">${t.price}</div></div>`).join('');
 }
 
-// =====================
-// OWNER CREDENTIALS — password stored as SHA-256 hash, never in plaintext
-// =====================
-const OWNER_EMAIL = 'm.greinert30@gmail.com';
-const OWNER_HASH  = 'fe40170f1db7f798f76c1129880d842287e19476a1d8570bbe03e7e28e9a7f4b';
-
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-async function checkOwnerPassword(pw) {
-  const hash = await sha256(pw);
-  return hash === (localStorage.getItem('ai_owner_hash') || OWNER_HASH);
-}
+// Owner authentication is handled server-side via /api/admin-auth
 
 function injectOwnerDashboardHTML() {
   const el = document.getElementById('owner-dashboard-overlay');
@@ -6958,7 +6948,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
               fileUri     = uploadData.file?.uri;
               fileMimeType = uploadData.file?.mimeType || 'application/pdf';
               totalPages  = 1;
-              console.log('[File API] Upload successful:', fileUri);
+
             } else {
               console.warn('[File API] Upload step failed:', uploadRes.status);
             }

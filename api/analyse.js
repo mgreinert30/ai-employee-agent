@@ -3,6 +3,15 @@ export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
 };
 
+const rateLimitMap = new Map();
+function isRateLimited(ip, max = 8, windowMs = 60000) {
+  const now = Date.now();
+  const rec = rateLimitMap.get(ip);
+  if (!rec || now - rec.t > windowMs) { rateLimitMap.set(ip, { t: now, n: 1 }); return false; }
+  rec.n++;
+  return rec.n > max;
+}
+
 // PDF-Analyse: gemini-1.5-flash as primary (stable, no 503/404 issues, excellent for docs)
 const MODELS = [
   'gemini-1.5-flash',       // primary: stable, reliable, great for PDF/doc analysis
@@ -30,6 +39,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+  if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

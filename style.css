@@ -2090,3 +2090,28 @@ footer { background: var(--black); color: #334155; text-align: center; padding: 
 .strict-kv-table td { padding: 5px 10px; border-bottom: 1px solid rgba(16,185,129,0.15); }
 .strict-kv-table td:first-child { color: #065f46; font-weight: 700; width: 40%; }
 @media (max-width: 600px) { .privacy-mode-btns { grid-template-columns: 1fr; } }
+
+/* ── Extra-Small Screens: 360px / 390px ────────────────────────────────── */
+@media (max-width: 390px) {
+  .hero h1 { font-size: 28px; letter-spacing: -0.5px; }
+  .hero > p { font-size: 15px; }
+  .hero-badges { gap: 6px; }
+  .hero-badge { font-size: 11px; padding: 6px 10px; }
+  .btn-xl { font-size: 15px; padding: 14px 22px; }
+  .hero-ctas { gap: 10px; }
+  .header-inner { padding: 0 14px; }
+  .logo-text { font-size: 15px; }
+  .trust-badge-item { font-size: 11px; padding: 5px 10px; }
+  .service-cards, .os-grid { grid-template-columns: 1fr; }
+  .cta-banner-inner h2 { font-size: 26px; }
+}
+
+@media (max-width: 360px) {
+  .hero h1 { font-size: 25px; }
+  .hero > p { font-size: 14px; }
+  .btn-xl { font-size: 14px; padding: 12px 18px; }
+  .task-page-header { padding: 14px; }
+  .form-card { padding: 16px; }
+  .depth-cards-row { flex-direction: column; }
+  .depth-card-opt { width: 100%; }
+}
