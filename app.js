@@ -221,7 +221,7 @@ function showLoggedIn() {
   document.getElementById('btn-my-tasks').style.display      = 'inline-block';
   document.getElementById('btn-header-login').style.display  = 'none';
   document.getElementById('btn-header-signup').style.display = 'none';
-  const isVerifiedOwner = currentUser.email === OWNER_EMAIL;
+  const isVerifiedOwner = currentUser?.isOwner === true;
   document.getElementById('btn-owner-panel').style.display  = isVerifiedOwner ? 'inline-block' : 'none';
   document.getElementById('btn-my-account').style.display   = isVerifiedOwner ? 'none' : 'inline-block';
   renderTestimonials();
@@ -4904,7 +4904,7 @@ async function handleResetPassword() {
     if (!res.ok || data.error) throw new Error(data.error);
 
     const email = data.email.toLowerCase();
-    if (email === OWNER_EMAIL) throw new Error('Owner-Passwort kann hier nicht geändert werden.');
+    if (currentUser?.isOwner) throw new Error('Owner-Passwort kann hier nicht geändert werden.');
 
     const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
     const idx   = users.findIndex(u => u.email.toLowerCase() === email);
