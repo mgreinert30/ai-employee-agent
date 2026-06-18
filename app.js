@@ -2095,19 +2095,8 @@ function confirmPayment() {
 
   applySmartPermissions();
 
-  const needsLocalAccess = document.getElementById('perm-email').checked ||
-                           document.getElementById('perm-files').checked ||
-                           document.getElementById('perm-browser').checked ||
-                           document.getElementById('perm-calendar').checked;
-
-  window.skippedSetup = !needsLocalAccess;
-
-  if (needsLocalAccess) {
-    showStep('step-setup');
-    applyLangToSetup();
-  } else {
-    goToAppSelection();
-  }
+  window.skippedSetup = true;
+  goToAppSelection();
 }
 
 // =====================
@@ -2220,7 +2209,7 @@ function goToAppSelection() {
 
   const backBtn = document.getElementById('btn-back-apps');
   if (backBtn) {
-    backBtn.onclick = () => showStep(window.skippedSetup ? 'step-payment' : 'step-setup');
+    backBtn.onclick = () => showStep('step-payment');
   }
 
   // If nothing is checked, skip directly to task
@@ -3970,7 +3959,7 @@ function goHome() { resetForm(); showPage('main'); }
 // =====================
 // STEP NAVIGATION
 // =====================
-const ALL_STEPS = ['step-form','step-price','step-payment','step-setup','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
+const ALL_STEPS = ['step-form','step-price','step-payment','step-apps','step-gmail','step-calendar','step-progress','step-result','step-deleting','step-deleted','step-feedback','step-review-done'];
 function showStep(id) {
   if (id !== 'step-progress') stopFunFacts();
   ALL_STEPS.forEach(s => {
