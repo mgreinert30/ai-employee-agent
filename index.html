@@ -12,7 +12,7 @@
   <meta name="robots" content="index, follow" />
   <title>AI Employee Agent — KI-Mitarbeiter ab €0,99 | DSGVO-konform</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=50" />
+  <link rel="stylesheet" href="style.css?v=51" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1394,6 +1394,11 @@
               <strong data-de="Strict" data-en="Strict">Strict</strong>
               <span data-de="Nur lokale Verarbeitung — kein Cloud-LLM" data-en="Local processing only — no cloud LLM">Nur lokal — kein Cloud</span>
             </button>
+            <button type="button" class="privacy-mode-btn" id="pm-vertraulich" onclick="setPrivacyMode('vertraulich')">
+              <span class="pm-icon">🔐</span>
+              <strong data-de="Vertraulich" data-en="Confidential">Vertraulich</strong>
+              <span data-de="PII + Firmen- &amp; Personennamen geschwärzt" data-en="PII + company &amp; names redacted">PII + Namen geschwärzt</span>
+            </button>
           </div>
           <p class="privacy-mode-hint" id="privacy-mode-hint">☁️ Dokument wird vollständig an Google Gemini API gesendet. Für öffentliche Dokumente optimal.</p>
         </div>
@@ -2243,6 +2248,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>

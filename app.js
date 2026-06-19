@@ -1950,6 +1950,7 @@ function handlePDFUpload(files) {
     if (!duplicate && uploadedPDFs.length < 10) uploadedPDFs.push(f);
   });
   renderPDFList();
+  updatePDFThumb();
 
   if (uploadedPDFs.length > 0) {
     const td = document.getElementById('task-description');
@@ -1996,15 +1997,53 @@ function removePDF(index) {
 function renderPDFList() {
   const list = document.getElementById('pdf-file-list');
   if (!uploadedPDFs.length) { list.innerHTML = ''; return; }
-  list.innerHTML = uploadedPDFs.map((f, i) => {
-    const kb = (f.size / 1024).toFixed(0);
-    const size = kb > 1024 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
-    const icon = isImageFile(f) ? '🖼️' : '📄';
-    return `<div class="pdf-file-item">
-      <span class="pdf-file-name">${icon} ${f.name}<span class="pdf-file-size">${size}</span></span>
-      <button type="button" class="pdf-file-remove" onclick="removePDF(${i})">×</button>
-    </div>`;
-  }).join('');
+  list.innerHTML = `<div id="pdf-thumb-container" style="display:none;margin-bottom:8px;"></div>` +
+    uploadedPDFs.map((f, i) => {
+      const kb = (f.size / 1024).toFixed(0);
+      const size = kb > 1024 ? `${(kb/1024).toFixed(1)} MB` : `${kb} KB`;
+      const icon = isImageFile(f) ? '🖼️' : '📄';
+      return `<div class="pdf-file-item">
+        <span class="pdf-file-name">${icon} ${f.name}<span class="pdf-file-size">${size}</span></span>
+        <button type="button" class="pdf-file-remove" onclick="removePDF(${i})">×</button>
+      </div>`;
+    }).join('');
+}
+
+async function updatePDFThumb() {
+  const container = document.getElementById('pdf-thumb-container');
+  if (!container) return;
+  const firstPDF = uploadedPDFs.find(f => !isImageFile(f));
+  const firstImg = uploadedPDFs.find(f => isImageFile(f));
+  if (!firstPDF && !firstImg) { container.style.display = 'none'; return; }
+
+  if (firstImg) {
+    // Bild direkt als Preview
+    const url = URL.createObjectURL(firstImg);
+    container.innerHTML = `<img src="${url}" alt="Preview" style="max-height:120px;max-width:180px;border-radius:6px;border:1px solid var(--border);object-fit:contain;display:block;" onload="URL.revokeObjectURL(this.src)">`;
+    container.style.display = 'block';
+    return;
+  }
+
+  // PDF: erste Seite rendern
+  if (typeof pdfjsLib === 'undefined') return;
+  try {
+    const arrayBuffer = await firstPDF.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.35 });
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    canvas.style.cssText = 'border-radius:6px;border:1px solid var(--border);display:block;max-width:180px;';
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    container.innerHTML = '';
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--muted);margin-top:4px;';
+    label.textContent = currentLang === 'de' ? `Seite 1 von ${pdf.numPages}` : `Page 1 of ${pdf.numPages}`;
+    container.appendChild(canvas);
+    container.appendChild(label);
+    container.style.display = 'block';
+  } catch (_) { container.style.display = 'none'; }
 }
 
 function submitTask(e) {
@@ -5312,11 +5351,12 @@ let _currentPrivacyMode = localStorage.getItem('ai_privacy_mode') || 'cloud';
 function setPrivacyMode(mode) {
   _currentPrivacyMode = mode;
   localStorage.setItem('ai_privacy_mode', mode);
-  ['cloud','privacy','strict'].forEach(m => {
+  ['cloud','privacy','strict','vertraulich'].forEach(m => {
     const btn = document.getElementById(`pm-${m}`);
     if (!btn) return;
     btn.classList.toggle('active', m === mode);
     if (m === 'strict') btn.classList.toggle('pm-strict-active', mode === 'strict');
+    if (m === 'vertraulich') btn.classList.toggle('pm-strict-active', mode === 'vertraulich');
   });
   const de = currentLang === 'de';
   const hints = {
@@ -5329,6 +5369,9 @@ function setPrivacyMode(mode) {
     strict: de
       ? '🔒 Alles bleibt lokal. Nur strukturelle Analyse (Tabellen, Metadaten, Schlüsselwerte) — kein Cloud-LLM.'
       : '🔒 Everything stays local. Structural analysis only (tables, metadata, key values) — no cloud LLM.',
+    vertraulich: de
+      ? '🔐 Höchste Stufe: PII, Firmennamen und Personennamen werden automatisch geschwärzt. Für vertrauliche Dokumente.'
+      : '🔐 Maximum protection: PII, company names and personal names auto-redacted. For confidential documents.',
   };
   const el = document.getElementById('privacy-mode-hint');
   if (el) el.textContent = hints[mode] || hints.cloud;
@@ -5361,6 +5404,16 @@ function redactPII(text) {
   for (const pat of PII_PATTERNS) {
     out = out.replace(pat.rx, `[${pat.type.toUpperCase()}-GESCHWÄRZT]`);
   }
+  return out;
+}
+
+// Vertraulich-Modus: PII + Firmennamen + Personennamen schwärzen
+function redactVertraulich(text) {
+  let out = redactPII(text);
+  // Firmenbezeichnungen (GmbH, AG, UG, KG, OHG, SE, e.V. + vorangehender Name)
+  out = out.replace(/\b[\wÄäÖöÜüß&.\-]+(?:\s+[\wÄäÖöÜüß&.\-]+){0,4}\s+(?:GmbH|AG|UG|KG|OHG|SE|e\.V\.|gGmbH|GbR|Ltd|Inc|Corp|LLC)(?:\s*&\s*Co\.?\s*KG)?\.?\b/g, '[FIRMA-GESCHWÄRZT]');
+  // Vor- + Nachname-Muster (zwei aufeinanderfolgende Großbuchstaben-Wörter, nicht am Satzanfang nach Satzzeichen)
+  out = out.replace(/(?<![.!?:]\s)(?<!\n)\b([A-ZÄÖÜ][a-zäöüß]{1,20})\s([A-ZÄÖÜ][a-zäöüß]{1,20})\b(?!\s*:)/g, '[PERSON-GESCHWÄRZT]');
   return out;
 }
 
@@ -6241,12 +6294,29 @@ async function extractPDFText(file) {
         if (serialized.length <= MAX_CHARS) {
           fullText += serialized;
         } else {
-          // Semantisches Budget-Chunking:
-          // Prioritätsgewichte pro Chunk-Typ — nie blind nach Zeichen schneiden
+          // Relevanz-Scoring: Chunk-Relevanz basierend auf Task-Keywords und Inhaltsqualität
+          const taskKws = (window._currentTaskKeywords || []);
+          function scoreChunkRelevance(chunk) {
+            const text = (chunk.text || '').toLowerCase();
+            let score = 0;
+            // Keyword-Treffer aus Task-Beschreibung
+            taskKws.forEach(kw => { if (text.includes(kw)) score += 2; });
+            // Strukturelle Qualitätsmerkmale
+            if (/\d+[,.]?\d*\s*(%|€|eur|mio|mrd|tsd)/i.test(text)) score += 3; // Zahlen mit Einheiten
+            if (/\|\s*\w/.test(text)) score += 2; // Tabellen-Syntax
+            if (/(zusammenfassung|fazit|ergebnis|empfehlung|conclus|summary|recommendation)/i.test(text)) score += 3;
+            if (/(risiko|risk|kritisch|critical|warnung|warning)/i.test(text)) score += 2;
+            return score;
+          }
+
+          // Semantisches Budget-Chunking mit Relevanz-Gewichtung
           const WEIGHTS = { metadata: 4, table: 3, image_caption: 2, section: 1.5, text_block: 1 };
-          const totalW  = allChunks.reduce((s, c) => s + (WEIGHTS[c.chunk_type] || 1), 0);
-          const trimmedParts = allChunks.map(c => {
-            const budget = Math.floor(MAX_CHARS * ((WEIGHTS[c.chunk_type] || 1) / totalW));
+          // Chunks nach kombiniertem Score sortieren (hohe Relevanz bekommt mehr Budget)
+          const scoredChunks = allChunks.map(c => ({ c, rel: scoreChunkRelevance(c) }));
+          const totalW  = scoredChunks.reduce((s, { c, rel }) => s + (WEIGHTS[c.chunk_type] || 1) + rel * 0.5, 0);
+          const trimmedParts = scoredChunks.map(({ c, rel }) => {
+            const w = (WEIGHTS[c.chunk_type] || 1) + rel * 0.5;
+            const budget = Math.floor(MAX_CHARS * (w / totalW));
             const ser    = serializeChunksForPrompt([c]);
             if (ser.length <= budget) return ser;
             // Tabellen nie zerteilen — lieber komplett weglassen wenn zu groß
@@ -6259,9 +6329,11 @@ async function extractPDFText(file) {
 
           fullText += trimmedParts.join('\n');
           const tableChunks = allChunks.filter(c => c.chunk_type === 'table').length;
-          fullText += `\n\n[Semantisches Chunking: ${Math.round(serialized.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K. `
-            + `${allChunks.length} Chunks (${tableChunks} Tabellen nie zerteilt). `
-            + `Gewichte: Metadaten 4×, Tabellen 3×, Abschnitte 1,5×, Text 1×.]`;
+          const highRelChunks = scoredChunks.filter(({ rel }) => rel > 3).length;
+          // Synthese-Notiz für Gemini: erklärt was priorisiert wurde
+          fullText += `\n\n[CHUNKING-SYNTHESE: ${Math.round(serialized.length/1000)}K → ${Math.round(MAX_CHARS/1000)}K. `
+            + `${allChunks.length} Chunks (${tableChunks} Tabellen, ${highRelChunks} hoch-relevant). `
+            + `Priorisierung: Task-Keywords + Finanzwerte + Strukturmerkmale. Bitte aus diesen Schlüsselabschnitten eine kohärente Gesamtanalyse synthetisieren.]`;
         }
 
         if (totalPages > PAGE_LIMIT) {
@@ -6454,6 +6526,166 @@ RECOMMENDATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Sign or not? What to renegotiate? Specific points.]`,
 
+    jahresabschluss: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KENNZAHLEN AUF EINEN BLICK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Kennzahl | Wert | Vorjahr | Veränderung. Pflicht: Umsatz/Bilanzsumme, Eigenkapital, Jahresüberschuss/-fehlbetrag, Cashflow, EK-Quote, Umsatzrendite, Verschuldungsgrad]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BILANZ-ANALYSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Aktiva/Passiva-Struktur, Eigenkapitalentwicklung, Rückstellungen, Verbindlichkeiten — mit 📄 (S.X)]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GEWINN- & VERLUSTRECHNUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Umsatz, Rohergebnis, EBIT, EBT, Jahresüberschuss — Vorjahresvergleich als Tabelle]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CASHFLOW & LIQUIDITÄT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Operativer Cashflow, Investitions-CF, Finanzierungs-CF — Qualitätsbewertung]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KRITISCHE PUNKTE & RED FLAGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Auffällige Bilanzpositionen, Risiken, Anhang-Hinweise — je mit 📄 (S.X) und 🔴/🟡/🟢]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MASSNAHMENPLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Maßnahme | Priorität (Hoch/Mittel/Niedrig) | Wirkung | Aufwand | Zeitrahmen]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GESAMTURTEIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Finanzielle Gesundheit: ✅/⚠️/❌ + Begründung. Klare Empfehlung.]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY METRICS AT A GLANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Metric | Value | Prior Year | Change. Required: Revenue/Total Assets, Equity, Net Income, Cash Flow, Equity Ratio, Net Margin, Debt Ratio]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BALANCE SHEET ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Asset/liability structure, equity development, provisions, liabilities — with 📄 (p.X)]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INCOME STATEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Revenue, gross profit, EBIT, EBT, net income — prior year comparison as table]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CASH FLOW & LIQUIDITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Operating CF, investing CF, financing CF — quality assessment]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL POINTS & RED FLAGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Unusual balance sheet items, risks, notes disclosures — each with 📄 (p.X) and 🔴/🟡/🟢]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Action | Priority (High/Medium/Low) | Impact | Effort | Timeline]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERALL VERDICT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Financial health: ✅/⚠️/❌ + reasoning. Clear recommendation.]`,
+
+    rechnung: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RECHNUNGSDETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Rechnungs-Nr. | Datum | Fälligkeit | Nettobetrag | MwSt. | Bruttobetrag]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+POSITIONEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Pos. | Beschreibung | Menge | Einzelpreis | Gesamtpreis]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRÜFUNG & AUFFÄLLIGKEITEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Rechnerische Richtigkeit nachrechnen. §14-UStG-Pflichtangaben prüfen. Abweichungen von Angebot/Vertrag benennen — mit 📄 (S.X)]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HANDLUNGSEMPFEHLUNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[🎯 Bezahlen / Klären / Beanstanden — mit konkreter Begründung und Zahlungsfristenhinweis]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INVOICE DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Invoice No. | Date | Due Date | Net Amount | VAT | Gross Total]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LINE ITEMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Item | Description | Qty | Unit Price | Total]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICATION & ANOMALIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Verify arithmetic. Check statutory fields. Note deviations from quote/contract — with 📄 (p.X)]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RECOMMENDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[🎯 Pay / Clarify / Dispute — with concrete reasoning and payment deadline notes]`,
+
+    protokoll: isDE
+      ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METADATEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Datum | Ort/Format | Dauer | Teilnehmer | Protokollant]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TAGESORDNUNG & BESCHLÜSSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: TOP | Thema | Beschluss/Ergebnis | Verantwortlich]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUFGABEN & ZUSTÄNDIGKEITEN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Aufgabe | Wer | Bis wann | Priorität]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OFFENE PUNKTE & NÄCHSTES MEETING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Was wurde nicht abgeschlossen? Nächster Termin? Vorbereitungsaufgaben?]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KURZFAZIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Was wurde erreicht? Kritische Punkte? Handlungsbedarf?]`
+      : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+METADATA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Date | Location/Format | Duration | Attendees | Recorder]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AGENDA ITEMS & DECISIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Item | Topic | Decision/Result | Responsible]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION ITEMS & RESPONSIBILITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Task | Who | By When | Priority]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPEN ITEMS & NEXT MEETING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[What was not concluded? Next meeting date? Preparation tasks?]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[What was achieved? Critical points? Action needed?]`,
+
     create_document: isDE
       ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EINLEITUNG
@@ -6566,6 +6798,11 @@ RISIKEN & CHANCEN
 [Konkrete Risiken und Chancen]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MASSNAHMENPLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Tabelle: Maßnahme | Priorität (Hoch/Mittel/Niedrig) | Wirkung | Aufwand | Zeitrahmen]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NÄCHSTE SCHRITTE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Klarer Aktionsplan]`
@@ -6588,6 +6825,11 @@ KEY FINDINGS & ANALYSIS
 RISKS & OPPORTUNITIES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Concrete risks and opportunities]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Table: Action | Priority (High/Medium/Low) | Impact | Effort | Timeline]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NEXT STEPS
@@ -6617,6 +6859,34 @@ Du darfst den Bericht NICHT nur zusammenfassen. Du musst: Zusammenhänge erkenne
 Analysiere Gewinnqualität: Kerngeschäft? Kapitalanlagen? Einmaleffekte? Bilanzierungseffekte?
 Bewerte kritisch: Umsatzentwicklung, EBITDA/EBIT, Eigenkapitalentwicklung, Cashflow-Qualität, Verschuldungsgrad, Kostenstruktur, Wachstumstreiber, Segmentergebnisse.
 Jede wichtige Aussage mit Seitenzahl belegen. Zahlen interpretieren, nicht nur wiederholen. Schreibe wie ein erfahrener Unternehmensberater.
+`,
+    jahresabschluss: `
+WICHTIGE AUSGABEREGEL:
+Gib niemals Rohdaten, JSON, Code, Arrays, Metadaten oder interne Zwischenschritte aus.
+
+ANALYSE-TIEFE — JAHRESABSCHLUSS (PFLICHT):
+Analysiere: Bilanzstruktur (Aktiva/Passiva-Verhältnis), Eigenkapitalentwicklung, Gewinnverwendung, Liquiditätsgrade (1./2./3. Grades), Working Capital, Debt-to-Equity-Ratio, Umsatzrendite, Eigenkapitalrendite, Gesamtkapitalrendite.
+Erkenne: Bilanzierungswahlrechte, stille Reserven, außerordentliche Ergebniseinflüsse, Rückstellungsqualität.
+Erstelle einen MASSNAHMENPLAN als Tabelle: Maßnahme | Priorität (Hoch/Mittel/Niedrig) | Wirkung | Aufwand | Zeitrahmen.
+Jede wichtige Aussage mit Seitenzahl belegen. Schreibe wie ein Wirtschaftsprüfer.
+`,
+    rechnung: `
+WICHTIGE AUSGABEREGEL:
+Gib niemals Rohdaten, JSON, Code, Arrays, Metadaten oder interne Zwischenschritte aus.
+
+ANALYSE-TIEFE — RECHNUNG (PFLICHT):
+Prüfe §14-UStG-Pflichtangaben: Vollständiger Name und Anschrift beider Parteien, Steuernummer/USt-IdNr., Ausstellungsdatum, fortlaufende Rechnungsnummer, Menge und Art der Leistung, Leistungszeitpunkt, Entgelt + Steuersatz + ausgewiesener Steuerbetrag.
+Rechne nach: Summe der Positionen, MwSt.-Berechnung, Gesamtbetrag — und benenne Rechenfehler explizit.
+Vergleiche mit Angebots-/Vertragsdaten wenn verfügbar.
+`,
+    protokoll: `
+WICHTIGE AUSGABEREGEL:
+Gib niemals Rohdaten, JSON, Code, Arrays, Metadaten oder interne Zwischenschritte aus.
+
+ANALYSE-TIEFE — PROTOKOLL (PFLICHT):
+Extrahiere ALLE Beschlüsse mit exaktem Wortlaut. Identifiziere alle Aufgaben/Action Items mit Verantwortlichen und Fristen.
+Erkenne: Widersprüche, unklare Zuständigkeiten, fehlende Fristen, Punkte ohne Ergebnis.
+Erstelle eine vollständig nachverfolgte Aufgabentabelle mit Prioritäten.
 `,
   };
 
@@ -6669,7 +6939,8 @@ AUSGABELÄNGE: ca. 3000-5500 Wörter. Fülle diesen Rahmen vollständig aus — 
   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • Kennzahlen-Abschnitt vollständig mit allen Zahlen aus dem Dokument befüllen.
-• Risiken und Chancen jeweils mit Begründung und 🎯 Handlungsempfehlung.`
+• Risiken und Chancen jeweils mit Begründung und 🎯 Handlungsempfehlung.
+• MASSNAHMENPLAN-PFLICHT: Am Ende eine Tabelle mit mindestens 3-5 konkreten Maßnahmen: Maßnahme | Priorität (Hoch/Mittel/Niedrig) | Wirkung | Aufwand | Zeitrahmen`
       : `MEDIUM MODE — FULL ANALYSIS (Purpose: All relevant aspects structured — ready for an informed decision.)
 OUTPUT LENGTH: approx. 3000-5500 words. Fill this scope completely — not shorter.
 • Every section thorough with context, reasoning and concrete figures — every claim backed by 📄 (p.X).
@@ -6681,7 +6952,8 @@ OUTPUT LENGTH: approx. 3000-5500 words. Fill this scope completely — not short
   Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • Fill the key metrics section completely with all figures from the document.
-• Risks and opportunities each with justification and 🎯 recommended action.`,
+• Risks and opportunities each with justification and 🎯 recommended action.
+• ACTION PLAN MANDATORY: End with a table of at least 3-5 concrete measures: Action | Priority (High/Medium/Low) | Impact | Effort | Timeline`,
     long: isDE
       ? `LANG-MODUS — PRÜFUNGSTIEFE (Zweck: Vollständige Dokumentation aller Erkenntnisse — für Archivierung, Weitergabe oder professionelle Prüfung.)
 AUSGABELÄNGE: mindestens 8000 Wörter. Vollständige Rundumanalyse — spare absolut nichts aus.
@@ -6695,7 +6967,8 @@ AUSGABELÄNGE: mindestens 8000 Wörter. Vollständige Rundumanalyse — spare ab
   PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausgeschrieben — keine Dimension darf verkürzt werden.
 • Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter 🎯 Handlungsempfehlung.
-• Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit konkretem Zeitrahmen.`
+• Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit konkretem Zeitrahmen.
+• MASSNAHMENPLAN-PFLICHT: Strukturierte Tabelle mit 5-10 Maßnahmen: Maßnahme | Priorität (Hoch/Mittel/Niedrig) | Wirkung | Aufwand | Zeitrahmen — sortiert nach Priorität.`
       : `LONG MODE — AUDIT DEPTH (Purpose: Complete documentation of all findings — for archiving, handover or professional review.)
 OUTPUT LENGTH: minimum 8000 words. Complete 360° analysis — leave absolutely nothing out.
 • MAXIMUM DEPTH: every metric individually commented, every claim backed by 📄 (p.X), all connections explained. No section shorter than 5 sentences.
@@ -6708,7 +6981,8 @@ OUTPUT LENGTH: minimum 8000 words. Complete 360° analysis — leave absolutely 
   MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • DEEP ANALYSIS in all 5 dimensions fully written out — no dimension may be shortened.
 • Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete 🎯 recommended action.
-• Conclusion and action plan: prioritised, numbered measures with concrete timeline.`
+• Conclusion and action plan: prioritised, numbered measures with concrete timeline.
+• ACTION PLAN MANDATORY: Structured table with 5-10 measures: Action | Priority (High/Medium/Low) | Impact | Effort | Timeline — sorted by priority.`
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
@@ -7028,6 +7302,9 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   let fileUri     = null;  // Gemini File API URI (bypasses Vercel size limit)
   let fileMimeType = null;
 
+  // Relevanz-Keywords für Chunk-Priorisierung setzen (wird in extractPDFText verwendet)
+  window._currentTaskKeywords = taskDesc.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+
   if (uploadedPDFs.length > 0) {
     const imageFiles = uploadedPDFs.filter(isImageFile);
     const pdfFiles   = uploadedPDFs.filter(f => !isImageFile(f));
@@ -7150,13 +7427,15 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
       }
 
       const isScannedDoc = clf?.isScanned || docText.includes('⚠️ [SCAN-PDF ERKANNT');
-      if (isScannedDoc && pageImages.length > 0) {
-        setProgress(32, currentLang === 'de'
-          ? '⚠️ Scan-PDF — visuelle Analyse wird priorisiert...'
-          : '⚠️ Scanned PDF — prioritising visual analysis...');
+      const isPoorExtraction = _qc && _qc.totalScore < 60 && !isScannedDoc;
+      if ((isScannedDoc || isPoorExtraction) && pageImages.length > 0) {
+        const reason = isScannedDoc
+          ? (currentLang === 'de' ? 'Scan-PDF' : 'Scanned PDF')
+          : (currentLang === 'de' ? `OCR-Fallback (Textqualität ${_qc?.totalScore}/100)` : `OCR fallback (text quality ${_qc?.totalScore}/100)`);
+        setProgress(32, `⚠️ ${reason} — ${currentLang === 'de' ? 'visuelle Analyse wird priorisiert...' : 'prioritising visual analysis...'}`);
         const textLimit = 8000;
         if (docText.length > textLimit) {
-          docText = docText.slice(0, textLimit) + '\n\n[Scan-PDF: primäre Analyse über Seitenbilder]';
+          docText = docText.slice(0, textLimit) + `\n\n[${reason}: primäre Analyse über Seitenbilder — ${pageImages.length} Seiten gerendert]`;
         }
       } else {
         const textLimit = pageImages.length > 0 ? 15000 : 80000;
@@ -7192,7 +7471,6 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
   if (_privMode === 'privacy' && !isCreationTask && docText && docText.length > 50) {
     const piiFindings = detectPII(docText);
     if (piiFindings.length > 0) {
-      // Warte auf Nutzer-Entscheidung (redact oder keep)
       await new Promise(resolve => {
         showPIIPreview(piiFindings, (shouldRedact) => {
           if (shouldRedact) docText = redactPII(docText);
@@ -7200,6 +7478,15 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
         });
       });
     }
+  }
+
+  // VERTRAULICH MODE: automatisch PII + Firmennamen + Personennamen schwärzen
+  if (_privMode === 'vertraulich' && !isCreationTask && docText && docText.length > 50) {
+    docText = redactVertraulich(docText);
+    setProgress(42, currentLang === 'de'
+      ? '🔐 Vertraulich: PII, Firmen- und Personennamen geschwärzt...'
+      : '🔐 Confidential: PII, company and personal names redacted...');
+    await new Promise(r => setTimeout(r, 600));
   }
 
   // ── Agenten-Pipeline (bei PDF-Analyse mit extrahierten Chunks + Spezialist) ─
