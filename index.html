@@ -12,7 +12,7 @@
   <meta name="robots" content="index, follow" />
   <title>AI Employee Agent — KI-Mitarbeiter ab €0,99 | DSGVO-konform</title>
   <link rel="icon" type="image/png" href="logo.png" />
-  <link rel="stylesheet" href="style.css?v=51" />
+  <link rel="stylesheet" href="style.css?v=52" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -210,6 +210,17 @@
         <input type="password" id="reset-new-pw" placeholder="Min. 8 Zeichen" minlength="8" />
         <button onclick="handleResetPassword()" class="btn-primary full-width">Passwort speichern</button>
         <p id="reset-msg" style="font-size:13px;margin:0;"></p>
+      </div>
+      <!-- EMAIL VERIFY PANEL — step after signup: enter 6-digit code -->
+      <div id="verify-panel" style="display:none;flex-direction:column;gap:14px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:4px;">📬</div>
+        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;" data-de="Code gesendet an" data-en="Code sent to">Code gesendet an</p>
+        <strong id="verify-email-label" style="color:white;font-size:14px;word-break:break-all;"></strong>
+        <label style="text-align:left;" data-de="6-stelliger Code" data-en="6-digit code">6-stelliger Code</label>
+        <input type="text" id="verify-code" placeholder="123456" maxlength="6" pattern="\d{6}" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:10px;text-align:center;font-size:26px;font-weight:700;" oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter'){event.preventDefault();handleVerifyCode();}" />
+        <button onclick="handleVerifyCode()" class="btn-primary full-width" data-de="Code bestätigen" data-en="Confirm code">Code bestätigen</button>
+        <p id="verify-msg" style="font-size:13px;margin:0;"></p>
+        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="resendVerifyCode();return false;" class="forgot-link" data-de="Code erneut senden" data-en="Resend code">Code erneut senden</a> &nbsp;·&nbsp; <a href="#" onclick="switchTab('signup');return false;" class="forgot-link" data-de="← Zurück" data-en="← Back">← Zurück</a></p>
       </div>
       <form id="form-signup" onsubmit="handleSignup(event)" style="display:none;flex-direction:column;gap:14px;">
         <label data-de="Dein Name" data-en="Your name">Dein Name</label>
@@ -2248,6 +2259,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
-  <script src="app.js?v=51"></script>
+  <script src="app.js?v=52"></script>
 </body>
 </html>

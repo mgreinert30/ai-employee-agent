@@ -143,9 +143,11 @@ function hideAuthModal() {
 }
 
 function switchTab(tab) {
-  document.getElementById('form-login').style.display = tab === 'login' ? 'flex' : 'none';
-  document.getElementById('form-signup').style.display = tab === 'signup' ? 'flex' : 'none';
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('form-login').style.display    = tab === 'login'  ? 'flex' : 'none';
+  document.getElementById('form-signup').style.display   = tab === 'signup' ? 'flex' : 'none';
+  document.getElementById('forgot-panel').style.display  = 'none';
+  document.getElementById('verify-panel').style.display  = 'none';
+  document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
   document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
 }
 
@@ -184,20 +186,123 @@ async function handleLogin(e) {
   showLoggedIn();
 }
 
-function handleSignup(e) {
+async function handleSignup(e) {
   e.preventDefault();
-  const name = document.getElementById('signup-name').value;
-  const email = document.getElementById('signup-email').value;
+  const name     = document.getElementById('signup-name').value.trim();
+  const email    = document.getElementById('signup-email').value.trim().toLowerCase();
   const password = document.getElementById('signup-password').value;
+  const errEl    = document.getElementById('signup-error');
+  errEl.textContent = '';
+
+  if (!name || !email || !password) {
+    errEl.textContent = currentLang === 'de' ? 'Bitte alle Felder ausfüllen.' : 'Please fill in all fields.';
+    return;
+  }
+  if (password.length < 8) {
+    errEl.textContent = currentLang === 'de' ? 'Passwort muss mind. 8 Zeichen haben.' : 'Password must be at least 8 characters.';
+    return;
+  }
+
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
-  if (users.find(u => u.email === email)) { document.getElementById('signup-error').textContent = currentLang === 'de' ? 'E-Mail bereits registriert.' : 'Email already registered.'; return; }
-  users.push({ name, email, password });
-  localStorage.setItem('ai_agent_users', JSON.stringify(users));
-  currentUser = { name, email };
-  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
-  updateActivity();
-  hideAuthModal();
-  showLoggedIn();
+  if (users.find(u => u.email.toLowerCase() === email)) {
+    errEl.textContent = currentLang === 'de' ? 'E-Mail bereits registriert.' : 'Email already registered.';
+    return;
+  }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = currentLang === 'de' ? 'Sende Code…' : 'Sending code…'; }
+
+  try {
+    const res  = await fetch('/api/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send', email }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'E-Mail konnte nicht gesendet werden');
+
+    // Registrierungsdaten zwischenspeichern
+    window._pendingSignup = { name, email, password };
+    window._verifyToken   = data.token;
+
+    // Verify-Panel anzeigen
+    document.getElementById('form-signup').style.display  = 'none';
+    document.getElementById('verify-panel').style.display = 'flex';
+    const lbl = document.getElementById('verify-email-label');
+    if (lbl) lbl.textContent = email;
+    document.getElementById('verify-code').value          = '';
+    document.getElementById('verify-msg').textContent     = '';
+    setTimeout(() => document.getElementById('verify-code').focus(), 100);
+  } catch (err) {
+    errEl.textContent = err.message;
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = currentLang === 'de' ? 'Konto erstellen' : 'Create account'; }
+  }
+}
+
+async function handleVerifyCode() {
+  const code  = (document.getElementById('verify-code').value || '').trim();
+  const msgEl = document.getElementById('verify-msg');
+  if (!/^\d{6}$/.test(code)) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = currentLang === 'de' ? 'Bitte 6-stelligen Code eingeben.' : 'Please enter the 6-digit code.';
+    return;
+  }
+  msgEl.style.color = '#94a3b8';
+  msgEl.textContent = currentLang === 'de' ? 'Prüfe Code…' : 'Checking code…';
+  try {
+    const res  = await fetch('/api/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'check', code, token: window._verifyToken }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error);
+
+    const { name, email, password } = window._pendingSignup || {};
+    if (!name || !email || !password) throw new Error(currentLang === 'de' ? 'Sitzung abgelaufen. Bitte nochmal registrieren.' : 'Session expired. Please sign up again.');
+
+    const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+    if (!users.find(u => u.email.toLowerCase() === email)) {
+      users.push({ name, email, password, verified: true });
+      localStorage.setItem('ai_agent_users', JSON.stringify(users));
+    }
+    window._pendingSignup = null;
+    window._verifyToken   = null;
+
+    currentUser = { name, email };
+    localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+    updateActivity();
+
+    document.getElementById('verify-panel').style.display = 'none';
+    hideAuthModal();
+    showLoggedIn();
+  } catch (err) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = err.message;
+  }
+}
+
+async function resendVerifyCode() {
+  const email = window._pendingSignup?.email;
+  const msgEl = document.getElementById('verify-msg');
+  if (!email) return;
+  msgEl.style.color = '#94a3b8';
+  msgEl.textContent = currentLang === 'de' ? 'Sende neuen Code…' : 'Sending new code…';
+  try {
+    const res  = await fetch('/api/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send', email }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error);
+    window._verifyToken = data.token;
+    msgEl.style.color = '#4ade80';
+    msgEl.textContent = currentLang === 'de' ? '✓ Neuer Code gesendet!' : '✓ New code sent!';
+    document.getElementById('verify-code').value = '';
+    document.getElementById('verify-code').focus();
+  } catch (err) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = err.message;
+  }
 }
 
 function acceptCookies() {
