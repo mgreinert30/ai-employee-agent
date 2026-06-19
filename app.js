@@ -631,14 +631,19 @@ function evaluateResult(result, analysisLength) {
   if (wordCount < min * 0.3)       { outcome = 'failed';               issue_type = 'too_short';              quality_score = 1; }
   else if (wordCount < min * 0.6)  { outcome = 'partially_successful'; issue_type = 'below_expected_length';  quality_score = 2; }
   else if (wordCount < min * 0.85) { outcome = 'partially_successful'; issue_type = 'slightly_short';         quality_score = 3; }
-  const hasCharts  = /\[CHART:/i.test(result);
-  const hasTables  = /\|.+\|/.test(result);
+  const hasCharts   = /\[CHART:/i.test(result);
+  const hasTables   = /\|.+\|/.test(result);
   const hasSections = (result.match(/^#{1,3}\s/m) || []).length >= 2;
+  // Seitenquellen-Rate: Anteil Sätze mit 📄 (S.X) oder (laut Seite X)
+  const sentences   = result.split(/[.!?]/).filter(s => s.trim().length > 20);
+  const citedCount  = sentences.filter(s => /📄\s*\(S\.\s*\d+\)|laut Seite \d+|\(S\.\s*\d+\)/i.test(s)).length;
+  const citRate     = sentences.length > 0 ? Math.round(citedCount / sentences.length * 100) : 0;
+  if (analysisLength !== 'short' && citRate < 20) { issue_type = issue_type || 'low_citation_rate'; quality_score = Math.min(quality_score, 3); if (outcome === 'successful') outcome = 'partially_successful'; }
   if (analysisLength === 'long'   && !hasCharts) { issue_type = issue_type || 'missing_charts'; quality_score = Math.min(quality_score, 3); if (outcome === 'successful') outcome = 'partially_successful'; }
   if (analysisLength === 'medium' && !hasCharts) { issue_type = issue_type || 'missing_charts'; quality_score = Math.min(quality_score, 4); }
   if (!hasTables && analysisLength !== 'short')  { issue_type = issue_type || 'missing_tables'; quality_score = Math.min(quality_score, 4); }
   if (!hasSections)                              { issue_type = issue_type || 'poor_structure';  quality_score = Math.min(quality_score, 3); }
-  return { outcome, quality_score, issue_type };
+  return { outcome, quality_score, issue_type, citRate };
 }
 
 // ── Improvement Rule Deriver ──────────────────────────────────────────────────
@@ -646,9 +651,10 @@ const IMPROVEMENT_RULES = {
   too_short:             'Extend analysis output to meet minimum length requirements for the selected depth',
   below_expected_length: 'Increase depth and detail to fully fill the requested analysis scope',
   slightly_short:        'Add more supporting detail and context to sections',
-  missing_charts:        'Always include charts when quantitative data is present in the document',
+  missing_charts:        'Include charts only when actual numerical values from the document are present — cite each with 📄 (S.X)',
   missing_tables:        'Use Markdown tables for all comparisons, data series and structured information',
   poor_structure:        'Ensure analysis has at least 3 clearly labelled sections with headings',
+  low_citation_rate:     'Every factual claim must be backed by 📄 (S.X) — cite page numbers for all numbers and concrete statements',
   no_output:             'Check model availability and retry with fallback model',
 };
 function deriveImprovementRule(issue_type, taskCategory) {
@@ -2750,6 +2756,7 @@ function renderResultRich(text) {
   const container = document.getElementById('result-content');
   if (!container) return;
   container.innerHTML = '';
+  renderQCBadge(container);
   const blocks = parseResultBlocks(text || '');
   let kpiGrid = null;
 
@@ -5258,9 +5265,9 @@ function formatQCReport(qc, de) {
   return out + '\n';
 }
 
-// Zeigt QC-Banner im Progress-Schritt (nur bei Warnung oder kritisch)
+// Zeigt QC-Banner im Progress-Schritt (alle Grades — good/warn/critical)
 function showQCBanner(qc) {
-  if (!qc || qc.grade === 'good') return;
+  if (!qc) return;
   const de = currentLang === 'de';
   const existing = document.getElementById('qc-banner');
   if (existing) existing.remove();
@@ -5273,6 +5280,7 @@ function showQCBanner(qc) {
   banner.innerHTML = `
     <div class="qc-banner-header">
       ${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: <strong>${qc.totalScore}/100</strong>
+      ${qc.grade === 'good' ? `<span style="color:#22c55e;font-size:12px;margin-left:8px;">${de ? '— Dokument vollständig lesbar' : '— Document fully readable'}</span>` : ''}
       <button onclick="this.closest('#qc-banner').remove()" class="qc-close">✕</button>
     </div>
     ${issueItems ? `<ul class="qc-issue-list">${issueItems}</ul>` : ''}
@@ -5280,6 +5288,19 @@ function showQCBanner(qc) {
   const box = document.querySelector('#step-progress .progress-box');
   if (box) box.insertBefore(banner, box.firstChild);
   else document.getElementById('step-progress')?.insertAdjacentElement('afterbegin', banner);
+}
+
+// QC-Badge im Analyse-Ergebnis (oben, immer sichtbar)
+function renderQCBadge(container) {
+  const qc = window._lastQCReport;
+  if (!qc || !container) return;
+  const de = currentLang === 'de';
+  const colors = { good: '#22c55e', warn: '#f59e0b', critical: '#ef4444' };
+  const badge = document.createElement('div');
+  badge.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;border:1px solid ${colors[qc.grade] || '#64748b'};color:${colors[qc.grade] || '#64748b'};background:${(colors[qc.grade] || '#64748b')}18;`;
+  badge.title = de ? `Extraktions-Qualität: ${qc.totalScore}/100` : `Extraction quality: ${qc.totalScore}/100`;
+  badge.innerHTML = `${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: ${qc.totalScore}/100`;
+  container.insertBefore(badge, container.firstChild);
 }
 
 // =====================
@@ -6602,87 +6623,91 @@ Jede wichtige Aussage mit Seitenzahl belegen. Zahlen interpretieren, nicht nur w
   // Calculate page-count-based targets (#2 — length control)
   const depthInstructions = {
     short: isDE
-      ? `⚠️ KURZ-MODUS — ÜBERSCHREIBT DAS AUSGABE-FORMAT UNTEN KOMPLETT.
+      ? `⚠️ KURZ-MODUS — SCHNELLCHECK (Zweck: In 2 Minuten das Wesentliche — bin ich betroffen? Was muss ich wissen?)
 Ignoriere die Abschnittsvorlage. Schreibe AUSSCHLIESSLICH diese 4 Blöcke — keine anderen Überschriften, kein TL;DR, keine Kennzahlen-Tabelle.
-LÄNGE: ca. 400-600 Wörter. Keine Grafiken. Maximal 1 einfache Tabelle (nur wenn absolut unverzichtbar).
+LÄNGE: ca. 400-600 Wörter. Keine Grafiken. Maximal 1 Tabelle (nur wenn unverzichtbar).
 
-**ZUSAMMENFASSUNG**
-2-3 Sätze: Worum geht es? Was ist das Kernthema des Dokuments?
+**KERNAUSSAGE**
+1-2 Sätze: Worum geht es und was ist die wichtigste Aussage des Dokuments?
 
 **WICHTIGSTE ERKENNTNISSE**
-Die 4-6 entscheidenden Punkte — jeweils 2-3 Sätze mit konkreten Zahlen und Begründung.
+Die 4-6 kritischsten Fakten — jede Aussage mit 📄 (S.X) belegen. Konkrete Zahlen, keine Floskeln.
 
-**KRITISCHE PUNKTE / RISIKEN**
-Was ist auffällig, problematisch oder besonders wichtig? Mindestens 2 Punkte vollständig ausformuliert.
+**RISIKEN / AUFFÄLLIGKEITEN**
+Was ist problematisch, ungewöhnlich oder sofort handlungsrelevant? Mindestens 2 Punkte vollständig ausformuliert.
 
 **EMPFEHLUNG**
-1-2 klare, sofort umsetzbare Handlungsempfehlungen.
+🎯 1-2 konkrete, sofort umsetzbare Handlungen — was tun jetzt?
 
-Regeln: Jeder Satz trägt Informationswert. Keine Wiederholungen. Vollständige Sätze, keine reinen Stichpunkte.`
-      : `⚠️ SHORT MODE — COMPLETELY OVERRIDES THE OUTPUT FORMAT BELOW.
+Regeln: Nur Fakten aus dem Dokument. Keine Charts ohne echte Zahlenwerte im Dokument. Jeder Satz trägt Informationswert.`
+      : `⚠️ SHORT MODE — QUICK SCAN (Purpose: In 2 minutes — am I affected? What do I need to know?)
 Ignore the section template. Write ONLY these 4 blocks — no other headings, no TL;DR, no metrics table.
-LENGTH: approx. 400-600 words. No charts. Maximum 1 simple table (only if absolutely essential).
+LENGTH: approx. 400-600 words. No charts. Maximum 1 table (only if essential).
 
-**SUMMARY**
-2-3 sentences: What is this about? What is the core topic of the document?
+**CORE FINDING**
+1-2 sentences: What is this about and what is the single most important point?
 
 **KEY FINDINGS**
-The 4-6 most important points — each 2-3 sentences with concrete figures and reasoning.
+The 4-6 most critical facts — every claim backed by 📄 (p.X). Concrete figures, no filler.
 
-**CRITICAL POINTS / RISKS**
-What stands out, is problematic or particularly important? At least 2 points written out fully.
+**RISKS / ANOMALIES**
+What is problematic, unusual or immediately actionable? At least 2 points written out fully.
 
 **RECOMMENDATION**
-1-2 clear, immediately actionable recommendations.
+🎯 1-2 concrete, immediately actionable steps — what to do now?
 
-Rules: Every sentence carries information value. No repetition. Complete sentences, not just bullet points.`,
+Rules: Only facts from the document. No charts without actual numerical values in the document. Every sentence carries information value.`,
     medium: isDE
-      ? `AUSGABELÄNGE: MITTEL — ZIEL ca. 3000-5500 Wörter. Fülle diesen Rahmen vollständig aus — nicht kürzer.
-• Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen belegt.
+      ? `MITTEL-MODUS — VOLLANALYSE (Zweck: Alle relevanten Aspekte strukturiert — bereit für eine informierte Entscheidung.)
+AUSGABELÄNGE: ca. 3000-5500 Wörter. Fülle diesen Rahmen vollständig aus — nicht kürzer.
+• Jeder Abschnitt ausführlich mit Kontext, Begründung und konkreten Zahlen — jede Aussage mit 📄 (S.X) belegt.
 • TABELLEN PFLICHT: Jede Zahlenreihe, jeder Vergleich, jedes Vor-/Nachteil-Paar → als Markdown-Tabelle. Kein Fließtext für Daten.
-• GRAFIKEN PFLICHT — mindestens 3 Grafiken direkt im Text platzieren. Erstelle eine Grafik IMMER wenn du Zahlen, Vergleiche oder Entwicklungen beschreibst:
+• GRAFIKEN NUR BEI ECHTEN DATEN — mindestens 3 Grafiken wenn ausreichend Zahlenwerte vorhanden. BEDINGUNG: Erstelle [CHART:...] NUR wenn tatsächliche numerische Werte direkt aus dem Dokument stammen — keine geschätzten, illustrativen oder erfundenen Werte. Gibt es keine konkreten Zahlen → Sachverhalt schriftlich beschreiben statt Chart erfinden.
   [CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]
   [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]
   [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]
   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • Kennzahlen-Abschnitt vollständig mit allen Zahlen aus dem Dokument befüllen.
-• Risiken und Chancen jeweils mit Begründung und konkreter Handlungsempfehlung.`
-      : `OUTPUT LENGTH: MEDIUM — TARGET approx. 3000-5500 words. Fill this scope completely — not shorter.
-• Every section thorough with context, reasoning and concrete figures.
+• Risiken und Chancen jeweils mit Begründung und 🎯 Handlungsempfehlung.`
+      : `MEDIUM MODE — FULL ANALYSIS (Purpose: All relevant aspects structured — ready for an informed decision.)
+OUTPUT LENGTH: approx. 3000-5500 words. Fill this scope completely — not shorter.
+• Every section thorough with context, reasoning and concrete figures — every claim backed by 📄 (p.X).
 • TABLES MANDATORY: Every data series, comparison, pros/cons → as Markdown table. No prose for data.
-• CHARTS MANDATORY — minimum 3 charts placed directly in the text. Create a chart WHENEVER you describe numbers, comparisons or trends:
+• CHARTS ONLY WITH REAL DATA — minimum 3 charts if sufficient numerical values exist. CONDITION: Create [CHART:...] ONLY when actual numerical values come directly from the document — no estimated, illustrative or invented values. If no concrete figures available → describe in prose instead of inventing chart data.
   [CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]
   [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]
   [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]
   Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • Fill the key metrics section completely with all figures from the document.
-• Risks and opportunities each with justification and concrete recommended action.`,
+• Risks and opportunities each with justification and 🎯 recommended action.`,
     long: isDE
-      ? `AUSGABELÄNGE: LANG — MINDEST-ZIEL ca. 8000 Wörter. Das ist eine vollständige Rundumanalyse — spare absolut nichts aus.
-• MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit Seitenreferenz belegt, alle Zusammenhänge erklärt. Kein Abschnitt kürzer als 5 Sätze.
-• TABELLEN ÜBERALL PFLICHT: JEDE Liste, JEDER Vergleich, JEDE Zahlenreihe, JEDE Aufzählung → sofort als Markdown-Tabelle. Absolut kein Fließtext für Daten oder Vergleiche.
-• GRAFIKEN ABSOLUT PFLICHT — mindestens 6 Grafiken direkt im Text, mehr ist besser. Erstelle eine Grafik bei JEDEM Abschnitt mit Zahlen oder Entwicklungen. Hast du am Ende weniger als 6 Grafiken, hast du die Aufgabe NICHT erfüllt:
+      ? `LANG-MODUS — PRÜFUNGSTIEFE (Zweck: Vollständige Dokumentation aller Erkenntnisse — für Archivierung, Weitergabe oder professionelle Prüfung.)
+AUSGABELÄNGE: mindestens 8000 Wörter. Vollständige Rundumanalyse — spare absolut nichts aus.
+• MAXIMALE TIEFE: Jede Kennzahl einzeln kommentiert, jede Aussage mit 📄 (S.X) belegt, alle Zusammenhänge erklärt. Kein Abschnitt kürzer als 5 Sätze.
+• TABELLEN ÜBERALL PFLICHT: JEDE Liste, JEDER Vergleich, JEDE Zahlenreihe → sofort als Markdown-Tabelle. Absolut kein Fließtext für Daten.
+• GRAFIKEN NUR BEI ECHTEN DATEN — mindestens 6 Grafiken wenn ausreichend Zahlenwerte vorhanden. ABSOLUTE BEDINGUNG: Erstelle [CHART:...] NUR für tatsächliche numerische Werte direkt aus dem Dokument. Keine erfundenen, geschätzten oder illustrativen Daten in Charts — lieber weniger Charts mit echten Zahlen als viele Charts mit Phantomwerten. Hast du am Ende weniger als 6 echte Charts, schreibe die fehlenden Erkenntnisse als Fließtext.
   [CHART:line|Titel|Jahr1:Wert,Jahr2:Wert,Jahr3:Wert,Jahr4:Wert|palette:finance]
   [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:growth]
   [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:corporate]
   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   PFLICHT: Jedes [CHART:bar] muss mindestens 4 Datenpunkte enthalten — nie weniger als 4 Balken.
 • TIEFEN-ANALYSE in allen 5 Dimensionen vollständig ausgeschrieben — keine Dimension darf verkürzt werden.
-• Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter Handlungsempfehlung.
+• Anomalie-Bericht: jeden Fund einzeln bewerten mit 🔴/🟡/🟢 und konkreter 🎯 Handlungsempfehlung.
 • Fazit und Handlungsplan: priorisierte, nummerierte Maßnahmen mit konkretem Zeitrahmen.`
-      : `OUTPUT LENGTH: LONG — MINIMUM TARGET approx. 8000 words. This is a complete 360° analysis — leave absolutely nothing out.
-• MAXIMUM DEPTH: every metric individually commented, every claim backed by page reference, all connections explained. No section shorter than 5 sentences.
-• TABLES EVERYWHERE MANDATORY: EVERY list, comparison, data series, enumeration → immediately as Markdown table. Absolutely no prose for data or comparisons.
-• CHARTS ABSOLUTELY MANDATORY — minimum 6 charts placed directly in text, more is better. Create a chart for EVERY section containing numbers or trends. If you end with fewer than 6 charts, you have NOT completed the task:
+      : `LONG MODE — AUDIT DEPTH (Purpose: Complete documentation of all findings — for archiving, handover or professional review.)
+OUTPUT LENGTH: minimum 8000 words. Complete 360° analysis — leave absolutely nothing out.
+• MAXIMUM DEPTH: every metric individually commented, every claim backed by 📄 (p.X), all connections explained. No section shorter than 5 sentences.
+• TABLES EVERYWHERE MANDATORY: EVERY list, comparison, data series → immediately as Markdown table. Absolutely no prose for data.
+• CHARTS ONLY WITH REAL DATA — minimum 6 charts if sufficient numerical values exist. ABSOLUTE CONDITION: Create [CHART:...] ONLY for actual numerical values directly from the document. No invented, estimated or illustrative data in charts — better fewer charts with real numbers than many charts with phantom values. If you have fewer than 6 real charts, write the missing insights as prose instead.
   [CHART:line|Title|Year1:Value,Year2:Value,Year3:Value,Year4:Value|palette:finance]
   [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:growth]
   [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value|palette:corporate]
   Palettes: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
   MANDATORY: Every [CHART:bar] must contain at least 4 data points — never fewer than 4 bars.
 • DEEP ANALYSIS in all 5 dimensions fully written out — no dimension may be shortened.
-• Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete recommended action.
+• Anomaly report: rate each finding individually with 🔴/🟡/🟢 and concrete 🎯 recommended action.
 • Conclusion and action plan: prioritised, numbered measures with concrete timeline.`
   };
 
@@ -6756,36 +6781,45 @@ Wenn die Aufgabe eine konkrete Frage oder Entscheidung enthält (z.B. "Soll ich 
 
 KERNREGELN — NIEMALS BRECHEN:
 0. KEIN METADATEN-BLOCK: Beginne NIEMALS mit Statistik- oder Dokumentinfo-Blöcken. Starte SOFORT mit TL;DR.
-1. SEITENREFERENZEN ZWINGEND: Bei jeder Zahl und jedem konkreten Fakt schreibe "(laut Seite X)" dahinter. Die Seitennummern erkennst du an ━━━ Seite X ━━━ im Text. Keine Seitenangabe gefunden → Aussage weglassen.
+1. SEITENREFERENZEN ZWINGEND: Bei JEDER Zahl und jedem konkreten Fakt schreibe "📄 (S.X)" direkt dahinter. Format: "Der Umsatz stieg auf 3,8 Mio. EUR 📄 (S.12)". Seitennummern erkennst du an ━━━ Seite X ━━━ im Text. Keine Seite gefunden → Aussage entweder weglassen ODER als "[Allg.]" (Allgemeinwissen) kennzeichnen.
 2. ECHTE ZAHLEN: Nur tatsächliche Werte aus dem Dokument — keine Platzhalter wie "[Zahl]".
 3. KEINE FLOSKELN: Verboten: "Es wäre sinnvoll...", "Eine Analyse empfiehlt sich...". Direkt mit Fakten starten.
 4. KRITISCH DENKEN: Widersprüche, Risiken und Lücken explizit benennen.
 5. ANTWORTE AUF DEUTSCH.
-6. TL;DR PFLICHT: Beginne IMMER mit "TL;DR | Dringlichkeit: X/10 | 1. [Fakt + Seite] | 2. [Fakt + Seite] | 3. [Fakt + Seite]"
+6. TL;DR PFLICHT: Beginne IMMER mit "TL;DR | Dringlichkeit: X/10 | 1. [Fakt + 📄 S.X] | 2. [Fakt + 📄 S.X] | 3. [Fakt + 📄 S.X]"
+7. QUELLENTYP TRANSPARENT: Jede inhaltliche Aussage klar einer Quelle zuordnen:
+   • Direkt aus dem Dokument → "📄 (S.X)" anhängen
+   • Aus Allgemeinwissen/Marktkenntnis → "[Allg.]" anhängen
+   NIEMALS Dokument-Fakten und Allgemeinwissen vermischen ohne Kennzeichnung. PDF-ONLY-Modus: Allgemeinwissen nur wenn unvermeidlich für Kontext.
 8. TABELLEN: Zahlenreihen, Vergleiche und Vor-/Nachteile IMMER als Markdown-Tabelle (| Spalte1 | Spalte2 | Spalte3 |) — niemals als Fließtext.
-9. GRAFIKEN: Anzahl STRIKT nach Analysetiefe (Kurz = keine, Mittel = mindestens 3, Lang = mindestens 6). Bei Mittel und Lang: Erstelle Grafiken IMMER wenn Zahlen, Vergleiche oder Trends im Dokument vorhanden sind. Keine Ausnahmen.
+9. GRAFIKEN NUR BEI ECHTEN DOKUMENTDATEN: Erstelle [CHART:...] AUSSCHLIESSLICH wenn tatsächliche numerische Werte direkt aus dem Dokument stammen und mit 📄 (S.X) belegbar sind. KEIN Chart für geschätzte, illustrative, hypothetische oder allgemein bekannte Werte. Gibt es keine konkreten Zahlen im Dokument → Sachverhalt schriftlich beschreiben.
    • Zeitreihen/Trends → [CHART:line|Titel|2020:Wert,2021:Wert,2022:Wert,2023:Wert|palette:X]
    • Kategorien-Vergleich → [CHART:bar|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:X]
    • Anteile/Prozente → [CHART:pie|Titel|Kat1:Wert,Kat2:Wert,Kat3:Wert,Kat4:Wert|palette:X]
    PFLICHT: Jedes [CHART:bar] muss MINDESTENS 4 Datenpunkte haben — nie weniger als 4 Balken.
-   Paletten (passend zum Inhalt wählen): finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
+   Paletten: finance · growth · costs · marketing · tech · hr · logistics · warm · cool · minimal · luxury · nature · corporate
    Beispiel: [CHART:line|Umsatz in Mio. EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8|palette:finance]
-10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Ideen/Tipps — 📊 für Datenfakten.
-11. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
-12. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
+10. SYMBOLE PFLICHT: ⚠️ für Risiken — ✅ für Positives — 💡 für Interpretationen — 📊 für Datenfakten — 🎯 für Empfehlungen.
+11. DREISCHICHT-KENNZEICHNUNG — jede inhaltliche Aussage gehört zu EINER dieser Kategorien:
+    • 📄 FAKT (S.X): Direkt aus dem Dokument belegbar — mit Seitenangabe
+    • 💡 ANALYSE: KI-Interpretation oder Schlussfolgerung aus Dokument-Fakten — klar als Einschätzung erkennbar
+    • 🎯 EMPFEHLUNG: Konkrete Handlungsempfehlung für den Leser — was jetzt tun?
+    Fakten, Interpretationen und Empfehlungen NIEMALS vermischen ohne Kennzeichnung.
+12. SCHICHTEN-STRUKTUR: (A) High-Level: Was ist das Dokument? (2 Sätze) — (B) Deep-Dive: Detaillierte Analyse — (C) Annex: Technische Details am Ende.
+13. STRUKTUR-BAUKASTEN PFLICHT — jede Analyse enthält diese 5 Blöcke:
     • EXECUTIVE DASHBOARD: Die 3 kritischsten Erkenntnisse auf einen Blick.
-    • FAKTEN-CHECK: Tabelle mit ALLEN wichtigen Zahlen, Daten und harten Zusagen.
+    • FAKTEN-CHECK: Tabelle mit ALLEN wichtigen Zahlen, Daten und harten Zusagen — je mit 📄 (S.X).
     • KLEINGEDRUCKT-ANALYSE: Alle Einschränkungen, Risiken oder Bedingungen die den Erfolg gefährden.
     • ANOMALIE-BERICHT: Alles was ungewöhnlich, widersprüchlich oder neu im Vergleich zu Standard-Dokumenten ist.
-    • HANDLUNGSEMPFEHLUNG: Was sollte der Leser als nächstes konkret tun?
-13. ANOMALIE-FOKUS — suche aktiv nach diesen Warnsignalen und benenne sie explizit:
+    • HANDLUNGSEMPFEHLUNG: 🎯 Was sollte der Leser als nächstes konkret tun?
+14. ANOMALIE-FOKUS — suche aktiv nach diesen Warnsignalen und benenne sie explizit:
     • Dramatische Änderungen: Zahlen oder Kennwerte die sich um mehr als 20% verändert haben.
     • Widersprüche: Aussagen die sich innerhalb des Dokuments widersprechen.
-    • Ungewöhnliche Formulierungen: Abschwächungen, Hedge-Sätze oder unklare Zusagen im Vergleich zu Vorjahren.
+    • Ungewöhnliche Formulierungen: Abschwächungen, Hedge-Sätze oder unklare Zusagen.
     • Fehlende Informationen: Was wird NICHT erwähnt, obwohl es bei diesem Dokumenttyp standard wäre?
-    • Timing-Anomalien: Fristen, Daten oder Deadlines die auffällig kurz oder unüblich sind.
+    • Timing-Anomalien: Fristen oder Deadlines die auffällig kurz oder unüblich sind.
     • Für jeden Anomalie-Fund: Bewertung 🔴 Kritisch / 🟡 Auffällig / 🟢 Beobachten.
-14. TIEFEN-ANALYSE in 5 Dimensionen — wende diese auf jedes Dokument an:
+15. TIEFEN-ANALYSE in 5 Dimensionen — wende diese auf jedes Dokument an:
     • DIE EXPLIZITE BOTSCHAFT ("Was"-Faktor): Was behauptet das Dokument offiziell? Welche strategische Richtung wird kommuniziert?
     • DIE KRITISCHE LÜCKE ("Blinder Fleck"): Was fehlt zwischen den Zeilen? Was wird heruntergespielt oder bewusst weggelassen?
     • DIE DATEN-LOGIK ("Realitäts-Check"): Sind die Zahlen kohärent? Wetten die Zahlen auf eine Zukunft die nicht eintreten muss?
@@ -6859,35 +6893,44 @@ If the task contains a concrete question or decision (e.g. "Should I buy?", "Is 
 
 CORE RULES — NEVER BREAK:
 0. NO METADATA BLOCK: Never start with statistics or document-info blocks. Start DIRECTLY with TL;DR.
-1. PAGE REFERENCES MANDATORY: After every number and concrete fact write "(see page X)". Page numbers are marked ━━━ Page X ━━━ in the text. No page found → don't include the claim.
+1. PAGE REFERENCES MANDATORY: After EVERY number and concrete fact write "📄 (p.X)" directly after it. Format: "Revenue rose to €3.8M 📄 (p.12)". Page numbers are marked ━━━ Page X ━━━ in the text. No page found → either omit the claim OR label it "[General]" (general knowledge).
 2. REAL NUMBERS: Only actual values from the document — no placeholders like "[number]".
 3. NO FILLER: Banned: "It would be useful...", "An analysis is recommended...". Start with facts.
 4. THINK CRITICALLY: Name contradictions, risks and gaps explicitly.
 5. RESPOND IN ENGLISH.
-6. TL;DR MANDATORY: Always begin with "TL;DR | Urgency: X/10 | 1. [fact + page] | 2. [fact + page] | 3. [fact + page]"
+6. TL;DR MANDATORY: Always begin with "TL;DR | Urgency: X/10 | 1. [fact + 📄 p.X] | 2. [fact + 📄 p.X] | 3. [fact + 📄 p.X]"
+7. SOURCE TYPE TRANSPARENCY: Every factual claim must be clearly attributed:
+   • Directly from the document → append "📄 (p.X)"
+   • From general knowledge/market context → append "[General]"
+   NEVER mix document facts and general knowledge without labelling. PDF-ONLY mode: use general knowledge only if unavoidable for context.
 8. TABLES: Data series, comparisons, pros/cons ALWAYS as Markdown table (| Col1 | Col2 | Col3 |) — never as prose.
-9. CHARTS: Follow the depth instruction above for chart count. Short = none. Medium = 3-6. Long = 6-10.
-   • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,2023:Value,...] (numbers only, no units)
+9. CHARTS ONLY WITH REAL DOCUMENT DATA: Create [CHART:...] EXCLUSIVELY when actual numerical values come directly from the document and can be cited with 📄 (p.X). NO charts for estimated, illustrative, hypothetical or general knowledge values. If no concrete figures in the document → describe in prose instead.
+   • Time series/trends → [CHART:line|Title|2020:Value,2021:Value,2022:Value,2023:Value,...] (numbers only)
    • Category comparison → [CHART:bar|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value,...]
    • Proportions/percentages → [CHART:pie|Title|Cat1:Value,Cat2:Value,Cat3:Value,Cat4:Value,...]
    MANDATORY: Every [CHART:bar] must have AT LEAST 4 data points — never fewer than 4 bars.
    Example: [CHART:line|Revenue in M EUR|2019:2.1,2020:1.8,2021:2.4,2022:2.9,2023:3.3,2024:3.8]
-10. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for ideas/tips — 📊 for data facts.
-11. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
-12. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
+10. SYMBOLS MANDATORY: ⚠️ for risks — ✅ for positives — 💡 for interpretations — 📊 for data facts — 🎯 for recommendations.
+11. THREE-LAYER LABELLING — every substantive statement belongs to ONE of these categories:
+    • 📄 FACT (p.X): Directly verifiable from the document — with page reference
+    • 💡 ANALYSIS: AI interpretation or inference drawn from document facts — clearly identifiable as assessment
+    • 🎯 RECOMMENDATION: Concrete action for the reader — what to do now?
+    NEVER mix facts, interpretations and recommendations without labelling.
+12. LAYERED STRUCTURE: (A) High-Level: What is this document? (2 sentences) — (B) Deep-Dive: Detailed analysis — (C) Annex: Technical details at the end.
+13. STRUCTURE TOOLKIT MANDATORY — every analysis contains these 5 blocks:
     • EXECUTIVE DASHBOARD: The 3 most critical findings at a glance.
-    • FACT CHECK: Table with ALL important numbers, dates and hard commitments.
+    • FACT CHECK: Table with ALL important numbers, dates and hard commitments — each with 📄 (p.X).
     • FINE PRINT ANALYSIS: All limitations, risks or conditions that could jeopardise success.
     • ANOMALY REPORT: Everything unusual, contradictory or new compared to standard documents of this type.
-    • RECOMMENDED ACTION: Based on the content — what should the reader do next, concretely?
-13. ANOMALY FOCUS — actively search for these warning signals and name them explicitly:
+    • RECOMMENDED ACTION: 🎯 What should the reader do next, concretely?
+14. ANOMALY FOCUS — actively search for these warning signals and name them explicitly:
     • Dramatic changes: Numbers or metrics that changed by more than 20%.
     • Contradictions: Statements that contradict each other within the document.
-    • Unusual language: Hedging, softened commitments or vague promises compared to previous periods.
+    • Unusual language: Hedging, softened commitments or vague promises.
     • Missing information: What is NOT mentioned that would be standard for this document type?
     • Timing anomalies: Deadlines or dates that are unusually short or atypical.
     • For each anomaly found: Rating 🔴 Critical / 🟡 Notable / 🟢 Watch.
-14. DEEP ANALYSIS in 5 dimensions — apply these to every document:
+15. DEEP ANALYSIS in 5 dimensions — apply these to every document:
     • THE EXPLICIT MESSAGE ("What" factor): What does the document officially claim? What strategic direction is communicated?
     • THE CRITICAL GAP ("Blind Spot"): What is missing between the lines? What is downplayed or deliberately omitted?
     • DATA LOGIC ("Reality Check"): Are the numbers coherent? Do the figures bet on a future that may not materialise?

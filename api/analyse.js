@@ -67,10 +67,11 @@ export default async function handler(req, res) {
   const hasFile   = typeof fileUri === 'string' && fileUri.startsWith('https://');
   const hasImages = !hasFile && Array.isArray(images) && images.length > 0;
 
+  // Punkt 3: Adaptive Analyse — Tiefe vor Vollständigkeit, hochwertige Abschnitte priorisieren
   const modePrefix = hasFile
-    ? `NATIVE PDF ANALYSIS MODE — You have direct access to the complete PDF document via the Gemini File API.\nRead ALL text, tables, charts, and data directly from the document without any limitations.\n\n`
+    ? `NATIVE PDF ANALYSIS MODE — You have direct access to the complete PDF via Gemini File API.\nADAPTIVE READING STRATEGY: Focus on high-value content — executive summaries, conclusions, financial tables, risk sections, key findings. Skip repetitive boilerplate, legal headers/footers, and index pages. Prioritise analytical depth over page-by-page completeness. For long documents: sample strategically rather than reading every line superficially.\n\n`
     : hasImages
-    ? `VISUAL ANALYSIS MODE — You are viewing ${images.length} rendered page image(s).\n- TABLES: extract EVERY row and column exactly as Markdown tables.\n- CHARTS: describe all data points, axis labels, trends.\n- Prefer visual data for tables/numbers over extracted text.\n\n`
+    ? `VISUAL ANALYSIS MODE — You are viewing ${images.length} rendered page image(s).\n- TABLES: extract EVERY row and column exactly as Markdown tables.\n- CHARTS: describe data points, axis labels, trends — ONLY if actual numerical values are clearly visible in the image. Do not estimate or invent chart data.\n- Prefer visual data for tables/numbers over extracted text.\n\n`
     : '';
 
   const safePrompt = modePrefix + (prompt.length > MAX_PROMPT_CHARS
