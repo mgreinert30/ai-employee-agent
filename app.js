@@ -5421,12 +5421,23 @@ function showQCBanner(qc) {
   const issueItems = qc.issues.slice(0, 3).map(i =>
     `<li>${i.sev === 'critical' ? '🔴' : '🟡'} ${i.msg}</li>`).join('');
   const recItems = qc.recs.slice(0, 2).map(r => `<li>→ ${r}</li>`).join('');
+  const cov = window._lastPageCoverage;
+  let covHtml = '';
+  if (cov) {
+    const covColor = cov.isTeilanalyse ? '#f59e0b' : '#22c55e';
+    const covIcon  = cov.isTeilanalyse ? '⚠️' : '✅';
+    let covDetail  = `${cov.successCount}/${cov.totalPages} ${de ? 'Seiten' : 'pages'} (${cov.coveragePct}%)`;
+    if (cov.skippedPages.length > 0) covDetail += ` — ${de ? 'Übersprungen' : 'Skipped'}: S.${cov.skippedPages[0]}–${cov.skippedPages[cov.skippedPages.length-1]}`;
+    if (cov.emptyPages.length > 0)   covDetail += ` — ${de ? 'Leer/Scan' : 'Empty/Scan'}: ${cov.emptyPages.length}`;
+    covHtml = `<div style="margin-top:6px;font-size:12px;color:${covColor};">${covIcon} ${de ? 'Seitenabdeckung' : 'Page coverage'}: ${covDetail}</div>`;
+  }
   banner.innerHTML = `
     <div class="qc-banner-header">
       ${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: <strong>${qc.totalScore}/100</strong>
-      ${qc.grade === 'good' ? `<span style="color:#22c55e;font-size:12px;margin-left:8px;">${de ? '— Dokument vollständig lesbar' : '— Document fully readable'}</span>` : ''}
+      ${qc.grade === 'good' && !cov?.isTeilanalyse ? `<span style="color:#22c55e;font-size:12px;margin-left:8px;">${de ? '— Dokument vollständig lesbar' : '— Document fully readable'}</span>` : ''}
       <button onclick="this.closest('#qc-banner').remove()" class="qc-close">✕</button>
     </div>
+    ${covHtml}
     ${issueItems ? `<ul class="qc-issue-list">${issueItems}</ul>` : ''}
     ${recItems   ? `<ul class="qc-rec-list">${recItems}</ul>`   : ''}`;
   const box = document.querySelector('#step-progress .progress-box');
@@ -5442,8 +5453,14 @@ function renderQCBadge(container) {
   const colors = { good: '#22c55e', warn: '#f59e0b', critical: '#ef4444' };
   const badge = document.createElement('div');
   badge.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:12px;border:1px solid ${colors[qc.grade] || '#64748b'};color:${colors[qc.grade] || '#64748b'};background:${(colors[qc.grade] || '#64748b')}18;`;
+  const cov = window._lastPageCoverage;
+  const covSuffix = cov
+    ? (cov.isTeilanalyse
+        ? ` | ⚠️ ${cov.successCount}/${cov.totalPages} ${de ? 'Seiten' : 'pages'} (${cov.coveragePct}%)`
+        : ` | ✅ ${cov.successCount}/${cov.totalPages} ${de ? 'Seiten' : 'pages'}`)
+    : '';
   badge.title = de ? `Extraktions-Qualität: ${qc.totalScore}/100` : `Extraction quality: ${qc.totalScore}/100`;
-  badge.innerHTML = `${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: ${qc.totalScore}/100`;
+  badge.innerHTML = `${qc.gradeEmoji} ${de ? 'Extraktions-Qualität' : 'Extraction quality'}: ${qc.totalScore}/100${covSuffix}`;
   container.insertBefore(badge, container.firstChild);
 }
 
@@ -6362,21 +6379,51 @@ async function extractPDFText(file) {
         const maxPages    = Math.min(totalPages, PAGE_LIMIT);
 
         // ── Strukturierte Block-Extraktion pro Seite ─────────────────────────
-        const allBlocks = []; // alle Blöcke aller Seiten
-        const allPages  = []; // {page, text} — für classifyPDF
+        const allBlocks   = []; // alle Blöcke aller Seiten
+        const allPages    = []; // {page, text} — für classifyPDF
+        const pageStatuses = []; // per-Seite Tracking für Coverage Report
 
         for (let i = 1; i <= maxPages; i++) {
-          const pdfPage = await pdf.getPage(i);
-          const content = await pdfPage.getTextContent();
-          const blocks  = extractBlocksFromItems(content.items, i, file.name);
-          allBlocks.push(...blocks);
+          try {
+            const pdfPage = await pdf.getPage(i);
+            const content = await pdfPage.getTextContent();
+            const blocks  = extractBlocksFromItems(content.items, i, file.name);
 
-          // Flat text dieser Seite für classifyPDF (Backward-Compat)
-          const pageText = blocks.map(b => b.text).join('\n');
-          if (pageText.length > 10) allPages.push({ page: i, text: pageText });
+            const pageText  = blocks.map(b => b.text).join('\n');
+            const chars     = pageText.length;
+            const hasTbl    = blocks.some(b => b.block_type === 'table');
+            const hasHdg    = blocks.some(b => b.block_type === 'heading');
+            const contentType = hasTbl ? 'table' : chars < 30 ? 'scan/leer' : hasHdg ? 'text+heading' : 'text';
+            const status      = chars < 30 ? 'leer' : 'extrahiert';
+            const qualScore   = chars < 30 ? 0 : Math.min(100, Math.round(Math.min(chars, 2000) / 20));
+
+            pageStatuses.push({ page: i, status, chars, contentType, qualScore, includedInAnalysis: chars >= 10 });
+            allBlocks.push(...blocks);
+            if (chars > 10) allPages.push({ page: i, text: pageText });
+          } catch (pageErr) {
+            pageStatuses.push({ page: i, status: 'fehlgeschlagen', chars: 0, contentType: 'unbekannt', qualScore: 0, includedInAnalysis: false });
+          }
         }
 
-        window._lastPDFBlocks = allBlocks; // für spätere Referenzen verfügbar
+        // Übersprungene Seiten jenseits PAGE_LIMIT markieren
+        for (let i = maxPages + 1; i <= totalPages; i++) {
+          pageStatuses.push({ page: i, status: 'übersprungen', chars: 0, contentType: 'unbekannt', qualScore: 0, includedInAnalysis: false });
+        }
+
+        window._lastPDFBlocks = allBlocks;
+
+        // ── Coverage Report berechnen ────────────────────────────────────────
+        const covSuccess  = pageStatuses.filter(p => p.status === 'extrahiert').length;
+        const covEmpty    = pageStatuses.filter(p => p.status === 'leer').map(p => p.page);
+        const covFailed   = pageStatuses.filter(p => p.status === 'fehlgeschlagen').map(p => p.page);
+        const covSkipped  = pageStatuses.filter(p => p.status === 'übersprungen').map(p => p.page);
+        const coveragePct = totalPages > 0 ? Math.round(covSuccess / totalPages * 100) : 100;
+        window._lastPageCoverage = {
+          totalPages, processedUpTo: maxPages,
+          successCount: covSuccess, emptyPages: covEmpty,
+          failedPages: covFailed, skippedPages: covSkipped,
+          coveragePct, isTeilanalyse: coveragePct < 95, pageStatuses,
+        };
 
         // ── Klassifikation ────────────────────────────────────────────────────
         const clf = classifyPDF(allPages, file.name);
@@ -6441,10 +6488,23 @@ async function extractPDFText(file) {
             + `Priorisierung: Task-Keywords + Finanzwerte + Strukturmerkmale. Bitte aus diesen Schlüsselabschnitten eine kohärente Gesamtanalyse synthetisieren.]`;
         }
 
-        if (totalPages > PAGE_LIMIT) {
-          fullText += `\n[Hinweis: Dokument hat ${totalPages} Seiten. Erste ${PAGE_LIMIT} analysiert.]`;
+        // ── Coverage-Fußnote: transparent was verarbeitet wurde ────────────────
+        const cov = window._lastPageCoverage;
+        if (cov) {
+          if (cov.isTeilanalyse) {
+            fullText += `\n\n⚠️ TEILANALYSE — SEITENABDECKUNG: ${cov.successCount}/${cov.totalPages} Seiten erfolgreich extrahiert (${cov.coveragePct}%).`;
+            if (cov.skippedPages.length > 0) {
+              fullText += ` Übersprungen (>${PAGE_LIMIT} Seiten-Limit): S.${cov.skippedPages[0]}–S.${cov.skippedPages[cov.skippedPages.length-1]}.`;
+            }
+            if (cov.emptyPages.length > 0) {
+              const ep = cov.emptyPages.slice(0, 10).join(', ') + (cov.emptyPages.length > 10 ? ` +${cov.emptyPages.length - 10} weitere` : '');
+              fullText += ` Leere/Scan-Seiten: S.${ep}.`;
+            }
+            fullText += `\nDIESE ANALYSE IST UNVOLLSTÄNDIG — beachte im Bericht explizit, welche Dokumentbereiche möglicherweise fehlen.`;
+          } else {
+            fullText += `\n[Seitenabdeckung: ${cov.successCount}/${cov.totalPages} (${cov.coveragePct}%) ✅]`;
+          }
         }
-        // Kurze Kontext-Fußnote am Ende (nicht am Anfang — damit Content zuerst gelesen wird)
         if (clf.docCategory !== 'allgemein') {
           const firstHint = clf.hintsText ? clf.hintsText.split('\n')[0] : '';
           fullText += `\n[DOKUMENT-TYP: ${clf.docCategory}${firstHint ? ' — ' + firstHint : ''}]`;
@@ -7091,7 +7151,24 @@ OUTPUT LENGTH: minimum 8000 words. Complete 360° analysis — leave absolutely 
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
-  const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
+
+  // ── Coverage-Guard: Teilanalyse-Warnung wenn < 95% Seiten verarbeitet ───────
+  const _cov = window._lastPageCoverage;
+  const _isTeil = _cov?.isTeilanalyse === true;
+  const _teilPrefix = _isTeil
+    ? (isDE
+        ? `⚠️ ACHTUNG — TEILANALYSE: Nur ${_cov.successCount}/${_cov.totalPages} Seiten (${_cov.coveragePct}%) wurden extrahiert. ${_cov.skippedPages.length > 0 ? `Seiten ${_cov.skippedPages[0]}–${_cov.skippedPages[_cov.skippedPages.length-1]} wurden nicht verarbeitet.` : ''} Behaupte NIEMALS eine "vollständige Analyse" oder "Tiefenanalyse" — kennzeichne die Analyse ausdrücklich als TEILANALYSE. Weise im Bericht darauf hin, welche Dokumentbereiche möglicherweise fehlen.\n\n`
+        : `⚠️ WARNING — PARTIAL ANALYSIS: Only ${_cov.successCount}/${_cov.totalPages} pages (${_cov.coveragePct}%) were extracted. ${_cov.skippedPages.length > 0 ? `Pages ${_cov.skippedPages[0]}–${_cov.skippedPages[_cov.skippedPages.length-1]} were not processed.` : ''} NEVER claim "complete analysis" or "in-depth analysis" — explicitly label this as a PARTIAL ANALYSIS. Note which document sections may be missing.\n\n`)
+    : '';
+
+  // Abschnitt "Verarbeitungsqualität" ist Pflicht bei Teilanalyse
+  const _coverageSection = _isTeil
+    ? (isDE
+        ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ VERARBEITUNGSQUALITÄT & SEITENABDECKUNG\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[PFLICHT: Trage hier ein — Gesamtseiten: ${_cov.totalPages} | Extrahiert: ${_cov.successCount} | Leer/Scan: ${_cov.emptyPages.length} | Übersprungen: ${_cov.skippedPages.length}${_cov.skippedPages.length > 0 ? ' (S.' + _cov.skippedPages[0] + '–' + _cov.skippedPages[_cov.skippedPages.length-1] + ')' : ''} | Abdeckung: ${_cov.coveragePct}%. Welche Dokumentbereiche könnten in den nicht verarbeiteten Seiten liegen? Was fehlt möglicherweise in dieser Analyse?]`
+        : `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ PROCESSING QUALITY & PAGE COVERAGE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[REQUIRED: Insert here — Total pages: ${_cov.totalPages} | Extracted: ${_cov.successCount} | Empty/Scan: ${_cov.emptyPages.length} | Skipped: ${_cov.skippedPages.length}${_cov.skippedPages.length > 0 ? ' (p.' + _cov.skippedPages[0] + '–' + _cov.skippedPages[_cov.skippedPages.length-1] + ')' : ''} | Coverage: ${_cov.coveragePct}%. Which document sections might be in the unprocessed pages? What may be missing from this analysis?]`)
+    : '';
+
+  const depth = (_teilPrefix + (depthInstructions[analysisLength] || depthInstructions['medium']));
   const typeInstructions = docTypeInstructions[docType] || '';
   const learningCtx = getLearningContext(isDE, docType);
 
@@ -7208,7 +7285,7 @@ KERNREGELN — NIEMALS BRECHEN:
 ${depth}
 
 AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
-${sections}
+${sections}${_coverageSection}
 
 QUALITÄTSPRÜFUNG:
 - Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen?
@@ -7452,6 +7529,8 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
               fileUri     = uploadData.file?.uri;
               fileMimeType = uploadData.file?.mimeType || 'application/pdf';
               totalPages  = 1;
+              // File API = Gemini verarbeitet die komplette PDF (1M Kontext) — 100% Coverage
+              window._lastPageCoverage = { totalPages: 0, processedUpTo: 0, successCount: 0, emptyPages: [], failedPages: [], skippedPages: [], coveragePct: 100, isTeilanalyse: false, pageStatuses: [], fileApiUsed: true };
 
             } else {
               console.warn('[File API] Upload step failed:', uploadRes.status);
