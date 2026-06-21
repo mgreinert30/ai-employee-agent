@@ -2603,9 +2603,12 @@ CONTENT MUST INCLUDE: ${points || '(only subject and recipient provided)'}
 TONE: ${toneLabel}`;
   }
 
+  // ?test=1 in der URL erzwingt Demo-Modus (keine echte KI, keine API-Kosten)
+  const _isTestMode = new URLSearchParams(window.location.search).get('test') === '1';
+
   // Always use real AI for document/report/reply creation (no PDF required)
   const taskKind = currentShortcutType || detectTaskType(taskDesc);
-  const useRealAI = uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply';
+  const useRealAI = !_isTestMode && (uploadedPDFs.length > 0 || taskKind === 'document' || taskKind === 'report' || taskKind === 'reply');
 
   if (useRealAI) {
     // Real AI mode — PDF uploaded, call server-side Gemini API
@@ -2620,7 +2623,7 @@ TONE: ${toneLabel}`;
         : `⚠️ Analysis could not be completed.\n\nError: ${err.message}\n\nPlease try again or contact support.`;
     }
   } else {
-    // Demo mode — no PDF uploaded, run without real document content
+    // Demo mode — kein echte API-Aufruf (kein PDF oder ?test=1)
     for (const [pct, msg] of steps) { await delay(1200); setProgress(pct, msg); }
     await delay(800);
     currentResult = generateDemoResult(taskDesc);
@@ -2642,9 +2645,13 @@ TONE: ${toneLabel}`;
     document.getElementById('result-content').before(demoBanner);
   }
   demoBanner.style.display = isDemo ? 'block' : 'none';
-  demoBanner.textContent = currentLang === 'de'
-    ? '⚠️ Demo-Ergebnis — lade ein Dokument hoch für eine echte KI-Analyse'
-    : '⚠️ Demo result — upload a document for real AI analysis';
+  demoBanner.textContent = _isTestMode
+    ? (currentLang === 'de'
+        ? '🧪 TEST-MODUS (?test=1) — Keine echte KI, keine API-Kosten. Ergebnis ist ein Beispiel.'
+        : '🧪 TEST MODE (?test=1) — No real AI, no API costs. Result is a demo example.')
+    : (currentLang === 'de'
+        ? '⚠️ Demo-Ergebnis — lade ein Dokument hoch für eine echte KI-Analyse'
+        : '⚠️ Demo result — upload a document for real AI analysis');
 }
 
 const FUN_FACTS = {
