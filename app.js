@@ -1,4 +1,4 @@
-// AI Employee Agent — app.js
+﻿// AI Employee Agent — app.js
 // Handles: language, auth, owner dashboard, pricing, payment, progress, reviews, testimonials.
 
 // =====================
@@ -2896,10 +2896,41 @@ function stripCodeFences(text) {
   return text.replace(/^```[a-z]*\n?/gim, '').replace(/^```$/gim, '').trim();
 }
 
+function checkDuplicateContent(text) {
+  if (!text || text.length < 200) return { ok: true };
+  const sentences = text.split(/[.!?。]\s+/).map(s => s.trim()).filter(s => s.length > 30);
+  if (sentences.length < 5) return { ok: true };
+  const seen = new Map();
+  let dupCount = 0;
+  let worstSample = '';
+  for (const s of sentences) {
+    const key = s.toLowerCase().replace(/\s+/g, ' ').slice(0, 120);
+    const prev = seen.get(key) || 0;
+    seen.set(key, prev + 1);
+    if (prev === 1) { dupCount++; if (!worstSample) worstSample = s.slice(0, 100); }
+  }
+  const dupRatio = dupCount / sentences.length;
+  return { ok: dupRatio < 0.30, dupRatio, worstSample };
+}
+
 function renderResultRich(text) {
   const container = document.getElementById('result-content');
   if (!container) return;
   container.innerHTML = '';
+
+  // Duplikat-Schutz: abbrechen wenn >30% der Sätze Wiederholungen sind
+  const dupCheck = checkDuplicateContent(text);
+  if (!dupCheck.ok) {
+    const de = currentLang === 'de';
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'padding:20px;background:#1e1a2e;border:1.5px solid #ef4444;border-radius:12px;margin:16px 0;';
+    errDiv.innerHTML = `<div style="color:#ef4444;font-weight:700;font-size:16px;margin-bottom:8px;">⚠️ ${de ? 'Analyse wurde gestoppt, weil wiederholter Inhalt erkannt wurde.' : 'Analysis stopped due to repeated content.'}</div>`
+      + `<div style="color:#94a3b8;font-size:14px;line-height:1.6;">${Math.round(dupCheck.dupRatio * 100)}% ${de ? 'der Sätze sind Duplikate. Bitte erneut analysieren.' : 'of sentences are duplicates. Please re-analyze.'}</div>`
+      + (dupCheck.worstSample ? `<div style="color:#64748b;font-size:12px;margin-top:8px;font-style:italic;">"${dupCheck.worstSample}…"</div>` : '');
+    container.appendChild(errDiv);
+    return;
+  }
+
   renderQCBadge(container);
   const blocks = parseResultBlocks(text || '');
   let kpiGrid = null;
@@ -3159,8 +3190,30 @@ function renderChartOnCanvas(canvas, block, wrapEl) {
 }
 
 // ── Step 2: render blocks into jsPDF ───────────────────────────────────────
+function checkMinimumSections(text, length) {
+  if (length !== 'long' || !text) return { ok: true, missing: [] };
+  const de = currentLang === 'de';
+  const required = de
+    ? ['Executive Summary', 'Kennzahlen', 'Risiken', 'Chancen', 'Handlungsempfehlung']
+    : ['Executive Summary', 'Key Figures', 'Risks', 'Opportunities', 'Recommendations'];
+  const textLower = text.toLowerCase();
+  const missing = required.filter(r => !textLower.includes(r.toLowerCase()));
+  return { ok: missing.length <= 2, missing };
+}
+
 function downloadPDF(length) {
   closeLengthSelector();
+
+  // Mindeststruktur-Check für Tiefenanalyse
+  const structCheck = checkMinimumSections(currentResult, length || window.selectedAnalysisLength);
+  if (!structCheck.ok) {
+    const de = currentLang === 'de';
+    const msg = de
+      ? `Die Tiefenanalyse ist unvollständig.\n\nFehlende Abschnitte: ${structCheck.missing.join(', ')}\n\nPDF-Export wurde blockiert. Bitte erneut analysieren.`
+      : `The deep analysis is incomplete.\n\nMissing sections: ${structCheck.missing.join(', ')}\n\nPDF export blocked. Please re-analyze.`;
+    alert(msg);
+    return;
+  }
 
   if (!window.jspdf) { alert('PDF-Bibliothek wird geladen — bitte erneut versuchen.'); return; }
   const { jsPDF } = window.jspdf;
@@ -3448,13 +3501,22 @@ function downloadPDF(length) {
   doc.setLineWidth(0.25);
   doc.line(cardX + 12, ty + 14, cardX + cardW - 8, ty + 14);
 
-  // Feature rows with icon circles
+// Feature rows with icon circles
+  const _pdfCovCard = window._lastPageCoverage;
+  const _tblCountCard = (window._lastPDFBlocks || []).filter(b => b.block_type === 'table').length;
+  const tblLabelCard = _tblCountCard > 0
+    ? (de ? ` Tabellen erkannt` : ` tables detected`)
+    : (de ? 'Keine Tabellen gefunden' : 'No tables found');
+  const pageLabelCard = _pdfCovCard?.totalPages
+    ? (_pdfCovCard.isTeilanalyse
+        ? (de ? `/ Seiten (Teilanalyse)` : `/ pages (partial)`)
+        : (de ? ` Seiten vollständig` : ` pages complete`))
+    : (de ? 'Seiten verarbeitet' : 'Pages processed');
   const feats = [
-    ['\u25CF', de ? 'Visuelle KI-Analyse'  : 'Visual AI Analysis',  de ? 'Tabellen & Grafiken erkannt'   : 'Tables & charts detected'],
-    ['\u25CF', de ? 'Seitenreferenzen'     : 'Page References',      de ? 'Jede Aussage belegt'           : 'Every claim sourced'],
-    ['\u25CF', de ? 'Vertraulich'          : 'Confidential',         de ? 'Daten nach Analyse gelöscht'   : 'Data deleted after analysis'],
-  ];
-  feats.forEach(([, left, right], i) => {
+    ['●', de ? 'Visuelle KI-Analyse'  : 'Visual AI Analysis',  tblLabelCard],
+    ['●', de ? 'Seitenreferenzen'     : 'Page References',      de ? 'Jede Aussage belegt'           : 'Every claim sourced'],
+    ['●', de ? 'Seitenabdeckung'      : 'Page Coverage',        pageLabelCard],
+  ];  feats.forEach(([, left, right], i) => {
     const fy = ty + 23 + i * 14;
     // Icon circle
     doc.setFillColor(accent[0], accent[1], accent[2]);
@@ -5590,9 +5652,15 @@ function runStrictLocalAnalysis(allChunks, taskDesc) {
     kvOut += '\n';
   }
 
+  const _cov = window._lastPageCoverage;
+  const displayPages = _cov?.totalPages
+    ? (_cov.isTeilanalyse
+        ? `${_cov.successCount}/${_cov.totalPages} ${de ? '(Teilanalyse)' : '(partial)'}`
+        : `${_cov.totalPages}`)
+    : (clf?.pageCount || '?');
   const stats = `## ${de ? 'Dokument-Statistik' : 'Document Statistics'}\n\n`
     + `| ${de ? 'Merkmal' : 'Property'} | ${de ? 'Wert' : 'Value'} |\n|---|---|\n`
-    + `| ${de ? 'Seiten' : 'Pages'} | ${clf?.pageCount || '?'} |\n`
+    + `| ${de ? 'Seiten' : 'Pages'} | ${displayPages} |\n`
     + `| ${de ? 'Abschnitte' : 'Sections'} | ${sections.length} |\n`
     + `| ${de ? 'Tabellen' : 'Tables'} | ${tables.length} |\n`
     + `| ${de ? 'Ø Zeichen/Seite' : 'Avg chars/page'} | ${clf?.avgCharsPerPage || '?'} |\n`
@@ -7151,24 +7219,7 @@ OUTPUT LENGTH: minimum 8000 words. Complete 360° analysis — leave absolutely 
   };
 
   const sections = docTypeSections[docType] || docTypeSections['allgemein'];
-
-  // ── Coverage-Guard: Teilanalyse-Warnung wenn < 95% Seiten verarbeitet ───────
-  const _cov = window._lastPageCoverage;
-  const _isTeil = _cov?.isTeilanalyse === true;
-  const _teilPrefix = _isTeil
-    ? (isDE
-        ? `⚠️ ACHTUNG — TEILANALYSE: Nur ${_cov.successCount}/${_cov.totalPages} Seiten (${_cov.coveragePct}%) wurden extrahiert. ${_cov.skippedPages.length > 0 ? `Seiten ${_cov.skippedPages[0]}–${_cov.skippedPages[_cov.skippedPages.length-1]} wurden nicht verarbeitet.` : ''} Behaupte NIEMALS eine "vollständige Analyse" oder "Tiefenanalyse" — kennzeichne die Analyse ausdrücklich als TEILANALYSE. Weise im Bericht darauf hin, welche Dokumentbereiche möglicherweise fehlen.\n\n`
-        : `⚠️ WARNING — PARTIAL ANALYSIS: Only ${_cov.successCount}/${_cov.totalPages} pages (${_cov.coveragePct}%) were extracted. ${_cov.skippedPages.length > 0 ? `Pages ${_cov.skippedPages[0]}–${_cov.skippedPages[_cov.skippedPages.length-1]} were not processed.` : ''} NEVER claim "complete analysis" or "in-depth analysis" — explicitly label this as a PARTIAL ANALYSIS. Note which document sections may be missing.\n\n`)
-    : '';
-
-  // Abschnitt "Verarbeitungsqualität" ist Pflicht bei Teilanalyse
-  const _coverageSection = _isTeil
-    ? (isDE
-        ? `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ VERARBEITUNGSQUALITÄT & SEITENABDECKUNG\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[PFLICHT: Trage hier ein — Gesamtseiten: ${_cov.totalPages} | Extrahiert: ${_cov.successCount} | Leer/Scan: ${_cov.emptyPages.length} | Übersprungen: ${_cov.skippedPages.length}${_cov.skippedPages.length > 0 ? ' (S.' + _cov.skippedPages[0] + '–' + _cov.skippedPages[_cov.skippedPages.length-1] + ')' : ''} | Abdeckung: ${_cov.coveragePct}%. Welche Dokumentbereiche könnten in den nicht verarbeiteten Seiten liegen? Was fehlt möglicherweise in dieser Analyse?]`
-        : `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ PROCESSING QUALITY & PAGE COVERAGE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n[REQUIRED: Insert here — Total pages: ${_cov.totalPages} | Extracted: ${_cov.successCount} | Empty/Scan: ${_cov.emptyPages.length} | Skipped: ${_cov.skippedPages.length}${_cov.skippedPages.length > 0 ? ' (p.' + _cov.skippedPages[0] + '–' + _cov.skippedPages[_cov.skippedPages.length-1] + ')' : ''} | Coverage: ${_cov.coveragePct}%. Which document sections might be in the unprocessed pages? What may be missing from this analysis?]`)
-    : '';
-
-  const depth = (_teilPrefix + (depthInstructions[analysisLength] || depthInstructions['medium']));
+  const depth = depthInstructions[analysisLength] || depthInstructions['medium'];
   const typeInstructions = docTypeInstructions[docType] || '';
   const learningCtx = getLearningContext(isDE, docType);
 
@@ -7285,7 +7336,7 @@ KERNREGELN — NIEMALS BRECHEN:
 ${depth}
 
 AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
-${sections}${_coverageSection}
+${sections}
 
 QUALITÄTSPRÜFUNG:
 - Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen?
