@@ -1,8 +1,8 @@
 // Vercel Serverless Function — Support chatbot powered by Gemini
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
-// Support-Chat: gemini-1.5-flash as primary (stable, fast, ideal for short Q&A)
-const MODELS = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.5-flash-lite'];
+// Support-Chat: gemini-2.0-flash as primary (stable v2, replaces deprecated 1.5 models)
+const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-002'];
 
 const SYSTEM_DE = `Du bist ein freundlicher Support-Assistent für "AI Employee Agent" — eine KI-Plattform für kleine Unternehmen.
 

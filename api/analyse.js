@@ -14,12 +14,12 @@ function isRateLimited(ip, max = 8, windowMs = 60000) {
   return rec.n > max;
 }
 
-// PDF-Analyse: gemini-1.5-flash as primary (stable, no 503/404 issues, excellent for docs)
+// PDF-Analyse: gemini-2.0-flash as primary (stable v2, replaces deprecated 1.5 models)
 const MODELS = [
-  'gemini-1.5-flash',       // primary: stable, reliable, great for PDF/doc analysis
-  'gemini-1.5-pro',         // fallback 1: more capable, same stable generation
-  'gemini-2.5-flash-lite',  // fallback 2: newer but lighter
-  'gemini-2.5-flash',       // fallback 3: newest, may have 503 under high load
+  'gemini-2.0-flash',        // primary: stable, fast, excellent for PDF/doc analysis
+  'gemini-2.5-flash',        // fallback 1: newest generation
+  'gemini-2.5-flash-lite',   // fallback 2: lighter variant
+  'gemini-1.5-flash-002',    // fallback 3: versioned 1.5 stable if available
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
@@ -160,6 +160,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // All models failed — fall back to JSON error response
-  return res.status(500).json({ error: allErrors.join(' | '), allErrors });
+  // All models failed — log technical details server-side, return friendly message to client
+  console.error('[analyse] All Gemini models failed:', allErrors);
+  return res.status(500).json({
+    error: 'Die Analyse konnte nicht gestartet werden, weil das konfigurierte KI-Modell nicht verfügbar ist. Bitte versuche es erneut. Das System wählt automatisch ein Ersatzmodell.',
+  });
 }

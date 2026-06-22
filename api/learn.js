@@ -96,6 +96,29 @@ async function sbDeleteAll(table) {
   } catch (_) { return false; }
 }
 
+// ── Gemini helper with model fallback ────────────────────────────────────────
+const LEARN_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-1.5-flash-002',
+];
+
+async function callGeminiJson(key, body) {
+  for (const model of LEARN_MODELS) {
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      );
+      if (r.ok) return r;
+      const status = r.status;
+      if (status !== 404 && status !== 400 && status !== 503 && status !== 429) break;
+    } catch (_) {}
+  }
+  return null;
+}
+
 // ── Insight Extractor (Gemini) ────────────────────────────────────────────────
 async function extractInsights(resultText, taskType) {
   if (!GEMINI_KEY) return [];
@@ -117,12 +140,11 @@ RESULT TO ANALYSE:
 ${resultText.slice(0, 2000)}`;
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 400, temperature: 0.1 } }) }
-    );
-    if (!r.ok) return [];
+    const r = await callGeminiJson(GEMINI_KEY, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 400, temperature: 0.1 },
+    });
+    if (!r) return [];
     const d = await r.json();
     const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\[[\s\S]*?\]/);
@@ -151,12 +173,11 @@ Return ONLY valid JSON array (no markdown):
 [{"rule": "...", "category": "general|pdf|email|report|contract|finance"}]`;
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 300, temperature: 0.2 } }) }
-    );
-    if (!r.ok) return [];
+    const r = await callGeminiJson(GEMINI_KEY, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 300, temperature: 0.2 },
+    });
+    if (!r) return [];
     const d = await r.json();
     const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\[[\s\S]*?\]/);
