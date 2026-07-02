@@ -12,11 +12,12 @@ function isRateLimited(ip, max = 5, windowMs = 60000) {
   return rec.n > max;
 }
 
+// Immobilienberatung: Pro für tiefes Reasoning, Flash als schnelle Fallbacks
 const MODELS = [
+  { name: 'gemini-2.5-pro',        api: 'v1beta', thinkingBudget: 1024 },
   { name: 'gemini-2.5-flash',      api: 'v1beta', thinkingBudget: 0   },
   { name: 'gemini-2.5-flash-lite', api: 'v1beta', thinkingBudget: 0   },
-  { name: 'gemini-2.5-pro',        api: 'v1beta', thinkingBudget: 1024 },
-  { name: 'gemini-1.5-flash',      api: 'v1beta', thinkingBudget: null },
+  { name: 'gemini-2.0-flash-lite', api: 'v1beta', thinkingBudget: null },
 ];
 
 function buildPrompt(property) {

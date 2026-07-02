@@ -97,11 +97,12 @@ async function sbDeleteAll(table) {
 }
 
 // ── Gemini helper with model fallback ────────────────────────────────────────
+// Lernfunktion: braucht gutes Textverständnis, Flash reicht aus
 const LEARN_MODELS = [
-  'gemini-2.0-flash',
   'gemini-2.5-flash',
+  'gemini-2.5-pro',
   'gemini-2.5-flash-lite',
-  'gemini-1.5-flash-002',
+  'gemini-2.0-flash-lite',
 ];
 
 async function callGeminiJson(key, body) {
