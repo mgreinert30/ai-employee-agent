@@ -14,12 +14,12 @@ function isRateLimited(ip, max = 8, windowMs = 60000) {
   return rec.n > max;
 }
 
-// PDF-Analyse: gemini-2.0-flash as primary (stable v2, replaces deprecated 1.5 models)
+// PDF-Analyse: gemini-2.5-flash as primary (current stable gen, 2026)
 const MODELS = [
-  'gemini-2.0-flash',        // primary: stable, fast, excellent for PDF/doc analysis
-  'gemini-2.5-flash',        // fallback 1: newest generation
+  'gemini-2.5-flash',        // primary: current stable, fast, great for PDF
+  'gemini-2.5-pro',          // fallback 1: most capable, same gen
   'gemini-2.5-flash-lite',   // fallback 2: lighter variant
-  'gemini-1.5-flash-002',    // fallback 3: versioned 1.5 stable if available
+  'gemini-2.0-flash-lite',   // fallback 3: older gen, very reliable
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
@@ -113,10 +113,7 @@ export default async function handler(req, res) {
       let errMsg = `HTTP ${geminiRes.status}`;
       try { const d = await geminiRes.json(); errMsg += `: ${d.error?.message || JSON.stringify(d).slice(0, 120)}`; } catch (_) {}
       allErrors.push(`[${model}] ${errMsg}`);
-      // Skip to next model for: deprecated/unavailable (404), bad request (400), overload (503), rate-limit (429)
-      const retriable = geminiRes.status === 404 || geminiRes.status === 400
-        || geminiRes.status === 503 || geminiRes.status === 429;
-      if (!retriable) break;
+      // Always try the next model — any error from one model shouldn't block fallbacks
       continue;
     }
 
@@ -164,5 +161,6 @@ export default async function handler(req, res) {
   console.error('[analyse] All Gemini models failed:', allErrors);
   return res.status(500).json({
     error: 'Die Analyse konnte nicht gestartet werden, weil das konfigurierte KI-Modell nicht verfügbar ist. Bitte versuche es erneut. Das System wählt automatisch ein Ersatzmodell.',
+    debug: allErrors, // temporär für Fehlerdiagnose
   });
 }
