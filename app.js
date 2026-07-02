@@ -6,6 +6,9 @@
 // =====================
 const APP_VERSION = '1.1';
 
+// Test-Accounts — können alle Features unbegrenzt kostenlos nutzen
+const FREE_ACCOUNTS = ['test@demo.de'];
+
 // =====================
 // ANALYSE-TOKEN — serverseitig signiert, 15 Min gültig
 // =====================
@@ -175,6 +178,16 @@ async function handleLogin(e) {
     }
   } catch (_) {}
 
+  // Test-Account Login (kein Registrierung nötig)
+  if (FREE_ACCOUNTS.includes(email.toLowerCase()) && password === 'test123') {
+    currentUser = { name: 'Tester', email: email.toLowerCase() };
+    if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+    updateActivity();
+    hideAuthModal();
+    showLoggedIn();
+    return;
+  }
+
   // Regular user login
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
   const user = users.find(u => u.email === email && u.password === password);
@@ -323,11 +336,14 @@ function toggleCookieDetails() {
 // =====================
 function isFreeTrialAvailable() {
   if (!currentUser) return true; // guests see the "gratis" button until they log in
+  if (FREE_ACCOUNTS.includes(currentUser.email)) return true; // Test-Accounts sind immer kostenlos
   return !localStorage.getItem(`ai_free_trial_used_${currentUser.email}`);
 }
 
 function markFreeTrialUsed() {
-  if (currentUser) localStorage.setItem(`ai_free_trial_used_${currentUser.email}`, '1');
+  if (currentUser && !FREE_ACCOUNTS.includes(currentUser.email)) {
+    localStorage.setItem(`ai_free_trial_used_${currentUser.email}`, '1');
+  }
 }
 
 function updateHeroCTA() {
@@ -2188,6 +2204,14 @@ function cancelTask() { showStep('step-form'); }
 // =====================
 async function goToPayment() {
   clearAnalysisToken();
+  // Test-Modus (?test=1) — Zahlung komplett überspringen, keine echte KI
+  if (new URLSearchParams(window.location.search).get('test') === '1') {
+    setAnalysisToken('free-trial');
+    window.skippedSetup = true;
+    showStep('step-progress');
+    startTask();
+    return;
+  }
   // Free trial — skip payment entirely
   if (currentEstimate?.isFree) {
     markFreeTrialUsed();
