@@ -14,12 +14,12 @@ function isRateLimited(ip, max = 8, windowMs = 60000) {
   return rec.n > max;
 }
 
-// PDF-Analyse: gemini-2.5-flash as primary (current stable gen, 2026)
+// PDF-Analyse: immer aktuellstes Flash-Modell, feste Versionen als Fallback
 const MODELS = [
-  'gemini-2.5-flash',        // primary: current stable, fast, great for PDF
-  'gemini-2.5-pro',          // fallback 1: most capable, same gen
-  'gemini-2.5-flash-lite',   // fallback 2: lighter variant
-  'gemini-2.0-flash-lite',   // fallback 3: older gen, very reliable
+  'gemini-flash-latest',     // primary: automatisch immer aktuell
+  'gemini-2.5-flash',        // fallback 1: bekannte stabile Version
+  'gemini-pro-latest',       // fallback 2: Pro falls Flash ausfällt
+  'gemini-2.5-pro',          // fallback 3: bekannte Pro-Version
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
