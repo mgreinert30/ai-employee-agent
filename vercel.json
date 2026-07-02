@@ -6,7 +6,10 @@
     "api/send-reset.js":       { "maxDuration": 10 },
     "api/verify-reset.js":     { "maxDuration": 10 },
     "api/chat.js":             { "maxDuration": 15 },
-    "api/learn.js":            { "maxDuration": 20 }
+    "api/learn.js":            { "maxDuration": 20 },
+    "api/heygen-create.js":    { "maxDuration": 30 },
+    "api/heygen-avatars.js":   { "maxDuration": 15 },
+    "api/heygen-status.js":    { "maxDuration": 15 }
   },
   "headers": [
     {

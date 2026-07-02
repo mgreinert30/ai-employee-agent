@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HeyGen Video-Generator — AI Employee Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 32px 16px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 32px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.06); }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #60a5fa; }
+    label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 14px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; border-radius: 8px;
+      border: 1.5px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+      color: #e2e8f0; font-size: 14px; font-family: inherit;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #60a5fa; }
+    select option { background: #1e293b; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity .15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg,#3b82f6,#6366f1); color: white; }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    .btn:not(:disabled):hover { opacity: 0.88; }
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+    .status-box {
+      border-radius: 10px; padding: 16px; margin-top: 20px;
+      font-size: 14px; line-height: 1.6; display: none;
+    }
+    .status-processing { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: #fbbf24; }
+    .status-done      { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #22c55e; }
+    .status-error     { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #ef4444; }
+    .avatar-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .avatar-item {
+      padding: 10px 14px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04); font-size: 13px; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .avatar-item:hover { border-color: #60a5fa; }
+    .avatar-item .name { font-weight: 600; }
+    .avatar-item .id   { color: #64748b; font-size: 11px; word-break: break-all; margin-top: 2px; }
+    .scene-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .scene { border-radius: 8px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
+    .scene-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+    .badge-alex { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .badge-emma { background: rgba(168,85,247,0.2); color: #c084fc; }
+    .scene-text { font-size: 13px; color: #94a3b8; font-style: italic; }
+    .download-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #22c55e; color: white; padding: 12px 24px;
+      border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 12px;
+    }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    code { font-family: monospace; background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 12px; word-break: break-all; }
+    hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 HeyGen Video-Generator</h1>
+  <p class="subtitle">Instagram Reel automatisch erstellen — Alex & Emma erklären die Website</p>
+
+  <!-- SCHRITT 1: Avatare laden -->
+  <div class="card">
+    <h2>Schritt 1 — Avatare aus HeyGen laden</h2>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">
+      Klicke auf "Avatare laden" um deine HeyGen-Avatare zu sehen. Dann wähle Alex und Emma aus.
+    </p>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-secondary" onclick="loadAvatars()">🔄 Avatare laden</button>
+    </div>
+    <div id="avatar-list-container" style="display:none;margin-top:16px;">
+      <div id="avatar-list" class="avatar-list"></div>
+      <hr>
+      <label>Alex Avatar-ID (männlich)</label>
+      <input type="text" id="alex-avatar-id" placeholder="z.B. avatar_123abc..." />
+      <label>Emma Avatar-ID (weiblich)</label>
+      <input type="text" id="emma-avatar-id" placeholder="z.B. avatar_456def..." />
+      <label>Alex Voice-ID (optional — leer lassen für Standard)</label>
+      <input type="text" id="alex-voice-id" placeholder="leer lassen für HeyGen-Standard" />
+      <label>Emma Voice-ID (optional — leer lassen für Standard)</label>
+      <input type="text" id="emma-voice-id" placeholder="leer lassen für HeyGen-Standard" />
+    </div>
+    <div id="avatar-status" class="status-box"></div>
+  </div>
+
+  <!-- SCHRITT 2: Script -->
+  <div class="card">
+    <h2>Schritt 2 — Script (vorausgefüllt)</h2>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">
+      Das humorvolle Script ist bereits eingetragen. Du kannst es hier anpassen:
+    </p>
+    <div class="scene-list" id="scene-preview"></div>
+    <p style="font-size:12px;color:#475569;margin-top:12px;">
+      Um den Text zu ändern, bearbeite direkt den Code in <code>api/heygen-create.js</code> unter <code>DEFAULT_SCENES</code>.
+    </p>
+  </div>
+
+  <!-- SCHRITT 3: Video erstellen -->
+  <div class="card">
+    <h2>Schritt 3 — Video erstellen</h2>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:16px;">
+      Format: <strong>1080×1920 (9:16)</strong> für Instagram Reels — Hintergrundfarbe: Website-Dunkelblau.
+    </p>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-primary" id="create-btn" onclick="createVideo()">🎬 Video erstellen</button>
+    </div>
+    <div id="create-status" class="status-box"></div>
+  </div>
+
+  <!-- SCHRITT 4: Status & Download -->
+  <div class="card" id="status-card" style="display:none;">
+    <h2>Schritt 4 — Status & Download</h2>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:12px;">
+      Video-ID: <code id="video-id-display"></code>
+    </p>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-secondary" id="check-btn" onclick="checkStatus()">🔍 Status prüfen</button>
+    </div>
+    <div id="video-status" class="status-box"></div>
+    <div id="download-area" style="display:none;margin-top:12px;"></div>
+  </div>
+</div>
+
+<script>
+const SCENES = [
+  { avatar: 'alex',  text: 'Stell dir vor, dein Mitarbeiter kommt NIE zu spät, braucht KEINEN Kaffee — und beschwert sich NIE über zu viel Arbeit.' },
+  { avatar: 'emma',  text: 'Das bin ich — Emma. KI-Mitarbeiterin. Und das ist Alex. Wir arbeiten 24/7 und fragen nie nach einer Gehaltserhöhung.' },
+  { avatar: 'alex',  text: 'Zusammen analysieren wir deine PDFs, sortieren deine E-Mails und schreiben deine Berichte — in unter 2 Minuten. Kein Witz.' },
+  { avatar: 'emma',  text: 'Du lädst ein PDF hoch. Alex liest jede Seite. Du trinkst deinen Kaffee. Alex liefert einen fertigen Bericht. Einer von uns arbeitet dabei härter.' },
+  { avatar: 'alex',  text: 'Das Beste? Dein erster Auftrag ist komplett gratis. Danach ab 99 Cent. Billiger als ein Kaffee — und ich bin schneller.' },
+  { avatar: 'emma',  text: 'Teste es jetzt auf a-i-employee.de — wir warten bereits. Buchstäblich. Wir sind KI.' },
+];
+
+let currentVideoId = null;
+let statusInterval  = null;
+
+// Scene-Vorschau rendern
+(function renderScenes() {
+  const el = document.getElementById('scene-preview');
+  el.innerHTML = SCENES.map((s, i) => `
+    <div class="scene">
+      <div class="scene-header">
+        <span class="badge badge-${s.avatar}">${s.avatar === 'alex' ? '👨‍💼 Alex' : '👩‍💼 Emma'}</span>
+        <span style="font-size:11px;color:#475569;">Szene ${i + 1}</span>
+      </div>
+      <div class="scene-text">"${s.text}"</div>
+    </div>
+  `).join('');
+})();
+
+async function loadAvatars() {
+  const box = document.getElementById('avatar-status');
+  showBox(box, 'processing', '<span class="spinner"></span> Lade Avatare aus deinem HeyGen-Account…');
+
+  try {
+    const r    = await fetch('/api/heygen-avatars');
+    const data = await r.json();
+
+    if (data.error) {
+      showBox(box, 'error', '❌ ' + data.error);
+      return;
+    }
+
+    const all = [
+      ...(data.avatars || []).map(a => ({ id: a.avatar_id, name: a.avatar_name || a.name || a.avatar_id })),
+      ...(data.groups  || []).map(g => ({ id: g.id,        name: g.name || g.id })),
+    ];
+
+    if (all.length === 0) {
+      showBox(box, 'error', '⚠️ Keine eigenen Avatare gefunden. Bitte zuerst in HeyGen Avatare erstellen.');
+      return;
+    }
+
+    const listEl = document.getElementById('avatar-list');
+    listEl.innerHTML = all.map(a => `
+      <div class="avatar-item" onclick="selectAvatar('${a.id}','${escHtml(a.name)}')">
+        <div class="name">${escHtml(a.name)}</div>
+        <div class="id">${a.id}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('avatar-list-container').style.display = 'block';
+    showBox(box, 'done', `✅ ${all.length} Avatar(e) gefunden. Klicke einen an um die ID zu kopieren.`);
+  } catch (e) {
+    showBox(box, 'error', '❌ Netzwerkfehler: ' + e.message);
+  }
+}
+
+function selectAvatar(id, name) {
+  const alexInput = document.getElementById('alex-avatar-id');
+  const emmaInput = document.getElementById('emma-avatar-id');
+  if (!alexInput.value) {
+    alexInput.value = id;
+    alert(`"${name}" als Alex gesetzt.`);
+  } else if (!emmaInput.value) {
+    emmaInput.value = id;
+    alert(`"${name}" als Emma gesetzt.`);
+  } else {
+    if (confirm(`Alex überschreiben mit "${name}"?`)) alexInput.value = id;
+  }
+}
+
+async function createVideo() {
+  const alexId  = document.getElementById('alex-avatar-id').value.trim();
+  const emmaId  = document.getElementById('emma-avatar-id').value.trim();
+  const alexVoice = document.getElementById('alex-voice-id').value.trim();
+  const emmaVoice = document.getElementById('emma-voice-id').value.trim();
+  const box     = document.getElementById('create-status');
+  const btn     = document.getElementById('create-btn');
+
+  if (!alexId || !emmaId) {
+    showBox(box, 'error', '❌ Bitte zuerst Alex-ID und Emma-ID eintragen (Schritt 1).');
+    return;
+  }
+
+  btn.disabled = true;
+  showBox(box, 'processing', '<span class="spinner"></span> Video wird bei HeyGen angefordert…');
+
+  try {
+    const r    = await fetch('/api/heygen-create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        alexAvatarId: alexId,
+        emmaAvatarId: emmaId,
+        ...(alexVoice ? { alexVoiceId: alexVoice } : {}),
+        ...(emmaVoice ? { emmaVoiceId: emmaVoice } : {}),
+      }),
+    });
+    const data = await r.json();
+
+    if (data.error || !r.ok) {
+      showBox(box, 'error', '❌ ' + (data.error || JSON.stringify(data)));
+      btn.disabled = false;
+      return;
+    }
+
+    currentVideoId = data.videoId;
+    document.getElementById('video-id-display').textContent = currentVideoId;
+    document.getElementById('status-card').style.display = 'block';
+    showBox(box, 'done', `✅ Video erstellt! ID: <code>${currentVideoId}</code><br>Gehe zu Schritt 4 um den Status zu prüfen.`);
+
+    // Auto-Polling starten
+    startPolling();
+  } catch (e) {
+    showBox(box, 'error', '❌ ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function checkStatus() {
+  if (!currentVideoId) return;
+  const box = document.getElementById('video-status');
+  showBox(box, 'processing', '<span class="spinner"></span> Status wird geprüft…');
+
+  try {
+    const r    = await fetch(`/api/heygen-status?id=${currentVideoId}`);
+    const data = await r.json();
+
+    if (data.error) { showBox(box, 'error', '❌ ' + data.error); return; }
+
+    const st = data.status;
+    if (st === 'completed' && data.videoUrl) {
+      clearInterval(statusInterval);
+      showBox(box, 'done', '✅ Video fertig!');
+      document.getElementById('download-area').style.display = 'block';
+      document.getElementById('download-area').innerHTML = `
+        <a class="download-btn" href="${data.videoUrl}" target="_blank" download>
+          ⬇️ Video herunterladen
+        </a>
+        <p style="font-size:12px;color:#475569;margin-top:8px;">
+          Direktlink: <code>${data.videoUrl}</code>
+        </p>
+      `;
+    } else if (st === 'failed') {
+      clearInterval(statusInterval);
+      showBox(box, 'error', '❌ Video-Erstellung fehlgeschlagen. Bitte erneut versuchen.');
+    } else {
+      showBox(box, 'processing', `<span class="spinner"></span> Status: <strong>${st || 'processing'}</strong> — Video wird noch gerendert…`);
+    }
+  } catch (e) {
+    showBox(box, 'error', '❌ ' + e.message);
+  }
+}
+
+function startPolling() {
+  clearInterval(statusInterval);
+  statusInterval = setInterval(checkStatus, 15000); // alle 15 Sek
+  checkStatus();
+}
+
+function showBox(el, type, html) {
+  el.style.display = 'block';
+  el.className = 'status-box status-' + (type === 'done' ? 'done' : type === 'error' ? 'error' : 'processing');
+  el.innerHTML = html;
+}
+
+function escHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>
