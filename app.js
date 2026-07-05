@@ -3683,16 +3683,23 @@ function downloadPDF(length) {
   y = mTop + 12;
 
   // Helper: safely strip all non-printable / non-latin characters for jsPDF
+  // jsPDF 2.5.1 helvetica uses WinAnsiEncoding \u2014 only U+0020\u2013U+00FF are safe.
+  // Characters in U+0100\u2013U+024F (extended Latin) trigger the &X&Y&Z& rendering bug.
   function safe(s) {
+    if (!s) return '';
     return s
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // strip **bold** markdown
-      .replace(/\*([^*]+)\*/g, '$1')     // strip *italic* markdown
-      .replace(/`([^`]+)`/g, '$1')       // strip `code` markdown
-      .replace(/\u2014|\u2013/g, ' - ')
-      .replace(/\u2018|\u2019/g, "'")
-      .replace(/\u201C|\u201D/g, '"')
-      .replace(/\u2022/g, '-')
-      .replace(/[^\x20-\x7E\u00C0-\u024F]/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+      .replace(/&[a-zA-Z0-9#]+;/g, ' ')      // strip remaining HTML entities
+      .replace(/\*\*([^*]+)\*\*/g, '$1')     // strip **bold** markdown
+      .replace(/\*([^*]+)\*/g, '$1')          // strip *italic* markdown
+      .replace(/`([^`]+)`/g, '$1')            // strip `code` markdown
+      .replace(/\u2014|\u2013|\u2012|\u2010/g, '-')  // all dash variants \u2192 hyphen
+      .replace(/\u2018|\u2019|\u02BC/g, "'")
+      .replace(/\u201C|\u201D|\u201E|\u201F/g, '"')
+      .replace(/\u2022|\u2023|\u2043/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/\u00B7/g, '.')
+      .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '') // WinAnsiEncoding-Bereich (bis U+00FF)
       .replace(/\s+/g, ' ')
       .trim();
   }
