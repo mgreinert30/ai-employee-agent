@@ -1,4 +1,6 @@
 // Vercel Serverless Function — Gemini Real Estate Valuation (DE)
+import { verifyToken, rejectToken } from './_token.js';
+
 export const config = {
   api: { bodyParser: { sizeLimit: '10mb' } },
 };
@@ -278,7 +280,7 @@ function repairAndParseJSON(raw) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-analysis-token');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -290,6 +292,12 @@ export default async function handler(req, res) {
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
+
+  const token = req.headers['x-analysis-token'];
+  if (token !== 'free-trial') {
+    const tokenCheck = verifyToken(token, 'analyse');
+    if (!tokenCheck.valid) return rejectToken(res, tokenCheck.reason);
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

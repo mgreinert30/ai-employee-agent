@@ -878,51 +878,18 @@
   <!-- PAYMENT STEP -->
   <div id="immo-payment-step" style="display:none;">
     <div class="payment-box" style="margin:0 auto;">
-      <h3>Zahlungsmethode</h3>
+      <h3>Immobilienbewertung</h3>
       <p class="payment-amount-label">€20,00</p>
-      <div id="immo-saved-payment" style="display:none;">
-        <div class="saved-method">
-          <span id="immo-saved-icon"></span>
-          <span id="immo-saved-label" style="flex:1;color:#0f172a;"></span>
-          <button onclick="immoChangePayment()" class="btn-link">Ändern</button>
-        </div>
-        <button onclick="immoConfirmPayment()" class="btn-primary full-width">Jetzt bezahlen</button>
+      <p style="font-size:14px;color:#64748b;margin-bottom:20px;text-align:center;">
+        Einmalige Zahlung · Sofortige KI-Auswertung · Sicher über PayPal
+      </p>
+      <div id="paypal-button-container"></div>
+      <div id="paypal-loading" style="text-align:center;color:#94a3b8;padding:16px;font-size:14px;">
+        <div style="display:inline-block;width:18px;height:18px;border:2px solid #dbeafe;border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;"></div>
+        PayPal wird geladen…
       </div>
-      <div id="immo-new-payment">
-        <div class="payment-options">
-          <button onclick="immoSelectPayment('paypal')" class="payment-option" id="immo-opt-paypal">
-            <span class="payment-logo">🅿️</span>
-            <span>PayPal</span>
-          </button>
-          <button onclick="immoSelectPayment('bank')" class="payment-option" id="immo-opt-bank">
-            <span class="payment-logo">🏦</span>
-            <span>Banküberweisung</span>
-          </button>
-        </div>
-        <div id="immo-paypal-form" style="display:none;">
-          <label>Deine PayPal E-Mail-Adresse</label>
-          <input type="email" id="immo-paypal-email" placeholder="deine@paypal.com" />
-          <p class="payment-hint">Du erhältst eine Zahlungsanfrage an diese Adresse.</p>
-          <div class="remember-row" style="margin-bottom:16px;">
-            <input type="checkbox" id="immo-save-paypal" checked />
-            <label for="immo-save-paypal">PayPal-Adresse speichern</label>
-          </div>
-          <button onclick="immoConfirmPayment()" class="btn-primary full-width">Mit PayPal bezahlen</button>
-        </div>
-        <div id="immo-bank-form" style="display:none;">
-          <label>Kontoinhaber</label>
-          <input type="text" id="immo-bank-name" placeholder="Max Mustermann" />
-          <label>IBAN</label>
-          <input type="text" id="immo-bank-iban" placeholder="DE89 3704 0044 0532 0130 00" />
-          <div class="bank-info-box">Nach Bestätigung erhältst du unsere Bankdaten per E-Mail.</div>
-          <div class="remember-row" style="margin-bottom:16px;">
-            <input type="checkbox" id="immo-save-bank" checked />
-            <label for="immo-save-bank">Bankdaten speichern</label>
-          </div>
-          <button onclick="immoConfirmPayment()" class="btn-primary full-width">Per Überweisung bezahlen</button>
-        </div>
-      </div>
-      <button onclick="backToImmoPrice()" class="btn-link center-link">← Zurück</button>
+      <div id="paypal-error" style="display:none;color:#ef4444;font-size:14px;text-align:center;padding:12px;background:#fef2f2;border-radius:8px;margin-top:12px;"></div>
+      <button onclick="backToImmoPrice()" class="btn-link center-link" style="margin-top:16px;">← Zurück</button>
     </div>
   </div>
 
@@ -1687,31 +1654,77 @@ function cancelImmoPrice() {
   document.getElementById('step-indicator').style.display = 'flex';
 }
 
+let _paypalRendered = false;
+
 function goToImmoPayment() {
   document.getElementById('immo-price-step').style.display = 'none';
-  // Reset form state
-  document.getElementById('immo-paypal-form').style.display = 'none';
-  document.getElementById('immo-bank-form').style.display = 'none';
-  document.querySelectorAll('#immo-payment-step .payment-option').forEach(b => b.classList.remove('selected'));
-  // Check for saved payment
-  const saved = localStorage.getItem('immo_payment');
-  if (saved) {
-    try {
-      const p = JSON.parse(saved);
-      document.getElementById('immo-saved-icon').textContent = p.method === 'paypal' ? '🅿️' : '🏦';
-      document.getElementById('immo-saved-label').textContent = p.method === 'paypal' ? `PayPal: ${p.value}` : `Banküberweisung: ${p.value}`;
-      document.getElementById('immo-saved-payment').style.display = 'block';
-      document.getElementById('immo-new-payment').style.display = 'none';
-    } catch(e) {
-      localStorage.removeItem('immo_payment');
-      document.getElementById('immo-saved-payment').style.display = 'none';
-      document.getElementById('immo-new-payment').style.display = 'block';
-    }
-  } else {
-    document.getElementById('immo-saved-payment').style.display = 'none';
-    document.getElementById('immo-new-payment').style.display = 'block';
-  }
   document.getElementById('immo-payment-step').style.display = 'block';
+  if (!_paypalRendered) loadImmoPayPal();
+}
+
+async function loadImmoPayPal() {
+  const loadingEl = document.getElementById('paypal-loading');
+  const errorEl   = document.getElementById('paypal-error');
+  errorEl.style.display = 'none';
+  loadingEl.style.display = 'block';
+  try {
+    const cfg = await fetch('/api/paypal').then(r => r.json());
+    if (!cfg.paypalClientId) throw new Error('PayPal ist derzeit nicht verfügbar. Bitte kontaktiere den Support.');
+
+    if (!window.paypal) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = `https://www.paypal.com/sdk/js?client-id=${cfg.paypalClientId}&currency=EUR&intent=capture`;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('PayPal SDK konnte nicht geladen werden. Bitte Seite neu laden.'));
+        document.head.appendChild(s);
+      });
+    }
+
+    loadingEl.style.display = 'none';
+    _paypalRendered = true;
+
+    await window.paypal.Buttons({
+      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' },
+
+      createOrder: async () => {
+        const r = await fetch('/api/paypal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create-order', amount: '20.00', description: 'Immobilienbewertung KI' }),
+        });
+        const d = await r.json();
+        if (!r.ok || d.error) throw new Error(d.error || 'Bestellung konnte nicht erstellt werden.');
+        return d.orderID;
+      },
+
+      onApprove: async (data) => {
+        loadingEl.innerHTML = '<div style="display:inline-block;width:18px;height:18px;border:2px solid #dbeafe;border-top-color:#3b82f6;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;"></div> Zahlung wird bestätigt…';
+        loadingEl.style.display = 'block';
+        const r = await fetch('/api/paypal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'capture-order', orderID: data.orderID, amount: '20.00', sessionId: String(Date.now()) }),
+        });
+        const d = await r.json();
+        if (!r.ok || d.error) throw new Error(d.error || 'Zahlung konnte nicht bestätigt werden.');
+        document.getElementById('immo-payment-step').style.display = 'none';
+        submitForm(d.token);
+      },
+
+      onError: (err) => {
+        console.error('PayPal:', err);
+        errorEl.textContent = 'Zahlung fehlgeschlagen. Bitte versuche es erneut oder lade die Seite neu.';
+        errorEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+      },
+    }).render('#paypal-button-container');
+
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = 'block';
+    loadingEl.style.display = 'none';
+  }
 }
 
 function backToImmoPrice() {
@@ -1719,53 +1732,7 @@ function backToImmoPrice() {
   document.getElementById('immo-price-step').style.display = 'block';
 }
 
-function immoChangePayment() {
-  localStorage.removeItem('immo_payment');
-  document.getElementById('immo-saved-payment').style.display = 'none';
-  document.getElementById('immo-new-payment').style.display = 'block';
-  document.getElementById('immo-paypal-form').style.display = 'none';
-  document.getElementById('immo-bank-form').style.display = 'none';
-  document.querySelectorAll('#immo-payment-step .payment-option').forEach(b => b.classList.remove('selected'));
-}
-
-function immoSelectPayment(method) {
-  document.getElementById('immo-paypal-form').style.display = method === 'paypal' ? 'block' : 'none';
-  document.getElementById('immo-bank-form').style.display = method === 'bank' ? 'block' : 'none';
-  document.getElementById('immo-opt-paypal').classList.toggle('selected', method === 'paypal');
-  document.getElementById('immo-opt-bank').classList.toggle('selected', method === 'bank');
-}
-
-function immoConfirmPayment() {
-  const savedEl = document.getElementById('immo-saved-payment');
-  if (savedEl.style.display !== 'none') {
-    // Use saved method — just proceed
-    document.getElementById('immo-payment-step').style.display = 'none';
-    submitForm();
-    return;
-  }
-  const paypalVisible = document.getElementById('immo-paypal-form').style.display === 'block';
-  const bankVisible = document.getElementById('immo-bank-form').style.display === 'block';
-  if (paypalVisible) {
-    const email = document.getElementById('immo-paypal-email').value.trim();
-    if (!email) { alert('Bitte gib deine PayPal-Adresse ein.'); return; }
-    if (document.getElementById('immo-save-paypal').checked) {
-      localStorage.setItem('immo_payment', JSON.stringify({ method: 'paypal', value: email }));
-    }
-  } else if (bankVisible) {
-    const name = document.getElementById('immo-bank-name').value.trim();
-    const iban = document.getElementById('immo-bank-iban').value.trim();
-    if (!name || !iban) { alert('Bitte fülle alle Bankdaten aus.'); return; }
-    if (document.getElementById('immo-save-bank').checked) {
-      localStorage.setItem('immo_payment', JSON.stringify({ method: 'bank', value: iban }));
-    }
-  } else {
-    alert('Bitte wähle eine Zahlungsmethode.'); return;
-  }
-  document.getElementById('immo-payment-step').style.display = 'none';
-  submitForm();
-}
-
-async function submitForm() {
+async function submitForm(immoToken) {
   document.getElementById('immo-price-step').style.display = 'none';
   document.getElementById('immo-payment-step').style.display = 'none';
   formData = collectFormData();
@@ -1797,7 +1764,10 @@ async function submitForm() {
   try {
     const res = await fetch('/api/immo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(immoToken ? { 'x-analysis-token': immoToken } : {}),
+      },
       body: JSON.stringify({ property: formData, images }),
     });
     progressBar.style.width = '100%';
