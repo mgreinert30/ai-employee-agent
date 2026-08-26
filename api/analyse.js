@@ -16,10 +16,9 @@ function isRateLimited(ip, max = 8, windowMs = 60000) {
 
 // PDF-Analyse: immer aktuellstes Flash-Modell, feste Versionen als Fallback
 const MODELS = [
-  'gemini-flash-latest',     // primary: automatisch immer aktuell
-  'gemini-2.5-flash',        // fallback 1: bekannte stabile Version
-  'gemini-pro-latest',       // fallback 2: Pro falls Flash ausfällt
-  'gemini-2.5-pro',          // fallback 3: bekannte Pro-Version
+  'gemini-2.5-flash',        // primary: schnell, effizient für PDFs
+  'gemini-2.5-pro',          // fallback: leistungsstark für komplexe Dokumente
+  'gemini-1.5-pro-latest',   // letzter Fallback
 ];
 
 // Streaming keeps connection alive — limits only bound by 60s function timeout
