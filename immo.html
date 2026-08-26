@@ -1655,6 +1655,35 @@ function cancelImmoPrice() {
 }
 
 let _paypalRendered = false;
+let _payCaptureId = null;
+let _lastImmoToken = null;
+
+async function requestRefund() {
+  if (!_payCaptureId) return;
+  const btn = document.getElementById('btn-refund');
+  if (btn) { btn.textContent = '⏳ Rückerstattung läuft…'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/paypal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'refund', captureId: _payCaptureId }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || 'Rückerstattung fehlgeschlagen');
+    _payCaptureId = null;
+    const banner = document.getElementById('error-banner');
+    banner.innerHTML = '✅ <strong>Rückerstattung erfolgreich</strong> — Der Betrag wird in 2–5 Werktagen auf dein Konto zurückgebucht.';
+    banner.style.background = '#f0fdf4';
+    banner.style.borderColor = '#bbf7d0';
+    banner.style.color = '#065f46';
+  } catch (err) {
+    if (btn) {
+      btn.textContent = '💶 Geld rückerstatten';
+      btn.disabled = false;
+    }
+    alert('Rückerstattung fehlgeschlagen: ' + err.message + '\nBitte kontaktiere uns: support@a-i-employee.de');
+  }
+}
 
 function goToImmoPayment() {
   document.getElementById('immo-price-step').style.display = 'none';
@@ -1708,6 +1737,7 @@ async function loadImmoPayPal() {
         });
         const d = await r.json();
         if (!r.ok || d.error) throw new Error(d.error || 'Zahlung konnte nicht bestätigt werden.');
+        _payCaptureId = d.captureId || d.token || null;
         document.getElementById('immo-payment-step').style.display = 'none';
         submitForm(d.token);
       },
@@ -1733,6 +1763,8 @@ function backToImmoPrice() {
 }
 
 async function submitForm(immoToken) {
+  if (immoToken) _lastImmoToken = immoToken;
+  else immoToken = _lastImmoToken;
   document.getElementById('immo-price-step').style.display = 'none';
   document.getElementById('immo-payment-step').style.display = 'none';
   formData = collectFormData();
@@ -1786,7 +1818,10 @@ async function submitForm(immoToken) {
     document.getElementById('step-4').style.display = 'block';
     document.getElementById('step-indicator').style.display = 'flex';
     const banner = document.getElementById('error-banner');
-    banner.innerHTML = `❌ Fehler bei der Bewertung: ${err.message} <button onclick="submitForm()" style="margin-left:12px;padding:4px 12px;background:#991b1b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">Erneut versuchen</button>`;
+    const refundBtn = _payCaptureId
+      ? `<button id="btn-refund" onclick="requestRefund()" style="margin-left:12px;padding:6px 16px;background:#fff;color:#991b1b;border:2px solid #fca5a5;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;">💶 Geld rückerstatten</button>`
+      : '';
+    banner.innerHTML = `❌ <strong>Analyse konnte nicht durchgeführt werden:</strong> ${err.message}<br><span style="font-size:12px;font-weight:400;margin-top:4px;display:inline-block;">Bitte versuche es erneut. Falls das Problem weiterhin besteht, erstatten wir dir den Betrag.</span><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button onclick="submitForm()" style="padding:6px 16px;background:#991b1b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;">🔄 Erneut versuchen</button>${refundBtn}</div>`;
     banner.style.display = 'block';
     banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }

@@ -61,7 +61,7 @@ export default async function handler(req, res) {
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen.' });
 
-  const { action, amount, description, orderID, sessionId } = req.body || {};
+  const { action, amount, description, orderID, sessionId, captureId } = req.body || {};
 
   // ── create-order ────────────────────────────────────────────────────────────
   if (action === 'create-order') {
@@ -105,16 +105,42 @@ export default async function handler(req, res) {
       if (capture.status !== 'COMPLETED') {
         return res.status(402).json({ error: `Zahlung nicht abgeschlossen (Status: ${capture.status || 'unbekannt'})` });
       }
+      const captureEntry = capture?.purchase_units?.[0]?.payments?.captures?.[0];
+      const captureIdResult = captureEntry?.id || null;
       const analysisToken = issueToken({
         use: 'analyse',
         sessionId: String(sessionId || '').slice(0, 64),
         amount: String(amount || ''),
       });
-      return res.status(200).json({ token: analysisToken, paypalOrderId: capture.id });
+      return res.status(200).json({ token: analysisToken, paypalOrderId: capture.id, captureId: captureIdResult });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
   }
 
-  return res.status(400).json({ error: 'Unbekannte Aktion. Erwartet: create-order oder capture-order' });
+  // ── refund ────────────────────────────────────────────────────────────────────
+  if (action === 'refund') {
+    const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) return res.status(503).json({ error: 'PayPal nicht konfiguriert' });
+    if (!captureId || typeof captureId !== 'string') return res.status(400).json({ error: 'captureId fehlt' });
+    try {
+      const { token: accessToken, base } = await getAccessToken();
+      const refundRes = await fetch(`${base}/v2/payments/captures/${captureId}/refund`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'PayPal-Request-Id': `refund-${captureId}-${Date.now()}`,
+        },
+        body: JSON.stringify({ note_to_payer: 'Rückerstattung — KI-Analyse fehlgeschlagen' }),
+      });
+      const refund = await refundRes.json();
+      if (!refundRes.ok) throw new Error(refund.message || `Rückerstattung fehlgeschlagen (HTTP ${refundRes.status})`);
+      return res.status(200).json({ success: true, refundId: refund.id, status: refund.status });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  return res.status(400).json({ error: 'Unbekannte Aktion. Erwartet: create-order, capture-order oder refund' });
 }
