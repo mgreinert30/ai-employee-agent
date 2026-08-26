@@ -21,15 +21,14 @@ const MODELS = [
   'gemini-1.5-pro-latest',   // letzter Fallback
 ];
 
-// Streaming keeps connection alive — limits only bound by 60s function timeout
-// Gemini 2.5 Flash ≈ 200 tok/s: short=~10s, medium=~25s, long=~55s
+// Gemini 2.5 Flash unterstützt bis zu 65.536 Output-Tokens
 const TOKEN_LIMITS = {
-  short:  2048,
-  medium: 5000,
-  long:   12000,
+  short:  4096,
+  medium: 20000,
+  long:   65000,
 };
 
-const MAX_PROMPT_CHARS = 30000;
+const MAX_PROMPT_CHARS = 200000;
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -66,11 +65,10 @@ export default async function handler(req, res) {
   const hasFile   = typeof fileUri === 'string' && fileUri.startsWith('https://');
   const hasImages = !hasFile && Array.isArray(images) && images.length > 0;
 
-  // Punkt 3: Adaptive Analyse — Tiefe vor Vollständigkeit, hochwertige Abschnitte priorisieren
   const modePrefix = hasFile
-    ? `NATIVE PDF ANALYSIS MODE — You have direct access to the complete PDF via Gemini File API.\nADAPTIVE READING STRATEGY: Focus on high-value content — executive summaries, conclusions, financial tables, risk sections, key findings. Skip repetitive boilerplate, legal headers/footers, and index pages. Prioritise analytical depth over page-by-page completeness. For long documents: sample strategically rather than reading every line superficially.\n\n`
+    ? `NATIVE PDF ANALYSIS MODE — Du hast direkten Zugriff auf das VOLLSTÄNDIGE PDF über die Gemini File API mit 1 Million Token Kontext.\n⚠️ PFLICHT — VOLLSTÄNDIGE LESUNG: Lies und analysiere JEDE EINZELNE SEITE des Dokuments. Überspringe KEINE Seite, kein Kapitel, keinen Abschnitt, keinen Anhang. Der Nutzer hat für eine vollständige Analyse bezahlt — jede ausgelassene Seite ist ein Fehler. Fußnoten, Glossare und Anhänge können kritische Informationen enthalten. Beziehe ALLE Seiten in deine Analyse ein.\n\n`
     : hasImages
-    ? `VISUAL ANALYSIS MODE — You are viewing ${images.length} rendered page image(s).\n- TABLES: extract EVERY row and column exactly as Markdown tables.\n- CHARTS: describe data points, axis labels, trends — ONLY if actual numerical values are clearly visible in the image. Do not estimate or invent chart data.\n- Prefer visual data for tables/numbers over extracted text.\n\n`
+    ? `VISUAL ANALYSIS MODE — Du siehst ${images.length} gerenderte PDF-Seite(n) als Bilder.\n⚠️ PFLICHT: Analysiere JEDES Bild vollständig. Extrahiere alle Tabellen zeilenweise als Markdown-Tabellen. Lies alle sichtbaren Zahlen, Texte und Diagramm-Labels exakt ab — erfinde keine Werte.\n\n`
     : '';
 
   const safePrompt = modePrefix + (prompt.length > MAX_PROMPT_CHARS

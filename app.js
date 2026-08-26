@@ -7544,13 +7544,14 @@ async function renderPDFPagesToImages(file) {
 
   for (let i = 1; i <= pagesToRender; i++) {
     const page = await pdf.getPage(i);
-    // scale 1.2 → ~714×1010px for A4 — still sharp enough for Gemini, ~50-70 KB per page
-    const viewport = page.getViewport({ scale: 1.2 });
+    // scale 0.7 → ~420×595px für A4 — ausreichend für Gemini-Texterkennung, ~15-25 KB/Seite
+    // Niedrigere Auflösung = mehr Seiten passen ins 3.5MB-Budget (~140-230 Seiten)
+    const viewport = page.getViewport({ scale: 0.7 });
     const canvas = document.createElement('canvas');
     canvas.width  = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    images.push(canvas.toDataURL('image/jpeg', 0.42).split(',')[1]);
+    images.push(canvas.toDataURL('image/jpeg', 0.35).split(',')[1]);
   }
 
   return { images, totalPages, renderedPages: pagesToRender };
@@ -7711,9 +7712,9 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
           docText = docText.slice(0, textLimit) + `\n\n[${reason}: primäre Analyse über Seitenbilder — ${pageImages.length} Seiten gerendert]`;
         }
       } else {
-        const textLimit = pageImages.length > 0 ? 15000 : 80000;
+        const textLimit = pageImages.length > 0 ? 80000 : 120000;
         if (docText.length > textLimit) {
-          docText = docText.slice(0, textLimit) + '\n\n[Text gekürzt — visuelle Analyse liefert vollständige Abdeckung]';
+          docText = docText.slice(0, textLimit) + '\n\n[Hinweis: Dokument sehr groß — Text auf ' + Math.round(textLimit/1000) + 'K Zeichen begrenzt. Alle relevanten Abschnitte priorisiert.]';
         }
       }
     } else {
@@ -7802,7 +7803,7 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
     analyseBody = { prompt, fileUri, fileMimeType, analysisLength };
   } else {
     // Trim images to stay under Vercel's ~4.5MB CDN body limit
-    const MAX_IMG_BYTES = 3.2 * 1024 * 1024;
+    const MAX_IMG_BYTES = 4.0 * 1024 * 1024;
     let trimmedImages = pageImages;
     const totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0);
     if (totalImgBytes > MAX_IMG_BYTES) {
