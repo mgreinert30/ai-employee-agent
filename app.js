@@ -956,7 +956,7 @@ function chainTranslate(langCode) {
   const prefix = de
     ? `Übersetze folgenden ${contextWord} vollständig und professionell auf ${targetLang}. Behalte alle Abschnittsüberschriften und Formatierung exakt bei. Gib NUR den übersetzten Text aus, kein Kommentar:\n\n`
     : `Translate the following ${contextWord} completely and professionally into ${targetLang}. Keep all section headings and formatting exactly as-is. Output ONLY the translated text, no commentary:\n\n`;
-  runChain(prefix);
+  runChain(prefix, targetLang);
 }
 
 function chainTask(type) {
@@ -970,27 +970,98 @@ function chainTask(type) {
     email: de ? 'Text' : 'text',
   }[taskType] || (de ? 'Text' : 'text');
 
+  const labels = {
+    shorten: de ? 'Gekürzt'    : 'Shortened',
+    report:  de ? 'Als Bericht': 'As Report',
+    bullets: de ? 'Stichpunkte': 'Bullet Points',
+  };
+
   const instructions = {
     shorten: de
       ? `Fasse folgende ${contextWord} in 50% kürzer zusammen — alle wichtigen Punkte behalten, Füllsätze entfernen. Gib nur die gekürzte ${contextWord} aus, kein Kommentar:\n\n`
       : `Summarise the following ${contextWord} in 50% shorter — keep all key points, remove filler. Output only the shortened ${contextWord}, no commentary:\n\n`,
     report: de
-      ? `Erstelle aus folgendem ${contextWord}-Inhalt einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen:\n\n`
-      : `Create a professional report with executive summary, key findings and recommendations from the following ${contextWord} content:\n\n`,
+      ? `Erstelle aus folgendem ${contextWord}-Inhalt einen professionellen Bericht mit Executive Summary, Haupterkenntnissen und Handlungsempfehlungen. Erfinde keine Informationen — nutze nur vorhandenen Inhalt:\n\n`
+      : `Create a professional report with executive summary, key findings and recommendations from the following ${contextWord} content. Do not invent information — use only existing content:\n\n`,
     bullets: de
-      ? `Forme folgende ${contextWord} in prägnante, klar strukturierte Stichpunkte um — kein Fließtext:\n\n`
-      : `Convert the following ${contextWord} into concise, clearly structured bullet points — no prose:\n\n`,
+      ? `Forme folgende ${contextWord} in prägnante, klar strukturierte Stichpunkte um — kein Fließtext. Zahlen und Fakten exakt behalten. Überschriften beibehalten:\n\n`
+      : `Convert the following ${contextWord} into concise, clearly structured bullet points — no prose. Keep all numbers and facts. Preserve headings:\n\n`,
   };
   const prefix = instructions[type] || instructions.shorten;
-  runChain(prefix);
+  runChain(prefix, labels[type] || type);
+}
+
+// =====================
+// DOCUMENT VERSION HISTORY — Rückgängig / Versionen
+// =====================
+let _docVersions = [];   // { label, result }
+let _chainPdfSuffix = ''; // Dateinamen-Suffix für nächste PDF
+
+function _saveDocVersion(label) {
+  if (!currentResult || currentResult.length < 20) return;
+  _docVersions.push({ label, result: currentResult });
+  if (_docVersions.length > 10) _docVersions.shift();
+  _updateVersionBar();
+}
+
+function undoLastEdit() {
+  if (_docVersions.length === 0) return;
+  const prev = _docVersions.pop();
+  currentResult = prev.result;
+  renderResultRich(currentResult);
+  _updateVersionBar();
+  const banner = document.getElementById('chain-pdf-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function _updateVersionBar() {
+  const bar = document.getElementById('version-bar');
+  const labels = document.getElementById('version-labels');
+  if (!bar || !labels) return;
+  if (_docVersions.length === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const de = currentLang === 'de';
+  const parts = [de ? 'Original' : 'Original', ..._docVersions.slice(1).map(v => v.label)];
+  labels.textContent = parts.join(' → ') + ' → ' + (de ? 'Aktuelle Version' : 'Current');
+}
+
+function _showChainPdfBanner(label) {
+  _chainPdfSuffix = label;
+  const banner = document.getElementById('chain-pdf-banner');
+  const lbl = document.getElementById('chain-pdf-label');
+  if (!banner || !lbl) return;
+  const de = currentLang === 'de';
+  lbl.textContent = `✅ ${de ? 'Neue Version erstellt' : 'New version ready'}: ${label}`;
+  banner.style.display = 'flex';
+}
+
+function downloadChainPDF() {
+  window._chainPdfSuffix = _chainPdfSuffix;
+  downloadPDF(window.selectedAnalysisLength || 'medium');
+  window._chainPdfSuffix = '';
+}
+
+function editDocumentCustom() {
+  const input = document.getElementById('custom-edit-input');
+  const instruction = (input?.value || '').trim();
+  const de = currentLang === 'de';
+  if (!instruction) {
+    alert(de ? 'Bitte eine Bearbeitungsanweisung eingeben.' : 'Please enter an editing instruction.');
+    return;
+  }
+  const prefix = de
+    ? `Bearbeite folgenden Text exakt nach dieser Anweisung: "${instruction}"\n\nBehalte die Struktur (Überschriften, Tabellen, Aufzählungen) soweit möglich bei. Gib NUR den bearbeiteten Text aus, keinen Kommentar:\n\n`
+    : `Edit the following text exactly according to this instruction: "${instruction}"\n\nKeep the structure (headings, tables, lists) intact as much as possible. Output ONLY the edited text, no commentary:\n\n`;
+  if (input) input.value = '';
+  runChain(prefix, instruction.slice(0, 30));
 }
 
 // Schriftgröße im Ergebnisfeld durchschalten: Klein → Normal → Groß
 let _fontSizeIdx = 1;
 const _FONT_SIZES = [
-  { size: '12px', lineH: '1.55', labelDE: '🔡 Klein',  labelEN: '🔡 Small'  },
-  { size: '15px', lineH: '1.65', labelDE: '🔠 Normal', labelEN: '🔠 Normal' },
-  { size: '19px', lineH: '1.9',  labelDE: '🔤 Groß',   labelEN: '🔤 Large'  },
+  { size: '12px', lineH: '1.55', labelDE: '🔡 Klein',  labelEN: '🔡 Small',  pdfScale: 0.85 },
+  { size: '15px', lineH: '1.65', labelDE: '🔠 Normal', labelEN: '🔠 Normal', pdfScale: 1.0  },
+  { size: '19px', lineH: '1.9',  labelDE: '🔤 Groß',   labelEN: '🔤 Large',  pdfScale: 1.2  },
 ];
 
 function cycleFontSize() {
@@ -1000,6 +1071,8 @@ function cycleFontSize() {
   if (container) { container.style.fontSize = chosen.size; container.style.lineHeight = chosen.lineH; }
   const btn = document.getElementById('chain-btn-font');
   if (btn) btn.textContent = currentLang === 'de' ? chosen.labelDE : chosen.labelEN;
+  window._pdfFontScale = chosen.pdfScale;
+  _showChainPdfBanner(currentLang === 'de' ? chosen.labelDE : chosen.labelEN);
 }
 
 // Shared SSE reader for /api/analyse — replaces res.json() everywhere
@@ -1049,7 +1122,7 @@ async function callAnalyseSSE(prompt, analysisLength) {
   return stripCodeFences(text);
 }
 
-async function runChain(prefix) {
+async function runChain(prefix, actionLabel) {
   const de = currentLang === 'de';
   const rawText = currentResult
     ? (currentResult.replace ? currentResult.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : String(currentResult))
@@ -1058,15 +1131,19 @@ async function runChain(prefix) {
     alert(de ? 'Kein Textinhalt zum Weiterverarbeiten verfügbar.' : 'No text content available to process.');
     return;
   }
+
+  // Save current version before modifying
+  _saveDocVersion(actionLabel || (de ? 'Version' : 'Version'));
+
   const input = rawText.slice(0, 18000);
   const prompt = prefix + input;
 
   showStep('step-progress');
   document.querySelector('.agent-icon').textContent = getCharacterEmoji();
-  setProgress(20, de ? 'KI verarbeitet...' : 'AI processing...');
+  setProgress(20, de ? 'KI bearbeitet Dokument...' : 'AI editing document...');
 
   try {
-    setProgress(55, de ? 'KI schreibt Ergebnis...' : 'AI writing result...');
+    setProgress(55, de ? 'KI schreibt neue Version...' : 'AI writing new version...');
     currentResult = await callAnalyseSSE(prompt);
   } catch (err) {
     currentResult = (de ? '⚠️ Fehler: ' : '⚠️ Error: ') + err.message;
@@ -1076,6 +1153,12 @@ async function runChain(prefix) {
   updateChainButtons(lastCompletedTaskType);
   showStep('step-result');
   renderResultRich(currentResult);
+
+  // Show new PDF download banner
+  if (!currentResult.startsWith('⚠️')) {
+    const label = actionLabel || (de ? 'Bearbeitet' : 'Edited');
+    _showChainPdfBanner(label);
+  }
 }
 
 // =====================
@@ -3249,6 +3332,13 @@ function downloadPDF(length) {
   if (!window.jspdf) { alert('PDF-Bibliothek wird geladen — bitte erneut versuchen.'); return; }
   const { jsPDF } = window.jspdf;
   const doc      = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  // Apply global font scale (from cycleFontSize) to all doc.setFontSize() calls
+  const _fScale = window._pdfFontScale || 1.0;
+  if (_fScale !== 1.0) {
+    const _origFS = doc.setFontSize.bind(doc);
+    doc.setFontSize = (n) => _origFS(Math.round(n * _fScale * 10) / 10);
+  }
   const pageW    = doc.internal.pageSize.getWidth();
   const pageH    = doc.internal.pageSize.getHeight();
   const mL = 20, mR = 20, mTop = 16, mBot = 16;
@@ -4081,7 +4171,8 @@ function downloadPDF(length) {
     doc.text(`${i - 1} / ${total - 1}`, pageW - mR, pageH - 5, { align:'right' });
   }
 
-  const outName = fileBase + `_${depthLbl.replace(/\s/g,'_')}_${refNr}.pdf`;
+  const chainSuffix = window._chainPdfSuffix ? `_${window._chainPdfSuffix.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_\-äöüÄÖÜ]/g,'')}` : '';
+  const outName = fileBase + `_${depthLbl.replace(/\s/g,'_')}${chainSuffix}_${refNr}.pdf`;
   doc.save(outName);
 }
 
