@@ -7255,9 +7255,10 @@ Erstelle eine vollständig nachverfolgte Aufgabentabelle mit Prioritäten.
   // Calculate page-count-based targets (#2 — length control)
   const depthInstructions = {
     short: isDE
-      ? `⚠️ KURZ-MODUS — SCHNELLCHECK (Zweck: In 2 Minuten das Wesentliche — bin ich betroffen? Was muss ich wissen?)
-Ignoriere die Abschnittsvorlage. Schreibe AUSSCHLIESSLICH diese 4 Blöcke — keine anderen Überschriften, kein TL;DR, keine Kennzahlen-Tabelle.
-LÄNGE: ca. 400-600 Wörter. Keine Grafiken. Maximal 1 Tabelle (nur wenn unverzichtbar).
+      ? `⚠️ KURZ-MODUS — SCHNELLCHECK — DIESE ANWEISUNG ÜBERSCHREIBT ALLE VORHERIGEN REGELN.
+IGNORIERE: TL;DR-Pflicht (Regel 6), Struktur-Baukasten (Regel 13), Tiefen-Analyse (Regel 15), Abschnittsvorlage. ALLES davon ist für Kurz-Modus deaktiviert.
+SCHREIBE AUSSCHLIESSLICH DIESE 4 BLÖCKE — keine anderen Überschriften, kein TL;DR, keine Kennzahlen-Tabelle, keine Grafiken.
+LÄNGE: 400-600 Wörter. Maximal 1 Tabelle (nur wenn unverzichtbar).
 
 **KERNAUSSAGE**
 1-2 Sätze: Worum geht es und was ist die wichtigste Aussage des Dokuments?
@@ -7271,10 +7272,11 @@ Was ist problematisch, ungewöhnlich oder sofort handlungsrelevant? Mindestens 2
 **EMPFEHLUNG**
 🎯 1-2 konkrete, sofort umsetzbare Handlungen — was tun jetzt?
 
-Regeln: Nur Fakten aus dem Dokument. Keine Charts ohne echte Zahlenwerte im Dokument. Jeder Satz trägt Informationswert.`
-      : `⚠️ SHORT MODE — QUICK SCAN (Purpose: In 2 minutes — am I affected? What do I need to know?)
-Ignore the section template. Write ONLY these 4 blocks — no other headings, no TL;DR, no metrics table.
-LENGTH: approx. 400-600 words. No charts. Maximum 1 table (only if essential).
+ABSCHLUSS-PRÜFUNG: Habe ich genau diese 4 Blöcke geschrieben und nichts anderes? Falls nein — sofort korrigieren.`
+      : `⚠️ SHORT MODE — QUICK SCAN — THIS INSTRUCTION OVERRIDES ALL PREVIOUS RULES.
+IGNORE: TL;DR mandate (Rule 6), Structure Toolkit (Rule 13), Deep Analysis (Rule 15), section template. ALL of these are deactivated for Short Mode.
+WRITE ONLY THESE 4 BLOCKS — no other headings, no TL;DR, no metrics table, no charts.
+LENGTH: 400-600 words. Maximum 1 table (only if essential).
 
 **CORE FINDING**
 1-2 sentences: What is this about and what is the single most important point?
@@ -7288,7 +7290,7 @@ What is problematic, unusual or immediately actionable? At least 2 points writte
 **RECOMMENDATION**
 🎯 1-2 concrete, immediately actionable steps — what to do now?
 
-Rules: Only facts from the document. No charts without actual numerical values in the document. Every sentence carries information value.`,
+FINAL CHECK: Have I written exactly these 4 blocks and nothing else? If not — correct immediately.`,
     medium: isDE
       ? `MITTEL-MODUS — VOLLANALYSE (Zweck: Alle relevanten Aspekte strukturiert — bereit für eine informierte Entscheidung.)
 AUSGABELÄNGE: ca. 3000-5500 Wörter. Fülle diesen Rahmen vollständig aus — nicht kürzer.
@@ -7462,15 +7464,18 @@ KERNREGELN — NIEMALS BRECHEN:
     • OPERATIVE EFFIZIENZ: Wird hier wirklich optimiert oder nur schöngerechnet? Wie entwickeln sich Margen und Kosten pro Einheit?
     • INNOVATIONS-ARCHITEKTUR: Wird nur optimiert oder neu erfunden? Welche Investments deuten auf langfristige strukturelle Veränderungen hin?
 
-${depth}
-
-AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
+${analysisLength === 'short' ? '' : `AUSGABE-FORMAT (genau diese Abschnitte, in dieser Reihenfolge):
 ${sections}
 
 QUALITÄTSPRÜFUNG:
 - Habe ich im Abschnitt "KENNZAHLEN" alle wichtigen Zahlen als "Bezeichnung: Wert" eingetragen?
 - Hat jede wichtige Aussage eine Seitenreferenz (laut Seite X)?
-- Überschreite ich die Mindestlänge?`;
+- Überschreite ich die Mindestlänge?`}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSE-TIEFE (ÜBERSCHREIBT ALLE VORHERIGEN FORMAT-REGELN):
+${depth}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   const personaEN = (docType === 'create_reply')
     ? `You are an experienced email copywriter. Write the finished, ready-to-send email now — using all the details the user has provided. No template, no placeholders, no options. Just the actual email.
@@ -7573,15 +7578,18 @@ CORE RULES — NEVER BREAK:
     • OPERATIONAL EFFICIENCY: Is this genuine optimisation or just cosmetic accounting? How are margins and unit costs trending?
     • INNOVATION ARCHITECTURE: Optimisation only, or genuine reinvention? Which investments signal long-term structural change?
 
-${depth}
-
-OUTPUT FORMAT (exactly these sections, in this order):
+${analysisLength === 'short' ? '' : `OUTPUT FORMAT (exactly these sections, in this order):
 ${sections}
 
 QUALITY CHECK:
 - Have I entered all key numbers as "Label: Value" in the METRICS section?
 - Does every important claim have a page reference (see page X)?
-- Am I meeting the minimum length?`;
+- Am I meeting the minimum length?`}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYSIS DEPTH (OVERRIDES ALL PREVIOUS FORMAT RULES):
+${depth}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   const hasDoc = docText && docText.length > 50;
 
