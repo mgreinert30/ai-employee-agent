@@ -1083,7 +1083,7 @@ async function callAnalyseSSE(prompt, analysisLength) {
   try {
     res = await fetch('/api/analyse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Analysis-Token': getAnalysisToken() || '' },
       body: JSON.stringify({ prompt, ...(analysisLength ? { analysisLength } : {}) }),
       signal: controller.signal
     });
