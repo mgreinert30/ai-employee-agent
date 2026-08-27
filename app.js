@@ -6481,7 +6481,7 @@ async function extractPDFText(file) {
         const typedArray = new Uint8Array(e.target.result);
         const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
         const totalPages  = pdf.numPages;
-        const PAGE_LIMIT  = 150;
+        const PAGE_LIMIT  = 350;
         const maxPages    = Math.min(totalPages, PAGE_LIMIT);
 
         // ── Strukturierte Block-Extraktion pro Seite ─────────────────────────
@@ -7539,7 +7539,8 @@ async function renderPDFPagesToImages(file) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
   const totalPages = pdf.numPages;
-  const pagesToRender = totalPages;
+  const MAX_VISUAL_PAGES = 100;
+  const pagesToRender = Math.min(totalPages, MAX_VISUAL_PAGES);
   const images = [];
 
   for (let i = 1; i <= pagesToRender; i++) {
@@ -7608,6 +7609,8 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
             const uploadRes = await fetch(uploadUrl, {
               method: 'POST',
               headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Length': String(arrayBuf.byteLength),
                 'X-Goog-Upload-Offset': '0',
                 'X-Goog-Upload-Command': 'upload, finalize',
               },
@@ -7797,27 +7800,39 @@ async function runRealAI(taskDesc, businessDetails, profession, analysisLength) 
 
   let result;
 
-  // Build request body — File API path sends fileUri; fallback path sends inline images
+  // Build request body — File API path sends fileUri; fallback path sends text or images
   let analyseBody;
   if (fileUri) {
     analyseBody = { prompt, fileUri, fileMimeType, analysisLength };
   } else {
-    // Trim images to stay under Vercel's ~4.5MB CDN body limit
-    const MAX_IMG_BYTES = 4.0 * 1024 * 1024;
-    let trimmedImages = pageImages;
-    const totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0);
-    if (totalImgBytes > MAX_IMG_BYTES) {
-      let cumBytes = 0;
-      trimmedImages = [];
-      for (const img of pageImages) {
-        const imgBytes = img.length * 0.75;
-        if (cumBytes + imgBytes > MAX_IMG_BYTES) break;
-        trimmedImages.push(img);
-        cumBytes += imgBytes;
+    // Only send page images when text extraction failed/was insufficient (scanned PDFs).
+    // For text-based PDFs the extracted text is already embedded in the prompt, so sending
+    // images on top would only inflate the body and hit Vercel's 4.5 MB hard limit.
+    const isScannedFallback = pageImages.length > 0 &&
+      (docText.length < 3000 || docText.includes('⚠️ [SCAN-PDF ERKANNT') ||
+       (window._lastPDFClassification?.isScanned === true));
+
+    if (isScannedFallback) {
+      // Trim images to stay safely under Vercel's 4.5 MB request-body limit
+      const MAX_IMG_BYTES = 2.5 * 1024 * 1024;
+      let trimmedImages = pageImages;
+      const totalImgBytes = pageImages.reduce((s, b) => s + b.length * 0.75, 0);
+      if (totalImgBytes > MAX_IMG_BYTES) {
+        let cumBytes = 0;
+        trimmedImages = [];
+        for (const img of pageImages) {
+          const imgBytes = img.length * 0.75;
+          if (cumBytes + imgBytes > MAX_IMG_BYTES) break;
+          trimmedImages.push(img);
+          cumBytes += imgBytes;
+        }
+        console.warn(`[analyse] Scan-PDF: payload trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
       }
-      console.warn(`[analyse] Payload trimmed from ${pageImages.length} to ${trimmedImages.length} pages`);
+      analyseBody = { prompt, images: trimmedImages, analysisLength };
+    } else {
+      // Text-based PDF — text is already in the prompt; skip images to avoid body-size 413
+      analyseBody = { prompt, analysisLength };
     }
-    analyseBody = { prompt, images: trimmedImages, analysisLength };
   }
 
   // Stream from server — Idle-Timeout: Timer resettet sich bei jedem Chunk

@@ -2,7 +2,7 @@
 import { verifyToken, rejectToken } from './_token.js';
 
 export const config = {
-  api: { bodyParser: { sizeLimit: '8mb' } },
+  api: { bodyParser: { sizeLimit: '10mb' } },
 };
 
 const rateLimitMap = new Map();
