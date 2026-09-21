@@ -3,1864 +3,1802 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="description" content="KI-Mitarbeiter für dein Unternehmen — PDFs analysieren, Berichte erstellen, E-Mails sortieren. DSGVO-konform, ab €0,99, Ergebnis in 2 Minuten."/>
+  <meta name="description" content="KI-Mitarbeiter für dein Unternehmen — PDFs analysieren, Berichte erstellen, Immobilien bewerten. DSGVO-konform, ab €0,99, Ergebnis in 2 Minuten."/>
   <title>AI Employee — Arbeit, die sich selbst erledigt.</title>
   <link rel="icon" type="image/png" href="logo.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"/>
   <style>
-    :root {
-      --bg: #F5F5F7;
-      --surface: #FFFFFF;
-      --dark: #080A0F;
-      --primary: #0052FF;
-      --cyan: #00CFFF;
-      --text: #111111;
-      --text-secondary: #6E6E73;
-      --text-tertiary: #AEAEB2;
-      --border: rgba(0,0,0,0.08);
-      --border-strong: rgba(0,0,0,0.14);
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.05);
-      --shadow-lg: 0 12px 40px rgba(0,0,0,0.10),0 4px 12px rgba(0,0,0,0.06);
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 22px;
-      --radius-xl: 32px;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg: #0A0A0C;
-        --surface: #141416;
-        --text: #F0F0F2;
-        --text-secondary: #8E8E93;
-        --text-tertiary: #48484A;
-        --border: rgba(255,255,255,0.08);
-        --border-strong: rgba(255,255,255,0.14);
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-        --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-        --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
-      }
-    }
-    :root[data-theme="dark"] {
-      --bg: #0A0A0C;
-      --surface: #141416;
-      --text: #F0F0F2;
-      --text-secondary: #8E8E93;
-      --text-tertiary: #48484A;
-      --border: rgba(255,255,255,0.08);
-      --border-strong: rgba(255,255,255,0.14);
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-      --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
-    }
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS — AI Employee Brand System
+═══════════════════════════════════════════ */
+:root {
+  --brand-navy:    #071B4D;
+  --brand-blue:    #145BFF;
+  --brand-electric:#087CFF;
+  --brand-cyan:    #08C7F4;
+  --brand-light:   #F2F7FF;
+  --brand-surface: #F7FAFF;
+  --brand-dark:    #06132F;
+  --brand-dark-2:  #071B35;
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; text-decoration: none; }
-    img { max-width: 100%; display: block; }
-    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  --text-primary:  #101828;
+  --text-secondary:#667085;
+  --text-tertiary: #98A2B3;
 
-    /* ─── Container ─── */
-    .container {
-      max-width: 1160px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-    .container-wide {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
+  --border-brand:  rgba(20,91,255,0.10);
+  --border-soft:   rgba(20,91,255,0.06);
+  --border-strong: rgba(20,91,255,0.18);
 
-    /* ─── Reveal animation ─── */
-    .reveal {
-      opacity: 0;
-      transform: translateY(28px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-    .reveal.visible {
-      opacity: 1;
-      transform: none;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .reveal { opacity: 1; transform: none; }
-    }
+  --brand-gradient: linear-gradient(135deg,#08C7F4 0%,#087CFF 45%,#145BFF 100%);
+  --brand-gradient-soft: linear-gradient(135deg,rgba(8,199,244,0.15) 0%,rgba(20,91,255,0.10) 100%);
 
-    /* ══════════════════════════════════════
-       NAV
-    ══════════════════════════════════════ */
-    .nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 1000;
-      padding: 0 24px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: background 0.3s, backdrop-filter 0.3s, border-bottom 0.3s;
-    }
-    .nav.scrolled {
-      background: rgba(245,245,247,0.82);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border-bottom: 1px solid var(--border);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .nav.scrolled { background: rgba(10,10,12,0.82); }
-    }
-    :root[data-theme="dark"] .nav.scrolled { background: rgba(10,10,12,0.82); }
+  --shadow-sm:  0 1px 4px rgba(7,27,77,0.06);
+  --shadow-md:  0 4px 20px rgba(7,27,77,0.09);
+  --shadow-lg:  0 15px 50px rgba(7,27,77,0.10);
+  --shadow-blue:0 8px 30px rgba(20,91,255,0.22);
 
-    .nav-logo {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text);
-    }
-    .nav-logo span { color: var(--primary); }
-    .nav-links {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    .nav-link {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      padding: 6px 14px;
-      border-radius: 8px;
-      transition: color 0.2s, background 0.2s;
-    }
-    .nav-link:hover { color: var(--text); background: var(--border); }
-    .nav-cta {
-      font-size: 14px;
-      font-weight: 600;
-      background: var(--primary);
-      color: #fff;
-      padding: 8px 20px;
-      border-radius: 10px;
-      transition: opacity 0.2s, transform 0.15s;
-      margin-left: 8px;
-    }
-    .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-    }
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 32px;
+}
 
-    /* ══════════════════════════════════════
-       HERO
-    ══════════════════════════════════════ */
-    .hero {
-      padding: 160px 24px 100px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary);
-      background: rgba(0,82,255,0.08);
-      border: 1px solid rgba(0,82,255,0.18);
-      padding: 6px 14px;
-      border-radius: 40px;
-      margin-bottom: 32px;
-      letter-spacing: 0.01em;
-    }
-    .hero-badge-dot {
-      width: 6px; height: 6px;
-      background: var(--primary);
-      border-radius: 50%;
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
-    }
-    .hero-headline {
-      font-size: clamp(48px, 7vw, 88px);
-      font-weight: 800;
-      line-height: 1.04;
-      letter-spacing: -0.04em;
-      color: var(--text);
-      max-width: 860px;
-      margin: 0 auto 24px;
-      text-wrap: balance;
-    }
-    .hero-headline-accent {
-      background: linear-gradient(135deg, var(--primary), var(--cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero-sub {
-      font-size: clamp(17px, 2vw, 20px);
-      color: var(--text-secondary);
-      max-width: 540px;
-      margin: 0 auto 48px;
-      line-height: 1.6;
-      font-weight: 400;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 72px;
-    }
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      background: var(--primary);
-      color: #fff;
-      padding: 14px 28px;
-      border-radius: var(--radius-md);
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(0,82,255,0.28);
-    }
-    .btn-primary:hover {
-      opacity: 0.9;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(0,82,255,0.38);
-    }
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--text);
-      padding: 14px 28px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-strong);
-      transition: background 0.2s, transform 0.15s;
-    }
-    .btn-secondary:hover { background: var(--surface); transform: translateY(-2px); }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:#fff;
+  color:var(--text-primary);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none;}
+img{max-width:100%;display:block;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
 
-    /* Hero stats strip */
-    .hero-stats {
-      display: flex;
-      justify-content: center;
-      gap: 48px;
-      flex-wrap: wrap;
-    }
-    .hero-stat { text-align: center; }
-    .hero-stat-num {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
-    }
-    .hero-stat-num span { color: var(--primary); }
-    .hero-stat-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-    .hero-divider {
-      width: 1px;
-      background: var(--border-strong);
-      align-self: stretch;
-    }
+.container{max-width:1160px;margin:0 auto;padding:0 24px;}
+.container-wide{max-width:1360px;margin:0 auto;padding:0 24px;}
 
-    /* Hero mockup card */
-    .hero-mockup {
-      margin: 80px auto 0;
-      max-width: 860px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-    }
-    .mockup-topbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .mockup-dot {
-      width: 12px; height: 12px;
-      border-radius: 50%;
-    }
-    .mockup-dot-r { background: #FF5F57; }
-    .mockup-dot-y { background: #FFBD2E; }
-    .mockup-dot-g { background: #28CA41; }
-    .mockup-title-bar {
-      flex: 1;
-      margin: 0 16px;
-      background: var(--border);
-      border-radius: 6px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      font-size: 12px;
-      color: var(--text-tertiary);
-    }
-    .mockup-body {
-      padding: 28px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    .mockup-upload {
-      grid-column: 1 / -1;
-      border: 2px dashed rgba(0,82,255,0.25);
-      border-radius: var(--radius-md);
-      padding: 28px;
-      text-align: center;
-      background: rgba(0,82,255,0.03);
-    }
-    .mockup-upload-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-    .mockup-upload-text { font-size: 14px; color: var(--text-secondary); }
-    .mockup-upload-text strong { color: var(--primary); }
-    .mockup-result {
-      background: var(--bg);
-      border-radius: var(--radius-md);
-      padding: 18px;
-    }
-    .mockup-result-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .mockup-bar {
-      height: 8px;
-      border-radius: 4px;
-      background: var(--border);
-      margin-bottom: 7px;
-      overflow: hidden;
-      position: relative;
-    }
-    .mockup-bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, var(--primary), var(--cyan));
-    }
-    .mockup-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-    .mockup-tag-green { background: rgba(40,202,65,0.12); color: #1a9e2c; }
-    .mockup-tag-blue { background: rgba(0,82,255,0.10); color: var(--primary); }
+/* Subtle background orbs */
+.orb{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:0;
+}
 
-    /* ══════════════════════════════════════
-       TRUST LOGOS STRIP
-    ══════════════════════════════════════ */
-    .trust-strip {
-      padding: 40px 24px 64px;
-      text-align: center;
-    }
-    .trust-strip-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-tertiary);
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 28px;
-    }
-    .trust-badges {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .trust-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 8px 16px;
-      border-radius: 40px;
-      box-shadow: var(--shadow-sm);
-    }
-    .trust-badge-icon { font-size: 15px; }
+/* Reveal animation */
+.reveal{
+  opacity:0;
+  transform:translateY(28px);
+  transition:opacity 0.65s ease,transform 0.65s ease;
+}
+.reveal.visible{opacity:1;transform:none;}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;}}
 
-    /* ══════════════════════════════════════
-       SECTION BASICS
-    ══════════════════════════════════════ */
-    .section { padding: 100px 0; }
-    .section-eyebrow {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 14px;
-    }
-    .section-title {
-      font-size: clamp(34px, 4.5vw, 56px);
-      font-weight: 800;
-      letter-spacing: -0.035em;
-      line-height: 1.08;
-      color: var(--text);
-      text-wrap: balance;
-      margin-bottom: 18px;
-    }
-    .section-sub {
-      font-size: 18px;
-      color: var(--text-secondary);
-      line-height: 1.65;
-      max-width: 560px;
-      font-weight: 400;
-    }
-    .section-header {
-      margin-bottom: 64px;
-    }
-    .section-header-center {
-      text-align: center;
-      margin-bottom: 64px;
-    }
-    .section-header-center .section-sub { margin: 0 auto; }
+/* Section label */
+.sec-label{
+  display:inline-block;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--brand-blue);
+  margin-bottom:14px;
+}
+.sec-title{
+  font-size:clamp(34px,4.5vw,54px);
+  font-weight:800;
+  letter-spacing:-0.035em;
+  line-height:1.08;
+  color:var(--brand-navy);
+  text-wrap:balance;
+  margin-bottom:16px;
+}
+.sec-sub{
+  font-size:18px;
+  color:var(--text-secondary);
+  line-height:1.65;
+  font-weight:400;
+}
+.sec-header{margin-bottom:60px;}
+.sec-header-center{text-align:center;margin-bottom:60px;}
+.sec-header-center .sec-sub{max-width:560px;margin:0 auto;}
 
-    /* ══════════════════════════════════════
-       BENTO GRID
-    ══════════════════════════════════════ */
-    .bento-section { padding: 80px 0 100px; }
-    .bento-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      grid-template-rows: auto;
-      gap: 16px;
-    }
-    .bento-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
-      position: relative;
-      transition: box-shadow 0.25s, transform 0.25s;
-    }
-    .bento-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-3px);
-    }
-    .bento-card-eyebrow {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 10px;
-    }
-    .bento-card-title {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-      margin-bottom: 10px;
-    }
-    .bento-card-text {
-      font-size: 15px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-    /* Bento layout */
-    .bento-a { grid-column: span 7; }
-    .bento-b { grid-column: span 5; }
-    .bento-c { grid-column: span 4; }
-    .bento-d { grid-column: span 4; }
-    .bento-e { grid-column: span 4; }
-    .bento-f { grid-column: span 6; }
-    .bento-g { grid-column: span 6; }
+/* ═══════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════ */
+.nav{
+  position:fixed;top:0;left:0;right:0;
+  z-index:1000;
+  height:76px;
+  display:flex;align-items:center;
+  padding:0 28px;
+  transition:height .3s ease,background .3s ease,border-bottom .3s ease,box-shadow .3s ease;
+}
+.nav.scrolled{
+  height:64px;
+  background:rgba(255,255,255,0.88);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid rgba(20,80,255,0.10);
+  box-shadow:0 4px 24px rgba(7,27,77,0.06);
+}
+.nav-inner{
+  max-width:1160px;
+  width:100%;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.nav-logo img{
+  height:40px;
+  width:auto;
+  display:block;
+}
+.nav-links{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  flex:1;
+  justify-content:center;
+}
+.nav-link{
+  font-size:14px;
+  font-weight:500;
+  color:#14254A;
+  padding:6px 14px;
+  border-radius:999px;
+  transition:color .22s ease,background .22s ease;
+  position:relative;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.nav-link::after{
+  content:'';
+  position:absolute;
+  left:14px;right:14px;bottom:4px;
+  height:2px;
+  background:var(--brand-blue);
+  border-radius:2px;
+  transform:scaleX(0);
+  transition:transform .22s ease;
+}
+.nav-link:hover{color:#1464FF;background:rgba(20,91,255,0.05);}
+.nav-link:hover::after{transform:scaleX(1);}
+.nav-link.active{color:#145BFF;background:rgba(20,91,255,0.08);}
+.nav-link.active::after{transform:scaleX(1);}
+.nav-actions{display:flex;align-items:center;gap:10px;}
+.nav-signin{
+  font-size:14px;
+  font-weight:500;
+  color:#14254A;
+  padding:7px 16px;
+  border-radius:10px;
+  border:1px solid var(--border-brand);
+  transition:background .2s;
+  white-space:nowrap;
+}
+.nav-signin:hover{background:var(--brand-light);}
+.nav-cta{
+  font-size:14px;
+  font-weight:600;
+  color:#fff;
+  padding:9px 20px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#087CFF,#145BFF);
+  box-shadow:0 4px 14px rgba(20,91,255,0.30);
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  white-space:nowrap;
+}
+.nav-cta:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(20,91,255,0.38);}
+/* Hamburger */
+.nav-hamburger{
+  display:none;
+  flex-direction:column;
+  gap:5px;
+  padding:6px;
+  cursor:pointer;
+}
+.nav-hamburger span{
+  display:block;
+  width:22px;height:2px;
+  background:var(--brand-navy);
+  border-radius:2px;
+  transition:transform .25s,opacity .25s;
+}
+@media(max-width:880px){
+  .nav-links{display:none;}
+  .nav-signin{display:none;}
+  .nav-hamburger{display:flex;}
+}
+@media(max-width:420px){
+  .nav-cta{font-size:13px;padding:8px 14px;}
+}
+/* Mobile overlay */
+.mobile-nav{
+  position:fixed;inset:0;
+  z-index:999;
+  background:rgba(6,19,47,0.97);
+  display:flex;flex-direction:column;
+  padding:80px 32px 40px;
+  transform:translateX(100%);
+  transition:transform .3s ease;
+}
+.mobile-nav.open{transform:none;}
+.mobile-nav-link{
+  font-size:28px;
+  font-weight:700;
+  color:rgba(255,255,255,0.85);
+  padding:18px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  transition:color .2s;
+}
+.mobile-nav-link:hover{color:#fff;}
+.mobile-nav-footer{
+  margin-top:auto;
+  display:flex;flex-direction:column;
+  gap:12px;
+}
+.mobile-nav-signin{
+  text-align:center;
+  font-size:16px;font-weight:500;
+  color:rgba(255,255,255,0.6);
+  padding:14px;
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:14px;
+  transition:background .2s;
+}
+.mobile-nav-signin:hover{background:rgba(255,255,255,0.06);}
+.mobile-nav-cta{
+  text-align:center;
+  font-size:16px;font-weight:600;
+  color:#fff;
+  padding:16px;
+  border-radius:14px;
+  background:var(--brand-gradient);
+  box-shadow:var(--shadow-blue);
+}
+.mobile-close{
+  position:absolute;top:24px;right:28px;
+  font-size:22px;color:rgba(255,255,255,0.6);
+  padding:8px;cursor:pointer;
+}
 
-    @media (max-width: 900px) {
-      .bento-a, .bento-b, .bento-c, .bento-d, .bento-e, .bento-f, .bento-g {
-        grid-column: span 12;
-      }
-    }
+/* ═══════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════ */
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:16px;font-weight:600;
+  color:#fff;
+  padding:14px 28px;
+  border-radius:13px;
+  background:linear-gradient(135deg,#087CFF,#145BFF);
+  box-shadow:var(--shadow-blue);
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+}
+.btn-primary:hover{opacity:.9;transform:translateY(-2px);box-shadow:0 12px 36px rgba(20,91,255,0.32);}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:16px;font-weight:500;
+  color:var(--brand-blue);
+  padding:14px 28px;
+  border-radius:13px;
+  border:1px solid var(--border-strong);
+  background:#fff;
+  transition:background .2s,transform .15s;
+}
+.btn-secondary:hover{background:var(--brand-light);transform:translateY(-1px);}
 
-    /* Dark accent bento */
-    .bento-dark {
-      background: var(--dark);
-      color: #F0F0F2;
-      border-color: transparent;
-    }
-    .bento-dark .bento-card-title { color: #fff; }
-    .bento-dark .bento-card-text { color: rgba(255,255,255,0.55); }
-    .bento-dark .bento-card-eyebrow { color: var(--cyan); }
+/* ═══════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════ */
+.hero{
+  position:relative;
+  padding:152px 24px 100px;
+  text-align:center;
+  background:#fff;
+  overflow:hidden;
+}
+/* Background glow */
+.hero-glow{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-60%);
+  width:900px;height:700px;
+  background:radial-gradient(circle,rgba(20,91,255,0.09) 0%,rgba(8,199,244,0.05) 40%,transparent 70%);
+  pointer-events:none;
+}
+.hero-brand-label{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:12px;font-weight:700;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+  color:var(--brand-blue);
+  background:rgba(20,91,255,0.07);
+  border:1px solid var(--border-strong);
+  padding:6px 14px;
+  border-radius:40px;
+  margin-bottom:28px;
+}
+.hero-brand-label-dot{
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--brand-gradient);
+  animation:pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.5;transform:scale(.82);}
+}
+.hero-headline{
+  font-size:clamp(52px,7.5vw,92px);
+  font-weight:800;
+  line-height:1.03;
+  letter-spacing:-0.045em;
+  color:var(--brand-navy);
+  max-width:900px;
+  margin:0 auto 22px;
+  text-wrap:balance;
+}
+.hero-headline-gradient{
+  background:var(--brand-gradient);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-sub{
+  font-size:clamp(17px,2vw,20px);
+  color:var(--text-secondary);
+  max-width:520px;
+  margin:0 auto 44px;
+  line-height:1.65;
+}
+.hero-actions{
+  display:flex;gap:14px;justify-content:center;
+  flex-wrap:wrap;margin-bottom:68px;
+}
+.hero-stats{
+  display:flex;justify-content:center;gap:40px;
+  flex-wrap:wrap;margin-bottom:72px;
+}
+.hero-stat{text-align:center;}
+.hero-stat-num{
+  font-size:26px;font-weight:800;
+  letter-spacing:-0.03em;
+  color:var(--brand-navy);
+  font-variant-numeric:tabular-nums;
+}
+.hero-stat-num-grad{
+  background:var(--brand-gradient);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-stat-label{font-size:13px;color:var(--text-secondary);margin-top:2px;}
+.hero-stat-div{width:1px;background:rgba(7,27,77,0.12);align-self:stretch;}
 
-    /* Bento visual elements */
-    .bento-number {
-      font-size: 64px;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      margin-bottom: 8px;
-      font-variant-numeric: tabular-nums;
-    }
-    .bento-number-accent { color: var(--primary); }
-    .bento-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    .bento-tag {
-      font-size: 13px;
-      font-weight: 500;
-      background: rgba(0,82,255,0.08);
-      color: var(--primary);
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid rgba(0,82,255,0.15);
-    }
-    .bento-dark .bento-tag {
-      background: rgba(0,207,255,0.12);
-      color: var(--cyan);
-      border-color: rgba(0,207,255,0.2);
-    }
-    .bento-check-list {
-      list-style: none;
-      margin-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .bento-check-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-    .bento-dark .bento-check-list li { color: rgba(255,255,255,0.55); }
-    .bento-check-icon {
-      width: 18px; height: 18px;
-      background: rgba(40,202,65,0.15);
-      color: #1a9e2c;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-    .bento-progress {
-      margin-top: 18px;
-    }
-    .bento-progress-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 13px;
-      margin-bottom: 5px;
-    }
-    .bento-progress-label { color: var(--text-secondary); }
-    .bento-progress-val { font-weight: 600; color: var(--text); }
-    .bento-progress-bar {
-      height: 6px;
-      background: var(--border);
-      border-radius: 3px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-    .bento-progress-fill {
-      height: 100%;
-      border-radius: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--cyan));
-    }
+/* ─── Product Dashboard Mockup ─── */
+.hero-dashboard{
+  position:relative;
+  margin:0 auto;
+  max-width:920px;
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-lg),0 0 0 1px rgba(20,91,255,0.04);
+  overflow:hidden;
+}
+.dash-glow{
+  position:absolute;bottom:-60px;left:50%;
+  transform:translateX(-50%);
+  width:700px;height:300px;
+  background:radial-gradient(circle,rgba(20,91,255,0.12),rgba(8,199,244,0.06),transparent 70%);
+  pointer-events:none;
+}
+.dash-topbar{
+  display:flex;align-items:center;
+  gap:8px;
+  padding:14px 18px;
+  background:var(--brand-surface);
+  border-bottom:1px solid var(--border-brand);
+}
+.d-dot{width:11px;height:11px;border-radius:50%;}
+.d-red{background:#FF5F57;} .d-yel{background:#FFBD2E;} .d-grn{background:#28CA41;}
+.dash-url{
+  flex:1;margin:0 14px;
+  background:rgba(20,91,255,0.05);
+  border:1px solid var(--border-brand);
+  border-radius:7px;
+  height:24px;
+  display:flex;align-items:center;padding:0 10px;
+  font-size:11px;color:var(--text-secondary);
+}
+.dash-body{
+  display:grid;grid-template-columns:200px 1fr;
+  min-height:320px;
+}
+/* Sidebar */
+.dash-sidebar{
+  border-right:1px solid var(--border-brand);
+  background:var(--brand-surface);
+  padding:16px 0;
+}
+.dash-sidebar-logo{
+  display:flex;align-items:center;gap:8px;
+  padding:0 16px 16px;
+  border-bottom:1px solid var(--border-brand);
+  margin-bottom:8px;
+}
+.dash-sidebar-logo img{height:24px;width:auto;}
+.dash-nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;
+  font-size:13px;font-weight:500;
+  color:var(--text-secondary);
+  cursor:pointer;
+  transition:background .15s,color .15s;
+  border-radius:0;
+}
+.dash-nav-item:hover{background:rgba(20,91,255,0.05);color:var(--brand-navy);}
+.dash-nav-item.active{
+  background:rgba(20,91,255,0.08);
+  color:var(--brand-blue);
+  font-weight:600;
+}
+.dash-nav-item.active .d-icon{color:var(--brand-blue);}
+.d-icon{font-size:14px;width:16px;text-align:center;}
+.dash-new-task{
+  margin:12px 10px 4px;
+  display:block;width:calc(100% - 20px);
+  font-size:13px;font-weight:600;
+  color:#fff;
+  padding:9px 14px;
+  border-radius:9px;
+  background:var(--brand-gradient);
+  text-align:center;
+}
+/* Main area */
+.dash-main{padding:20px 24px;position:relative;z-index:1;}
+.dash-task-header{margin-bottom:16px;}
+.dash-task-title{
+  font-size:15px;font-weight:700;
+  color:var(--brand-navy);margin-bottom:4px;
+}
+.dash-task-file{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text-secondary);
+  background:var(--brand-light);
+  border:1px solid var(--border-brand);
+  padding:4px 10px;border-radius:6px;
+}
+.dash-progress{
+  display:grid;gap:6px;
+  margin-bottom:16px;
+}
+.dash-step{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 12px;
+  border-radius:9px;
+  font-size:13px;
+}
+.dash-step-done{background:rgba(16,185,129,0.07);color:#059669;}
+.dash-step-active{background:rgba(20,91,255,0.08);color:var(--brand-blue);font-weight:600;}
+.dash-step-pending{background:var(--brand-surface);color:var(--text-tertiary);}
+.dash-step-icon{font-size:12px;width:16px;text-align:center;}
+/* Active step animation */
+.dash-step-active .dash-step-icon::after{
+  content:'';
+  display:inline-block;
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--brand-blue);
+  animation:pulse-step 1.2s ease-in-out infinite;
+}
+@keyframes pulse-step{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:.4;transform:scale(.75);}
+}
+.dash-results{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.dash-result-item{
+  padding:10px 12px;
+  background:var(--brand-surface);
+  border:1px solid var(--border-brand);
+  border-radius:9px;
+  font-size:12px;font-weight:600;
+  color:var(--brand-navy);
+  display:flex;align-items:center;gap:7px;
+}
+.dash-result-icon{
+  width:20px;height:20px;
+  border-radius:5px;
+  background:var(--brand-gradient);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;
+  flex-shrink:0;
+}
+.dash-download{
+  grid-column:1/-1;
+  margin-top:4px;
+  padding:10px;
+  background:var(--brand-gradient);
+  color:#fff;
+  border-radius:9px;
+  font-size:13px;font-weight:600;
+  text-align:center;
+  cursor:pointer;
+}
+@media(max-width:660px){
+  .dash-body{grid-template-columns:1fr;}
+  .dash-sidebar{display:none;}
+}
 
-    /* ══════════════════════════════════════
-       WORKFLOW SECTION
-    ══════════════════════════════════════ */
-    .workflow-section { background: var(--surface); padding: 100px 0; }
-    .workflow-steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 2px;
-      background: var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      margin-top: 64px;
-    }
-    @media (max-width: 860px) {
-      .workflow-steps { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 480px) {
-      .workflow-steps { grid-template-columns: 1fr; }
-    }
-    .workflow-step {
-      background: var(--surface);
-      padding: 40px 32px;
-      position: relative;
-    }
-    .workflow-step-num {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      margin-bottom: 18px;
-    }
-    .workflow-step-icon {
-      font-size: 32px;
-      margin-bottom: 14px;
-    }
-    .workflow-step-title {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin-bottom: 8px;
-    }
-    .workflow-step-text {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-    .workflow-step-badge {
-      display: inline-flex;
-      margin-top: 14px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--primary);
-      background: rgba(0,82,255,0.08);
-      padding: 4px 10px;
-      border-radius: 6px;
-    }
+/* ═══════════════════════════════════════════
+   TRUST STRIP
+═══════════════════════════════════════════ */
+.trust-strip{
+  padding:36px 24px 56px;
+  text-align:center;
+  background:var(--brand-surface);
+  border-top:1px solid var(--border-brand);
+  border-bottom:1px solid var(--border-brand);
+}
+.trust-label{
+  font-size:12px;font-weight:600;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-tertiary);margin-bottom:24px;
+}
+.trust-badges{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.trust-badge{
+  display:flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:600;
+  color:var(--text-secondary);
+  background:#fff;
+  border:1px solid var(--border-brand);
+  padding:8px 16px;border-radius:40px;
+  box-shadow:var(--shadow-sm);
+}
+.trust-badge-icon{font-size:14px;}
 
-    /* ══════════════════════════════════════
-       USE CASES / AGENTS SECTION
-    ══════════════════════════════════════ */
-    .agents-section { padding: 100px 0; }
-    .agents-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 64px;
-    }
-    @media (max-width: 860px) {
-      .agents-grid { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 480px) {
-      .agents-grid { grid-template-columns: 1fr; }
-    }
-    .agent-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-      transition: box-shadow 0.25s, transform 0.25s;
-    }
-    .agent-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-3px);
-    }
-    .agent-icon {
-      width: 48px; height: 48px;
-      background: rgba(0,82,255,0.08);
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      margin-bottom: 20px;
-    }
-    .agent-title {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      margin-bottom: 8px;
-    }
-    .agent-text {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
-    .agent-time {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--primary);
-    }
+/* ═══════════════════════════════════════════
+   BENTO — PRODUKT
+═══════════════════════════════════════════ */
+.bento-section{
+  padding:100px 0;
+  background:var(--brand-surface);
+}
+.bento-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:14px;
+}
+.bento-card{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:22px;
+  padding:32px;
+  box-shadow:var(--shadow-sm);
+  overflow:hidden;position:relative;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+}
+.bento-card:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-md);
+  border-color:rgba(20,91,255,0.20);
+}
+/* Top accent line on some cards */
+.bento-card-accent::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;
+  height:3px;
+  background:var(--brand-gradient);
+  border-radius:22px 22px 0 0;
+}
+.bento-label{
+  font-size:11px;font-weight:700;
+  letter-spacing:0.09em;text-transform:uppercase;
+  color:var(--brand-blue);margin-bottom:10px;
+}
+.bento-title{
+  font-size:21px;font-weight:700;
+  letter-spacing:-0.02em;line-height:1.2;
+  color:var(--brand-navy);margin-bottom:9px;
+}
+.bento-text{font-size:14px;color:var(--text-secondary);line-height:1.6;}
+.bento-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;}
+.bento-tag{
+  font-size:12px;font-weight:600;
+  background:var(--brand-light);
+  color:var(--brand-blue);
+  border:1px solid var(--border-brand);
+  padding:4px 11px;border-radius:6px;
+}
+.bento-checklist{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:9px;}
+.bento-checklist li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-secondary);}
+.bento-check-icon{
+  width:17px;height:17px;
+  background:rgba(16,185,129,0.12);color:#059669;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0;margin-top:1px;
+}
+.bento-num{
+  font-size:62px;font-weight:900;
+  letter-spacing:-0.04em;line-height:1;
+  margin-bottom:8px;
+  background:var(--brand-gradient);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.bento-progress-row{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;margin-bottom:5px;
+}
+.bento-progress-label{color:var(--text-secondary);}
+.bento-progress-val{font-weight:600;color:var(--brand-navy);}
+.bento-progress-bar{
+  height:5px;background:var(--brand-light);
+  border-radius:3px;margin-bottom:10px;overflow:hidden;
+}
+.bento-progress-fill{
+  height:100%;border-radius:3px;
+  background:var(--brand-gradient);
+}
+/* Bento dark card */
+.bento-dark{
+  background:radial-gradient(circle at 80% 20%,rgba(20,91,255,0.20),transparent 60%),var(--brand-dark);
+  border-color:transparent;
+}
+.bento-dark .bento-title{color:#fff;}
+.bento-dark .bento-text{color:rgba(255,255,255,0.50);}
+.bento-dark .bento-label{color:var(--brand-cyan);}
+.bento-dark .bento-num{background:var(--brand-gradient);-webkit-background-clip:text;background-clip:text;}
+.bento-dark .bento-tag{
+  background:rgba(8,199,244,0.12);
+  color:var(--brand-cyan);
+  border-color:rgba(8,199,244,0.20);
+}
+/* Grid spans */
+.bento-a{grid-column:span 7;}
+.bento-b{grid-column:span 5;}
+.bento-c{grid-column:span 4;}
+.bento-d{grid-column:span 4;}
+.bento-e{grid-column:span 4;}
+.bento-f{grid-column:span 6;}
+.bento-g{grid-column:span 6;}
+@media(max-width:900px){
+  .bento-a,.bento-b,.bento-c,.bento-d,.bento-e,.bento-f,.bento-g{grid-column:span 12;}
+}
 
-    /* ══════════════════════════════════════
-       SOLUTIONS / WHY DIFFERENT
-    ══════════════════════════════════════ */
-    .solutions-section { background: var(--surface); padding: 100px 0; }
-    .solutions-split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 64px;
-      align-items: center;
-    }
-    @media (max-width: 860px) {
-      .solutions-split { grid-template-columns: 1fr; gap: 40px; }
-    }
-    .solutions-visual {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 40px;
-      box-shadow: var(--shadow-md);
-    }
-    .compare-table { width: 100%; border-collapse: collapse; }
-    .compare-table th {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      padding: 0 0 16px;
-      text-align: left;
-    }
-    .compare-table th:last-child { text-align: center; }
-    .compare-table td {
-      font-size: 14px;
-      color: var(--text-secondary);
-      padding: 10px 0;
-      border-top: 1px solid var(--border);
-    }
-    .compare-table td:first-child { color: var(--text); font-weight: 500; }
-    .compare-table td:last-child { text-align: center; }
-    .cmp-yes { color: #1a9e2c; font-size: 16px; font-weight: 700; }
-    .cmp-no { color: #c0392b; font-size: 16px; font-weight: 700; }
-    .solutions-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
-      margin-top: 40px;
-    }
-    .solutions-list-item {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-    .solutions-list-icon {
-      width: 36px; height: 36px;
-      background: rgba(0,82,255,0.08);
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      flex-shrink: 0;
-    }
-    .solutions-list-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-    .solutions-list-text {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.55;
-    }
+/* ═══════════════════════════════════════════
+   WORKFLOW — DARK NAVY
+═══════════════════════════════════════════ */
+.workflow-section{
+  padding:100px 0;
+  background:radial-gradient(circle at 70% 30%,rgba(20,91,255,0.18),transparent 40%),
+             var(--brand-dark);
+  position:relative;overflow:hidden;
+}
+.workflow-section .sec-label{color:var(--brand-cyan);}
+.workflow-section .sec-title{color:#fff;}
+.workflow-section .sec-sub{color:rgba(255,255,255,0.50);}
+.workflow-steps{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:2px;
+  background:rgba(255,255,255,0.06);
+  border-radius:20px;
+  overflow:hidden;
+  margin-top:60px;
+}
+@media(max-width:860px){.workflow-steps{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.workflow-steps{grid-template-columns:1fr;}}
+.workflow-step{
+  padding:40px 30px;
+  background:rgba(255,255,255,0.03);
+  transition:background .2s;
+}
+.workflow-step:hover{background:rgba(255,255,255,0.06);}
+.workflow-step-num{
+  font-size:11px;font-weight:700;
+  letter-spacing:0.10em;text-transform:uppercase;
+  color:rgba(255,255,255,0.30);margin-bottom:18px;
+}
+.workflow-step-icon-wrap{
+  width:44px;height:44px;
+  border-radius:12px;
+  background:rgba(20,91,255,0.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:14px;
+}
+.workflow-step-title{font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;}
+.workflow-step-text{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6;}
+.workflow-step-badge{
+  display:inline-flex;margin-top:14px;
+  font-size:12px;font-weight:600;
+  background:rgba(8,199,244,0.12);
+  color:var(--brand-cyan);
+  padding:4px 10px;border-radius:6px;
+}
 
-    /* ══════════════════════════════════════
-       SECURITY / TRUST DARK
-    ══════════════════════════════════════ */
-    .security-section {
-      background: var(--dark);
-      padding: 100px 0;
-      color: #F0F0F2;
-    }
-    .security-section .section-title { color: #fff; }
-    .security-section .section-sub { color: rgba(255,255,255,0.5); }
-    .security-section .section-eyebrow { color: var(--cyan); }
-    .security-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 64px;
-    }
-    @media (max-width: 760px) {
-      .security-grid { grid-template-columns: 1fr; }
-    }
-    .security-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      transition: background 0.2s;
-    }
-    .security-card:hover { background: rgba(255,255,255,0.07); }
-    .security-card-icon {
-      font-size: 28px;
-      margin-bottom: 16px;
-    }
-    .security-card-title {
-      font-size: 17px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-    .security-card-text {
-      font-size: 14px;
-      color: rgba(255,255,255,0.5);
-      line-height: 1.6;
-    }
-    .security-certifications {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 52px;
-      justify-content: center;
-    }
-    .security-cert {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 13px;
-      font-weight: 600;
-      color: rgba(255,255,255,0.7);
-    }
+/* ═══════════════════════════════════════════
+   TEAM — Alex & Emma
+═══════════════════════════════════════════ */
+.team-section{padding:100px 0;background:#fff;}
+.team-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:24px;margin-top:60px;
+}
+@media(max-width:700px){.team-grid{grid-template-columns:1fr;max-width:400px;margin-left:auto;margin-right:auto;}}
+.team-card{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:22px;
+  padding:36px;
+  box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;gap:20px;
+  transition:transform .25s,box-shadow .25s,border-color .25s;
+  overflow:hidden;position:relative;
+}
+.team-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;
+  height:3px;
+  background:var(--brand-gradient);
+  border-radius:22px 22px 0 0;
+}
+.team-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);border-color:rgba(20,91,255,0.20);}
+.team-avatar{
+  width:88px;height:88px;
+  border-radius:50%;
+  overflow:hidden;
+  border:3px solid var(--brand-light);
+  box-shadow:0 0 0 4px rgba(20,91,255,0.08);
+  flex-shrink:0;
+}
+.team-avatar img{width:100%;height:100%;object-fit:cover;}
+.team-info{}
+.team-name{font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--brand-navy);margin-bottom:4px;}
+.team-role{font-size:14px;color:var(--brand-blue);font-weight:600;margin-bottom:12px;}
+.team-desc{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px;}
+.team-skills{display:flex;flex-wrap:wrap;gap:7px;}
+.team-skill{
+  font-size:12px;font-weight:600;
+  background:var(--brand-light);
+  color:var(--brand-blue);
+  border:1px solid var(--border-brand);
+  padding:4px 12px;border-radius:6px;
+}
 
-    /* ══════════════════════════════════════
-       PRICING
-    ══════════════════════════════════════ */
-    .pricing-section { padding: 100px 0; }
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 64px;
-      align-items: start;
-    }
-    @media (max-width: 860px) {
-      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
-    }
-    .pricing-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 36px;
-      box-shadow: var(--shadow-sm);
-    }
-    .pricing-card-featured {
-      background: var(--primary);
-      border-color: transparent;
-      color: #fff;
-      box-shadow: 0 16px 48px rgba(0,82,255,0.30);
-      transform: scale(1.03);
-    }
-    .pricing-eyebrow {
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      margin-bottom: 10px;
-    }
-    .pricing-card-featured .pricing-eyebrow { color: rgba(255,255,255,0.6); }
-    .pricing-name {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-    .pricing-price {
-      font-size: 48px;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      margin: 20px 0 6px;
-      font-variant-numeric: tabular-nums;
-    }
-    .pricing-price sup {
-      font-size: 22px;
-      vertical-align: super;
-      font-weight: 700;
-    }
-    .pricing-price-note {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-bottom: 28px;
-    }
-    .pricing-card-featured .pricing-price-note { color: rgba(255,255,255,0.6); }
-    .pricing-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 28px 0;
-    }
-    .pricing-card-featured .pricing-divider { background: rgba(255,255,255,0.2); }
-    .pricing-features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .pricing-features li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 14px;
-      color: var(--text-secondary);
-    }
-    .pricing-card-featured .pricing-features li { color: rgba(255,255,255,0.8); }
-    .pricing-features li::before {
-      content: "✓";
-      font-weight: 700;
-      color: var(--primary);
-      flex-shrink: 0;
-    }
-    .pricing-card-featured .pricing-features li::before { color: rgba(255,255,255,0.9); }
-    .pricing-cta {
-      display: block;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 600;
-      padding: 14px;
-      border-radius: var(--radius-md);
-      margin-top: 28px;
-      transition: opacity 0.2s, transform 0.15s;
-    }
-    .pricing-cta-outline {
-      border: 1px solid var(--border-strong);
-      color: var(--text);
-    }
-    .pricing-cta-outline:hover { background: var(--bg); transform: translateY(-1px); }
-    .pricing-cta-white {
-      background: #fff;
-      color: var(--primary);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.16);
-    }
-    .pricing-cta-white:hover { opacity: 0.92; transform: translateY(-1px); }
+/* ═══════════════════════════════════════════
+   USE CASES / LÖSUNGEN
+═══════════════════════════════════════════ */
+.agents-section{padding:100px 0;background:var(--brand-surface);}
+.agents-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:14px;margin-top:60px;
+}
+@media(max-width:860px){.agents-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.agents-grid{grid-template-columns:1fr;}}
+.agent-card{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:18px;padding:28px;
+  box-shadow:var(--shadow-sm);
+  transition:transform .25s,box-shadow .25s,border-color .25s;
+}
+.agent-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:rgba(20,91,255,0.20);}
+.agent-icon-wrap{
+  width:44px;height:44px;
+  border-radius:11px;
+  background:#EEF4FF;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;margin-bottom:16px;
+}
+.agent-title{font-size:17px;font-weight:700;color:var(--brand-navy);margin-bottom:7px;}
+.agent-text{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;}
+.agent-time{font-size:12px;font-weight:600;color:var(--brand-blue);}
 
-    /* ══════════════════════════════════════
-       FINAL CTA
-    ══════════════════════════════════════ */
-    .cta-section {
-      padding: 120px 24px;
-      text-align: center;
-      background: linear-gradient(160deg, rgba(0,82,255,0.06), rgba(0,207,255,0.04));
-    }
-    .cta-headline {
-      font-size: clamp(40px, 5.5vw, 68px);
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1.06;
-      color: var(--text);
-      max-width: 760px;
-      margin: 0 auto 20px;
-      text-wrap: balance;
-    }
-    .cta-sub {
-      font-size: 18px;
-      color: var(--text-secondary);
-      margin: 0 auto 48px;
-      max-width: 500px;
-      line-height: 1.6;
-    }
-    .cta-actions {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .cta-note {
-      font-size: 13px;
-      color: var(--text-tertiary);
-      margin-top: 20px;
-    }
+/* ═══════════════════════════════════════════
+   IMMOBILIEN
+═══════════════════════════════════════════ */
+.immo-section{padding:100px 0;background:var(--brand-light);}
+.immo-split{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:60px;align-items:center;
+}
+@media(max-width:860px){.immo-split{grid-template-columns:1fr;gap:40px;}}
+.immo-list{list-style:none;margin:24px 0 36px;display:flex;flex-direction:column;gap:14px;}
+.immo-list li{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:15px;color:var(--text-secondary);
+}
+.immo-list-icon{
+  width:20px;height:20px;
+  border-radius:50%;
+  background:rgba(20,91,255,0.10);
+  color:var(--brand-blue);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;
+}
+.immo-dashboard{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:22px;
+  padding:28px;
+  box-shadow:var(--shadow-lg);
+}
+.immo-dash-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.immo-dash-title{font-size:14px;font-weight:700;color:var(--brand-navy);}
+.immo-dash-status{
+  font-size:11px;font-weight:600;
+  background:rgba(16,185,129,0.10);color:#059669;
+  padding:3px 9px;border-radius:5px;
+}
+.immo-marktwert{
+  font-size:42px;font-weight:900;
+  letter-spacing:-0.04em;
+  color:var(--brand-navy);
+  margin-bottom:4px;
+  font-variant-numeric:tabular-nums;
+}
+.immo-range{font-size:13px;color:var(--text-secondary);margin-bottom:22px;}
+.immo-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.immo-metric{
+  background:var(--brand-surface);
+  border:1px solid var(--border-brand);
+  border-radius:11px;padding:12px;
+}
+.immo-metric-label{font-size:11px;color:var(--text-tertiary);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+.immo-metric-val{font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--brand-navy);}
+.immo-metric-sub{font-size:11px;color:var(--text-secondary);}
+.immo-compare{font-size:12px;color:var(--text-secondary);padding:10px 12px;background:var(--brand-surface);border-radius:9px;border:1px solid var(--border-brand);}
+.immo-compare strong{color:var(--brand-blue);}
 
-    /* ══════════════════════════════════════
-       FOOTER
-    ══════════════════════════════════════ */
-    .footer {
-      background: var(--dark);
-      color: rgba(255,255,255,0.5);
-      padding: 64px 0 40px;
-    }
-    .footer-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 48px;
-      margin-bottom: 56px;
-    }
-    @media (max-width: 860px) {
-      .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
-    }
-    @media (max-width: 480px) {
-      .footer-grid { grid-template-columns: 1fr; }
-    }
-    .footer-brand-logo {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 12px;
-    }
-    .footer-brand-logo span { color: var(--cyan); }
-    .footer-brand-text {
-      font-size: 14px;
-      line-height: 1.65;
-      max-width: 260px;
-      margin-bottom: 20px;
-    }
-    .footer-col-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 16px;
-      letter-spacing: 0.02em;
-    }
-    .footer-links {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .footer-links li a {
-      font-size: 14px;
-      color: rgba(255,255,255,0.45);
-      transition: color 0.2s;
-    }
-    .footer-links li a:hover { color: #fff; }
-    .footer-bottom {
-      border-top: 1px solid rgba(255,255,255,0.08);
-      padding-top: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .footer-bottom-copy { font-size: 13px; }
-    .footer-bottom-links {
-      display: flex;
-      gap: 20px;
-    }
-    .footer-bottom-links a {
-      font-size: 13px;
-      color: rgba(255,255,255,0.35);
-      transition: color 0.2s;
-    }
-    .footer-bottom-links a:hover { color: rgba(255,255,255,0.7); }
+/* ═══════════════════════════════════════════
+   SOLUTIONS
+═══════════════════════════════════════════ */
+.solutions-section{padding:100px 0;background:#fff;}
+.solutions-split{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:64px;align-items:center;
+}
+@media(max-width:860px){.solutions-split{grid-template-columns:1fr;gap:40px;}}
+.solutions-visual{
+  background:var(--brand-surface);
+  border:1px solid var(--border-brand);
+  border-radius:22px;padding:32px;
+  box-shadow:var(--shadow-md);
+}
+.compare-table{width:100%;border-collapse:collapse;}
+.compare-table th{
+  font-size:11px;font-weight:700;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text-tertiary);
+  padding:0 0 14px;text-align:left;
+}
+.compare-table th:not(:first-child){text-align:center;}
+.compare-table td{
+  font-size:14px;color:var(--text-secondary);
+  padding:10px 0;border-top:1px solid var(--border-brand);
+}
+.compare-table td:first-child{color:var(--brand-navy);font-weight:500;}
+.compare-table td:not(:first-child){text-align:center;}
+.cmp-yes{color:#059669;font-size:15px;font-weight:700;}
+.cmp-no{color:#c0392b;font-size:15px;}
+.solutions-list{list-style:none;margin-top:36px;display:flex;flex-direction:column;gap:20px;}
+.sol-item{display:flex;gap:14px;align-items:flex-start;}
+.sol-icon{
+  width:36px;height:36px;flex-shrink:0;
+  background:#EEF4FF;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--brand-blue);
+}
+.sol-title{font-size:15px;font-weight:700;color:var(--brand-navy);margin-bottom:3px;}
+.sol-text{font-size:13px;color:var(--text-secondary);line-height:1.55;}
 
-    /* ══════════════════════════════════════
-       MODALS
-    ══════════════════════════════════════ */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(8px);
-      z-index: 9000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s;
-    }
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .modal-box {
-      background: var(--surface);
-      border-radius: var(--radius-xl);
-      padding: 40px;
-      max-width: 640px;
-      width: 100%;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: var(--shadow-lg);
-      transform: scale(0.96) translateY(16px);
-      transition: transform 0.25s;
-    }
-    .modal-overlay.open .modal-box { transform: none; }
-    .modal-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-    .modal-title {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .modal-close {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: var(--border);
-      color: var(--text);
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .modal-close:hover { background: var(--border-strong); }
-    .modal-body { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
-    .modal-body h3 { font-size: 16px; font-weight: 700; color: var(--text); margin: 20px 0 8px; }
-    .modal-body h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 14px 0 4px; }
-    .modal-body p { margin-bottom: 10px; }
-    .modal-body ul { padding-left: 20px; margin-bottom: 10px; }
-    .modal-body ul li { margin-bottom: 4px; }
+/* ═══════════════════════════════════════════
+   SECURITY
+═══════════════════════════════════════════ */
+.security-section{padding:100px 0;background:var(--brand-light);}
+.security-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:14px;margin-top:60px;
+}
+@media(max-width:760px){.security-grid{grid-template-columns:1fr;}}
+.security-card{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:18px;padding:28px;
+  box-shadow:var(--shadow-sm);
+  display:flex;gap:16px;align-items:flex-start;
+  transition:transform .25s,box-shadow .25s;
+}
+.security-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+.security-icon{
+  width:44px;height:44px;flex-shrink:0;
+  background:#EEF4FF;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.security-title{font-size:15px;font-weight:700;color:var(--brand-navy);margin-bottom:5px;}
+.security-text{font-size:13px;color:var(--text-secondary);line-height:1.6;}
+.security-more{
+  text-align:center;margin-top:40px;
+  font-size:14px;font-weight:600;color:var(--brand-blue);
+}
+.security-more a:hover{text-decoration:underline;}
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+/* ═══════════════════════════════════════════
+   PRICING
+═══════════════════════════════════════════ */
+.pricing-section{padding:100px 0;background:#fff;}
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:14px;margin-top:60px;align-items:start;
+}
+@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:400px;margin-left:auto;margin-right:auto;}}
+.pricing-card{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:24px;padding:36px;
+  box-shadow:var(--shadow-sm);
+}
+.pricing-featured{
+  background:linear-gradient(150deg,#0A2F8E,#145BFF);
+  border-color:transparent;
+  color:#fff;
+  box-shadow:0 20px 60px rgba(20,91,255,0.30);
+  transform:scale(1.03);
+}
+.pricing-eyebrow{
+  font-size:11px;font-weight:700;
+  letter-spacing:0.10em;text-transform:uppercase;
+  color:var(--text-tertiary);margin-bottom:8px;
+}
+.pricing-featured .pricing-eyebrow{color:rgba(255,255,255,0.55);}
+.pricing-name{font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--brand-navy);margin-bottom:4px;}
+.pricing-featured .pricing-name{color:#fff;}
+.pricing-price{
+  font-size:48px;font-weight:900;letter-spacing:-0.04em;
+  line-height:1;margin:18px 0 6px;
+  font-variant-numeric:tabular-nums;
+  color:var(--brand-navy);
+}
+.pricing-featured .pricing-price{color:#fff;}
+.pricing-price sup{font-size:22px;vertical-align:super;font-weight:700;}
+.pricing-note{font-size:13px;color:var(--text-secondary);margin-bottom:24px;}
+.pricing-featured .pricing-note{color:rgba(255,255,255,0.60);}
+.pricing-div{height:1px;background:var(--border-brand);margin:22px 0;}
+.pricing-featured .pricing-div{background:rgba(255,255,255,0.18);}
+.pricing-features{list-style:none;display:flex;flex-direction:column;gap:11px;}
+.pricing-features li{
+  display:flex;align-items:flex-start;gap:9px;
+  font-size:14px;color:var(--text-secondary);
+}
+.pricing-featured .pricing-features li{color:rgba(255,255,255,0.80);}
+.pricing-features li::before{
+  content:'✓';font-weight:700;
+  color:var(--brand-blue);flex-shrink:0;
+}
+.pricing-featured .pricing-features li::before{color:rgba(255,255,255,0.9);}
+.pricing-cta{
+  display:block;text-align:center;
+  font-size:15px;font-weight:600;
+  padding:13px;border-radius:12px;
+  margin-top:24px;
+  transition:opacity .2s,transform .15s,background .2s;
+}
+.pricing-cta-outline{border:1px solid var(--border-strong);color:var(--brand-navy);}
+.pricing-cta-outline:hover{background:var(--brand-light);}
+.pricing-cta-white{background:#fff;color:var(--brand-blue);box-shadow:0 4px 14px rgba(0,0,0,0.14);}
+.pricing-cta-white:hover{opacity:.92;transform:translateY(-1px);}
+
+/* ═══════════════════════════════════════════
+   FAQ
+═══════════════════════════════════════════ */
+.faq-section{padding:100px 0;background:var(--brand-surface);}
+.faq-list{margin-top:60px;display:flex;flex-direction:column;gap:12px;max-width:760px;margin-left:auto;margin-right:auto;}
+.faq-item{
+  background:#fff;
+  border:1px solid var(--border-brand);
+  border-radius:14px;overflow:hidden;
+}
+.faq-question{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px;
+  font-size:15px;font-weight:600;
+  color:var(--brand-navy);
+  cursor:pointer;
+  gap:12px;
+  transition:background .15s;
+}
+.faq-question:hover{background:var(--brand-surface);}
+.faq-arrow{
+  width:24px;height:24px;
+  border-radius:50%;
+  background:var(--brand-light);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--brand-blue);
+  flex-shrink:0;
+  transition:transform .25s;
+}
+.faq-item.open .faq-arrow{transform:rotate(180deg);}
+.faq-answer{
+  max-height:0;overflow:hidden;
+  transition:max-height .35s ease,padding .25s;
+  font-size:14px;color:var(--text-secondary);line-height:1.7;
+  padding:0 24px;
+}
+.faq-item.open .faq-answer{max-height:300px;padding:0 24px 20px;}
+
+/* ═══════════════════════════════════════════
+   CTA — DARK NAVY
+═══════════════════════════════════════════ */
+.cta-section{
+  padding:120px 24px;
+  text-align:center;
+  background:radial-gradient(circle at 30% 70%,rgba(20,91,255,0.20),transparent 45%),
+             radial-gradient(circle at 75% 20%,rgba(8,199,244,0.10),transparent 40%),
+             var(--brand-dark);
+  position:relative;overflow:hidden;
+}
+.cta-headline{
+  font-size:clamp(40px,5.5vw,68px);
+  font-weight:800;letter-spacing:-0.04em;line-height:1.06;
+  color:#fff;
+  max-width:760px;margin:0 auto 18px;
+  text-wrap:balance;
+}
+.cta-sub{
+  font-size:18px;color:rgba(255,255,255,0.55);
+  margin:0 auto 44px;max-width:480px;line-height:1.65;
+}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-primary-dark{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:16px;font-weight:600;
+  color:#fff;padding:14px 28px;
+  border-radius:13px;
+  background:var(--brand-gradient);
+  box-shadow:0 8px 30px rgba(8,199,244,0.25);
+  transition:opacity .2s,transform .15s;
+}
+.btn-primary-dark:hover{opacity:.9;transform:translateY(-2px);}
+.btn-ghost{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:16px;font-weight:500;
+  color:rgba(255,255,255,0.70);
+  padding:14px 28px;
+  border-radius:13px;
+  border:1px solid rgba(255,255,255,0.18);
+  transition:background .2s,color .2s;
+}
+.btn-ghost:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.cta-note{font-size:13px;color:rgba(255,255,255,0.30);margin-top:20px;}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+.footer{
+  background:var(--brand-dark-2);
+  padding:64px 0 36px;
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+.footer-grid{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:48px;margin-bottom:52px;
+}
+@media(max-width:860px){.footer-grid{grid-template-columns:1fr 1fr;gap:32px;}}
+@media(max-width:480px){.footer-grid{grid-template-columns:1fr;}}
+.footer-logo img{height:36px;width:auto;margin-bottom:14px;}
+.footer-tagline{
+  font-size:14px;color:rgba(255,255,255,0.40);
+  line-height:1.65;max-width:260px;margin-bottom:0;
+}
+.footer-col-title{
+  font-size:12px;font-weight:700;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:rgba(255,255,255,0.50);margin-bottom:16px;
+}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.footer-links li a{font-size:14px;color:rgba(255,255,255,0.38);transition:color .2s;}
+.footer-links li a:hover{color:rgba(255,255,255,0.80);}
+.footer-bottom{
+  border-top:1px solid rgba(255,255,255,0.07);
+  padding-top:24px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.25);}
+.footer-bottom-links{display:flex;gap:18px;}
+.footer-bottom-links a{font-size:12px;color:rgba(255,255,255,0.28);transition:color .2s;}
+.footer-bottom-links a:hover{color:rgba(255,255,255,0.60);}
+
+/* ═══════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(6,19,47,0.65);
+  backdrop-filter:blur(10px);
+  z-index:9000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:auto;}
+.modal-box{
+  background:#fff;border-radius:var(--radius-xl);
+  padding:40px;max-width:640px;width:100%;
+  max-height:80vh;overflow-y:auto;
+  box-shadow:0 30px 80px rgba(7,27,77,0.20);
+  transform:scale(.96) translateY(16px);
+  transition:transform .25s;
+}
+.modal-overlay.open .modal-box{transform:none;}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.modal-title{font-size:22px;font-weight:700;letter-spacing:-0.02em;color:var(--brand-navy);}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--brand-light);color:var(--text-secondary);
+  font-size:18px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .2s;
+}
+.modal-close:hover{background:var(--brand-surface);}
+.modal-body{font-size:14px;color:var(--text-secondary);line-height:1.75;}
+.modal-body h3{font-size:16px;font-weight:700;color:var(--brand-navy);margin:20px 0 7px;}
+.modal-body h4{font-size:14px;font-weight:600;color:var(--brand-navy);margin:12px 0 4px;}
+.modal-body p{margin-bottom:8px;}
+.modal-body ul{padding-left:18px;margin-bottom:8px;}
+.modal-body ul li{margin-bottom:3px;}
+.modal-body a{color:var(--brand-blue);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px;}
   </style>
 </head>
 <body>
 
-  <!-- ── NAV ── -->
-  <nav class="nav" id="main-nav">
-    <div class="nav-logo">AI<span>Employee</span></div>
-    <div class="nav-links">
-      <a href="#features" class="nav-link">Features</a>
-      <a href="#workflow" class="nav-link">So funktioniert's</a>
-      <a href="#pricing" class="nav-link">Preise</a>
-      <a href="https://a-i-employee.de" class="nav-cta">Kostenlos starten →</a>
-    </div>
-  </nav>
+<!-- ═══ MOBILE NAV OVERLAY ═══ -->
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-close" onclick="closeMobileNav()">✕</button>
+  <a class="mobile-nav-link" href="#start" onclick="closeMobileNav()">Start</a>
+  <a class="mobile-nav-link" href="#produkt" onclick="closeMobileNav()">Produkt</a>
+  <a class="mobile-nav-link" href="#loesungen" onclick="closeMobileNav()">Lösungen</a>
+  <a class="mobile-nav-link" href="#sicherheit" onclick="closeMobileNav()">Sicherheit</a>
+  <a class="mobile-nav-link" href="#pricing" onclick="closeMobileNav()">Preise</a>
+  <a class="mobile-nav-link" href="#faq" onclick="closeMobileNav()">FAQ</a>
+  <div class="mobile-nav-footer">
+    <a class="mobile-nav-signin" href="https://a-i-employee.de">Anmelden</a>
+    <a class="mobile-nav-cta" href="https://a-i-employee.de">AI Employee starten →</a>
+  </div>
+</div>
 
-  <!-- ── HERO ── -->
-  <section class="hero" id="hero">
-    <div class="container">
-      <div class="hero-badge reveal">
-        <span class="hero-badge-dot"></span>
-        Jetzt verfügbar — DSGVO-konform, Made in Germany
+<!-- ═══ NAV ═══ -->
+<nav class="nav" id="main-nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#start">
+      <img src="https://a-i-employee.de/logo.png" alt="AI Employee" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+      <span style="display:none;font-size:17px;font-weight:700;letter-spacing:-0.02em;color:var(--brand-navy)">AI<span style="color:var(--brand-blue)">Employee</span></span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" data-section="start" href="#start">Start</a>
+      <a class="nav-link" data-section="produkt" href="#produkt">Produkt</a>
+      <a class="nav-link" data-section="loesungen" href="#loesungen">Lösungen</a>
+      <a class="nav-link" data-section="sicherheit" href="#sicherheit">Sicherheit</a>
+      <a class="nav-link" data-section="pricing" href="#pricing">Preise</a>
+      <a class="nav-link" data-section="faq" href="#faq">FAQ</a>
+    </div>
+    <div class="nav-actions">
+      <a class="nav-signin" href="https://a-i-employee.de">Anmelden</a>
+      <a class="nav-cta" href="https://a-i-employee.de">AI Employee starten</a>
+      <div class="nav-hamburger" onclick="openMobileNav()" id="nav-hamburger">
+        <span></span><span></span><span></span>
       </div>
-      <h1 class="hero-headline reveal" style="transition-delay:0.08s">
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="start" style="padding-top:76px;">
+  <div class="hero" style="padding-top:80px;">
+    <div class="hero-glow"></div>
+    <div class="container" style="position:relative;z-index:1;">
+      <div class="hero-brand-label reveal">
+        <span class="hero-brand-label-dot"></span>
+        AI EMPLOYEE AGENT
+      </div>
+      <h1 class="hero-headline reveal" style="transition-delay:.07s">
         Arbeit, die sich<br>
-        <span class="hero-headline-accent">selbst erledigt.</span>
+        <span class="hero-headline-gradient">selbst erledigt.</span>
       </h1>
-      <p class="hero-sub reveal" style="transition-delay:0.14s">
+      <p class="hero-sub reveal" style="transition-delay:.13s">
         Dein KI-Mitarbeiter analysiert PDFs, erstellt Berichte und bewertet Immobilien — in Minuten, nicht Stunden. Ab €0,99 pro Aufgabe.
       </p>
-      <div class="hero-actions reveal" style="transition-delay:0.20s">
-        <a href="https://a-i-employee.de" class="btn-primary">Kostenlos ausprobieren →</a>
-        <a href="#workflow" class="btn-secondary">Wie es funktioniert</a>
+      <div class="hero-actions reveal" style="transition-delay:.18s">
+        <a href="https://a-i-employee.de" class="btn-primary" style="font-size:16px;">AI Employee starten →</a>
+        <a href="#produkt" class="btn-secondary">Demo ansehen</a>
       </div>
-
-      <!-- Stats -->
-      <div class="hero-stats reveal" style="transition-delay:0.26s">
+      <div class="hero-stats reveal" style="transition-delay:.24s">
         <div class="hero-stat">
-          <div class="hero-stat-num"><span id="counter-hours">0</span>+ Std.</div>
+          <div class="hero-stat-num"><span class="hero-stat-num-grad" id="c-hours">0</span>+ Std.</div>
           <div class="hero-stat-label">pro Woche gespart</div>
         </div>
-        <div class="hero-divider"></div>
+        <div class="hero-stat-div"></div>
         <div class="hero-stat">
-          <div class="hero-stat-num">€<span id="counter-price">0</span>,99</div>
-          <div class="hero-stat-label">ab pro Aufgabe</div>
+          <div class="hero-stat-num">ab €<span class="hero-stat-num-grad">0,99</span></div>
+          <div class="hero-stat-label">pro Aufgabe</div>
         </div>
-        <div class="hero-divider"></div>
+        <div class="hero-stat-div"></div>
         <div class="hero-stat">
-          <div class="hero-stat-num"><span id="counter-min">0</span> Min.</div>
+          <div class="hero-stat-num"><span class="hero-stat-num-grad" id="c-min">0</span> Min.</div>
           <div class="hero-stat-label">Ergebnis in</div>
         </div>
-      </div>
-
-      <!-- Mockup -->
-      <div class="hero-mockup reveal" style="transition-delay:0.32s">
-        <div class="mockup-topbar">
-          <span class="mockup-dot mockup-dot-r"></span>
-          <span class="mockup-dot mockup-dot-y"></span>
-          <span class="mockup-dot mockup-dot-g"></span>
-          <div class="mockup-title-bar">a-i-employee.de — Analyse starten</div>
+        <div class="hero-stat-div"></div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><span class="hero-stat-num-grad">100%</span></div>
+          <div class="hero-stat-label">DSGVO-konform</div>
         </div>
-        <div class="mockup-body">
-          <div class="mockup-upload">
-            <div class="mockup-upload-icon">📄</div>
-            <div class="mockup-upload-text">
-              <strong>PDF hochladen</strong> oder hierher ziehen<br>
-              <span style="font-size:12px;margin-top:4px;display:block;opacity:0.7">Vertrag.pdf — 48 Seiten wird analysiert…</span>
+      </div>
+      <!-- Product Dashboard -->
+      <div class="hero-dashboard reveal" style="transition-delay:.30s">
+        <div class="dash-glow"></div>
+        <div class="dash-topbar">
+          <span class="d-dot d-red"></span>
+          <span class="d-dot d-yel"></span>
+          <span class="d-dot d-grn"></span>
+          <div class="dash-url">a-i-employee.de — Neuer Auftrag</div>
+        </div>
+        <div class="dash-body">
+          <div class="dash-sidebar">
+            <a href="https://a-i-employee.de" class="dash-new-task">+ Neue Aufgabe</a>
+            <div class="dash-nav-item active"><span class="d-icon">📄</span> Dokumente</div>
+            <div class="dash-nav-item"><span class="d-icon">📊</span> Berichte</div>
+            <div class="dash-nav-item"><span class="d-icon">🔍</span> Recherche</div>
+            <div class="dash-nav-item"><span class="d-icon">🏠</span> Immobilien</div>
+            <div class="dash-nav-item"><span class="d-icon">🕐</span> Verlauf</div>
+          </div>
+          <div class="dash-main">
+            <div class="dash-task-header">
+              <div class="dash-task-title">Analysiere diesen Geschäftsbericht.</div>
+              <div class="dash-task-file">📄 Geschäftsbericht_2026.pdf · 48 Seiten</div>
+            </div>
+            <div class="dash-progress">
+              <div class="dash-step dash-step-done"><span class="dash-step-icon">✓</span> Dokument wird gelesen</div>
+              <div class="dash-step dash-step-done"><span class="dash-step-icon">✓</span> Kennzahlen werden analysiert</div>
+              <div class="dash-step dash-step-active"><span class="dash-step-icon"></span> Risiken werden erkannt</div>
+              <div class="dash-step dash-step-pending"><span class="dash-step-icon">○</span> Bericht wird erstellt</div>
+            </div>
+            <div class="dash-results">
+              <div class="dash-result-item"><div class="dash-result-icon">★</div>Executive Summary</div>
+              <div class="dash-result-item"><div class="dash-result-icon">↑</div>Top-Erkenntnisse</div>
+              <div class="dash-result-item"><div class="dash-result-icon">!</div>Risiken</div>
+              <div class="dash-result-item"><div class="dash-result-icon">→</div>Empfehlungen</div>
+              <div class="dash-download">📥 Bericht herunterladen</div>
             </div>
           </div>
-          <div class="mockup-result">
-            <div class="mockup-result-label">Analyse-Ergebnis</div>
-            <div class="mockup-bar"><div class="mockup-bar-fill" style="width:92%"></div></div>
-            <div class="mockup-bar"><div class="mockup-bar-fill" style="width:76%"></div></div>
-            <div class="mockup-bar"><div class="mockup-bar-fill" style="width:60%"></div></div>
-            <span class="mockup-tag mockup-tag-green">✓ Fertig in 2:14 min</span>
-          </div>
-          <div class="mockup-result">
-            <div class="mockup-result-label">Risiko-Score</div>
-            <div style="font-size:36px;font-weight:900;letter-spacing:-0.04em;color:var(--text)">8.4<span style="font-size:16px;color:var(--text-secondary)">/10</span></div>
-            <span class="mockup-tag mockup-tag-blue">Immobilienbewertung</span>
-          </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── TRUST STRIP ── -->
-  <div class="trust-strip">
-    <div class="container">
-      <div class="trust-strip-label">Vertraut von Unternehmern in Deutschland</div>
-      <div class="trust-badges">
-        <span class="trust-badge"><span class="trust-badge-icon">🇩🇪</span> Deutsches Unternehmen</span>
-        <span class="trust-badge"><span class="trust-badge-icon">🛡️</span> DSGVO-konform</span>
-        <span class="trust-badge"><span class="trust-badge-icon">🔒</span> Keine Datenspeicherung</span>
-        <span class="trust-badge"><span class="trust-badge-icon">⚡</span> Kein Abo-Zwang</span>
-        <span class="trust-badge"><span class="trust-badge-icon">🆓</span> Erste Aufgabe kostenlos</span>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- ── BENTO GRID ── -->
-  <section class="bento-section" id="features">
-    <div class="container-wide">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Was AI Employee kann</div>
-        <h2 class="section-title" style="margin:0 auto 18px;max-width:640px">Alles was du für deinen Büroalltag brauchst</h2>
-        <p class="section-sub" style="margin:0 auto">Kein Monatsabo. Keine Installation. Starte heute mit der ersten kostenlosen Analyse.</p>
-      </div>
-      <div class="bento-grid reveal" style="transition-delay:0.1s">
-        <!-- A: Large left — PDF Analysis -->
-        <div class="bento-card bento-a">
-          <div class="bento-card-eyebrow">PDF-Analyse</div>
-          <h3 class="bento-card-title">48-seitige Verträge in<br>2 Minuten verstehen</h3>
-          <p class="bento-card-text">Lade ein beliebiges Dokument hoch — Verträge, Gutachten, Berichte — und dein KI-Mitarbeiter fasst zusammen, beantwortet Fragen und markiert kritische Stellen.</p>
-          <div class="bento-tags">
-            <span class="bento-tag">PDF-Upload</span>
-            <span class="bento-tag">Zusammenfassung</span>
-            <span class="bento-tag">Fragen stellen</span>
-            <span class="bento-tag">Kritische Stellen</span>
-          </div>
-          <div class="bento-progress">
-            <div class="bento-progress-row">
-              <span class="bento-progress-label">Executive Summary</span>
-              <span class="bento-progress-val">✓</span>
-            </div>
-            <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:100%"></div></div>
-            <div class="bento-progress-row">
-              <span class="bento-progress-label">Top-3-Risiken identifiziert</span>
-              <span class="bento-progress-val">✓</span>
-            </div>
-            <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:100%"></div></div>
-            <div class="bento-progress-row">
-              <span class="bento-progress-label">Handlungsempfehlungen</span>
-              <span class="bento-progress-val">✓</span>
-            </div>
-            <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:87%"></div></div>
-          </div>
-        </div>
-        <!-- B: Right — Time saved -->
-        <div class="bento-card bento-b bento-dark">
-          <div class="bento-card-eyebrow">Zeitersparnis</div>
-          <div class="bento-number"><span class="bento-number-accent">5+</span></div>
-          <h3 class="bento-card-title">Stunden pro Woche zurückgewonnen</h3>
-          <p class="bento-card-text">Statt stundenlanger manueller Arbeit erledigst du dieselbe Aufgabe in Minuten — und kannst dich auf das Wesentliche konzentrieren.</p>
-        </div>
-        <!-- C: Immobilien -->
-        <div class="bento-card bento-c">
-          <div class="bento-card-eyebrow">Immobilien</div>
-          <div class="bento-card-title">Objekt­bewertung in Minuten</div>
-          <p class="bento-card-text">Unterlagen hochladen, Vergleichsobjekte analysieren lassen, Bewertung erhalten. Für Makler, Investoren und Verwalter.</p>
-          <div class="bento-tags" style="margin-top:14px">
-            <span class="bento-tag">€487.000 Schätzwert</span>
-          </div>
-        </div>
-        <!-- D: Berichte -->
-        <div class="bento-card bento-d">
-          <div class="bento-card-eyebrow">Berichte</div>
-          <div class="bento-card-title">Professionelle Berichte auf Knopfdruck</div>
-          <p class="bento-card-text">Aus Rohdaten oder Notizen erstellt dein KI-Mitarbeiter strukturierte, professionelle Dokumente — direkt als PDF.</p>
-          <ul class="bento-check-list" style="margin-top:14px">
-            <li><span class="bento-check-icon">✓</span>Executive Summary</li>
-            <li><span class="bento-check-icon">✓</span>Tabellen & Grafiken</li>
-            <li><span class="bento-check-icon">✓</span>PDF-Download</li>
-          </ul>
-        </div>
-        <!-- E: Price -->
-        <div class="bento-card bento-e">
-          <div class="bento-card-eyebrow">Preis</div>
-          <div class="bento-number"><span class="bento-number-accent">€0</span></div>
-          <div class="bento-card-title">Erste Aufgabe gratis — danach ab €0,99</div>
-          <p class="bento-card-text">Kein Abo, kein Vertrag. Du zahlst nur für das, was du nutzt.</p>
-        </div>
-        <!-- F: DSGVO -->
-        <div class="bento-card bento-f">
-          <div class="bento-card-eyebrow">Datenschutz</div>
-          <h3 class="bento-card-title">DSGVO-konform von Anfang an</h3>
-          <p class="bento-card-text">Betrieben von einem deutschen Unternehmen. Keine dauerhafte Datenspeicherung. Kein KI-Training mit deinen Dokumenten. Volle Transparenz.</p>
-          <ul class="bento-check-list">
-            <li><span class="bento-check-icon">✓</span>Betreiber: AI Employee GbR, Düsseldorf</li>
-            <li><span class="bento-check-icon">✓</span>Google Gemini API als Auftragsverarbeiter (AVV)</li>
-            <li><span class="bento-check-icon">✓</span>Kein Training mit deinen Daten</li>
-            <li><span class="bento-check-icon">✓</span>Art. 6 Abs. 1 lit. b DSGVO</li>
-          </ul>
-        </div>
-        <!-- G: Availability -->
-        <div class="bento-card bento-g bento-dark">
-          <div class="bento-card-eyebrow">Verfügbarkeit</div>
-          <h3 class="bento-card-title">24/7 bereit — kein Urlaub, keine Krankheit</h3>
-          <p class="bento-card-text">Dein KI-Mitarbeiter ist immer verfügbar. Morgens um 3 Uhr, am Wochenende, zwischen zwei Terminen — einfach hochladen und Ergebnis abholen.</p>
-          <div class="bento-tags" style="margin-top:16px">
-            <span class="bento-tag">Immer online</span>
-            <span class="bento-tag">Keine Installation</span>
-            <span class="bento-tag">Im Browser</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── USE CASES / AGENTS ── -->
-  <section class="agents-section" id="use-cases">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Für wen ist AI Employee?</div>
-        <h2 class="section-title" style="margin:0 auto 18px;max-width:680px">Überall dort, wo Dokumente Zeit kosten</h2>
-        <p class="section-sub" style="margin:0 auto">Von der Einzelkanzlei bis zum mittelständischen Makler — AI Employee passt sich deinem Alltag an.</p>
-      </div>
-      <div class="agents-grid reveal" style="transition-delay:0.1s">
-        <div class="agent-card">
-          <div class="agent-icon">🏠</div>
-          <div class="agent-title">Immobilienmakler</div>
-          <div class="agent-text">Exposés, Grundbuchauszüge und Kaufverträge in Minuten analysieren. Objekte automatisch bewerten. Mehr Termine, weniger Papierkram.</div>
-          <div class="agent-time">⚡ Exposé-Analyse in 3 min</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-icon">⚖️</div>
-          <div class="agent-title">Kanzleien & Notare</div>
-          <div class="agent-text">Verträge, Gutachten und juristische Dokumente schnell erfassen. Risiken identifizieren. Mandantenfragen fundiert beantworten.</div>
-          <div class="agent-time">⚡ Vertrag lesen in 2 min</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-icon">👥</div>
-          <div class="agent-title">HR & Personalmanagement</div>
-          <div class="agent-text">Bewerbungsunterlagen, Arbeitszeugnisse und Arbeitsverträge strukturiert auswerten. Entscheidungen auf Basis klarer Zusammenfassungen treffen.</div>
-          <div class="agent-time">⚡ Bewerbung in 90 Sekunden</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-icon">📊</div>
-          <div class="agent-title">Steuerberater</div>
-          <div class="agent-text">Jahresabschlüsse, Bescheide und Finanzdokumente automatisch aufbereiten. Mandanten besser beraten, ohne stundenlange Lesepflicht.</div>
-          <div class="agent-time">⚡ Bescheid in 4 min</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-icon">💼</div>
-          <div class="agent-title">Freiberufler & Berater</div>
-          <div class="agent-text">Angebote, Briefings und Projektdokumente schnell verstehen. Professionelle Zusammenfassungen für Kunden auf Knopfdruck.</div>
-          <div class="agent-time">⚡ Briefing in 2 min</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-icon">🏗️</div>
-          <div class="agent-title">Bau & Handwerk</div>
-          <div class="agent-text">Ausschreibungen, Leistungsverzeichnisse und Gutachten effizient auswerten. Weniger Zeit mit Dokumenten, mehr Zeit auf der Baustelle.</div>
-          <div class="agent-time">⚡ Ausschreibung in 5 min</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── SOLUTIONS / WHY DIFFERENT ── -->
-  <section class="solutions-section" id="solutions">
-    <div class="container">
-      <div class="solutions-split">
-        <div class="reveal">
-          <div class="section-eyebrow">Warum AI Employee?</div>
-          <h2 class="section-title">Nicht ChatGPT.<br>Nicht ein weiteres Abo.</h2>
-          <p class="section-sub">AI Employee ist kein allgemeiner KI-Chatbot — es ist ein spezialisierter Assistent, der genau für Büro- und Dokumentenaufgaben trainiert und optimiert wurde.</p>
-          <ul class="solutions-list">
-            <li class="solutions-list-item">
-              <div class="solutions-list-icon">📄</div>
-              <div>
-                <div class="solutions-list-title">Spezialisiert auf Dokumente</div>
-                <div class="solutions-list-text">Kein generischer Chatbot — AI Employee versteht PDFs, erkennt Strukturen und liefert gezielte Business-Antworten.</div>
-              </div>
-            </li>
-            <li class="solutions-list-item">
-              <div class="solutions-list-icon">💶</div>
-              <div>
-                <div class="solutions-list-title">Bezahlen was du nutzt</div>
-                <div class="solutions-list-text">Ab €0,99 pro Aufgabe, kein Monatsabo. Ideal wenn du nicht jeden Tag eine Analyse brauchst.</div>
-              </div>
-            </li>
-            <li class="solutions-list-item">
-              <div class="solutions-list-icon">🇩🇪</div>
-              <div>
-                <div class="solutions-list-title">Deutsch und datenschutzkonform</div>
-                <div class="solutions-list-text">Betrieben aus Düsseldorf. DSGVO-konform. Kein Training mit deinen Dokumenten. Keine Datenweitergabe an Dritte.</div>
-              </div>
-            </li>
-            <li class="solutions-list-item">
-              <div class="solutions-list-icon">⚡</div>
-              <div>
-                <div class="solutions-list-title">Sofort starten, keine Einrichtung</div>
-                <div class="solutions-list-text">Browser öffnen, hochladen, fertig. Keine Installation, kein Onboarding, keine Lernkurve.</div>
-              </div>
-            </li>
-          </ul>
-        </div>
-        <div class="solutions-visual reveal" style="transition-delay:0.12s">
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th>Feature</th>
-                <th style="text-align:center">AI Employee</th>
-                <th style="text-align:center">Andere</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>DSGVO-konform</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td><span class="cmp-no">✗</span></td>
-              </tr>
-              <tr>
-                <td>Kein Abo nötig</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td><span class="cmp-no">✗</span></td>
-              </tr>
-              <tr>
-                <td>Erste Aufgabe gratis</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td><span class="cmp-no">✗</span></td>
-              </tr>
-              <tr>
-                <td>Auf Deutsch optimiert</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td style="color:var(--text-tertiary);text-align:center">~</td>
-              </tr>
-              <tr>
-                <td>Keine Datenspeicherung</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td><span class="cmp-no">✗</span></td>
-              </tr>
-              <tr>
-                <td>Sofort nutzbar</td>
-                <td><span class="cmp-yes">✓</span></td>
-                <td><span class="cmp-yes">✓</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── SECURITY ── -->
-  <section class="security-section" id="security">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Sicherheit & Datenschutz</div>
-        <h2 class="section-title">Deine Daten bleiben deine Daten.</h2>
-        <p class="section-sub" style="margin:0 auto">Wir haben AI Employee von Grund auf mit Datenschutz as Design gebaut — nicht als nachträgliches Compliance-Häkchen.</p>
-      </div>
-      <div class="security-grid reveal" style="transition-delay:0.1s">
-        <div class="security-card">
-          <div class="security-card-icon">🔒</div>
-          <div class="security-card-title">Keine dauerhafte Datenspeicherung</div>
-          <div class="security-card-text">Hochgeladene Dokumente werden nach der Analyse nicht dauerhaft gespeichert. Was nicht existiert, kann nicht geleakt werden.</div>
-        </div>
-        <div class="security-card">
-          <div class="security-card-icon">🛡️</div>
-          <div class="security-card-title">DSGVO Art. 6 Abs. 1 lit. b</div>
-          <div class="security-card-text">Die KI-Verarbeitung erfolgt auf Basis eines klaren Rechtsgrundlagenpfads — Vertragserfüllung, Standardvertragsklauseln, EU-U.S. Data Privacy Framework.</div>
-        </div>
-        <div class="security-card">
-          <div class="security-card-icon">🤝</div>
-          <div class="security-card-title">Google Gemini als AVV-Partner</div>
-          <div class="security-card-text">Google agiert als Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Kein Training von KI-Modellen mit deinen Daten laut API-Bedingungen.</div>
-        </div>
-        <div class="security-card">
-          <div class="security-card-icon">🏢</div>
-          <div class="security-card-title">Betreiber in Deutschland</div>
-          <div class="security-card-text">AI Employee GbR, Neusser Str. 82, 40219 Düsseldorf. Deutsches Recht, volle Transparenz, direkter Kontakt bei Fragen.</div>
-        </div>
-        <div class="security-card">
-          <div class="security-card-icon">👁️</div>
-          <div class="security-card-title">Volle Transparenz</div>
-          <div class="security-card-text">Wir erklären genau was mit deinen Daten passiert — im Cookie-Banner, in der Datenschutzerklärung und jederzeit auf Anfrage.</div>
-        </div>
-        <div class="security-card">
-          <div class="security-card-icon">⚡</div>
-          <div class="security-card-title">Nur notwendige Cookies</div>
-          <div class="security-card-text">Keine Tracking-Cookies, kein Marketing-Pixel, keine Weitergabe an Werbeplattformen. Nur das technisch Notwendige nach § 25 TDDDG.</div>
-        </div>
-      </div>
-      <div class="security-certifications reveal" style="transition-delay:0.2s">
-        <span class="security-cert">🇩🇪 Deutsches Unternehmen</span>
-        <span class="security-cert">🛡️ DSGVO-konform</span>
-        <span class="security-cert">📋 AVV nach Art. 28</span>
-        <span class="security-cert">🔐 EU-U.S. DPF</span>
-        <span class="security-cert">🚫 Kein KI-Training</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── WORKFLOW ── -->
-  <section class="workflow-section" id="workflow">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">So einfach funktioniert's</div>
-        <h2 class="section-title" style="margin:0 auto 18px;max-width:640px">Von Upload zu Ergebnis in 4 Schritten</h2>
-        <p class="section-sub" style="margin:0 auto">Keine Einrichtung. Kein Onboarding. Einfach anfangen.</p>
-      </div>
-      <div class="workflow-steps reveal" style="transition-delay:0.1s">
-        <div class="workflow-step">
-          <div class="workflow-step-num">Schritt 01</div>
-          <div class="workflow-step-icon">📂</div>
-          <div class="workflow-step-title">Aufgabe wählen</div>
-          <div class="workflow-step-text">Wähle aus PDF-Analyse, Berichterstellung oder Immobilienbewertung — genau das, was du gerade brauchst.</div>
-          <span class="workflow-step-badge">< 10 Sekunden</span>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-step-num">Schritt 02</div>
-          <div class="workflow-step-icon">⬆️</div>
-          <div class="workflow-step-title">Dokument hochladen</div>
-          <div class="workflow-step-text">Ziehe dein PDF in den Browser oder klicke zum Hochladen. Bis zu 50 Seiten — kein Limit für die Dateigröße.</div>
-          <span class="workflow-step-badge">Drag & Drop</span>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-step-num">Schritt 03</div>
-          <div class="workflow-step-icon">🤖</div>
-          <div class="workflow-step-title">KI arbeitet</div>
-          <div class="workflow-step-text">Dein KI-Mitarbeiter liest, versteht und analysiert das Dokument. Sicher, schnell und ohne Datenspeicherung.</div>
-          <span class="workflow-step-badge">Ø 2 Minuten</span>
-        </div>
-        <div class="workflow-step">
-          <div class="workflow-step-num">Schritt 04</div>
-          <div class="workflow-step-icon">📥</div>
-          <div class="workflow-step-title">Ergebnis laden</div>
-          <div class="workflow-step-text">Du erhältst einen strukturierten Bericht — als lesbares Ergebnis im Browser oder direkt als PDF zum Download.</div>
-          <span class="workflow-step-badge">PDF-Download</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── USE CASES / AGENTS ── -->
-  <section class="agents-section" id="use-cases">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Für wen ist AI Employee?</div>
-        <h2 class="section-title" style="margin:0 auto 18px;max-width:680px">Überall dort, wo Dokumente Zeit kosten</h2>
-        <p class="section-sub" style="margin:0 auto">Von der Einzelkanzlei bis zum mittelständischen Makler — AI Employee passt sich deinem Alltag an.</p>
-      </div>
-      <div class="agents-grid reveal" style="transition-delay:0.1s">
-        <div class="agent-card"><div class="agent-icon">🏠</div><div class="agent-title">Immobilienmakler</div><div class="agent-text">Exposés, Grundbuchauszüge und Kaufverträge in Minuten analysieren. Objekte automatisch bewerten.</div><div class="agent-time">⚡ Exposé-Analyse in 3 min</div></div>
-        <div class="agent-card"><div class="agent-icon">⚖️</div><div class="agent-title">Kanzleien & Notare</div><div class="agent-text">Verträge, Gutachten und juristische Dokumente schnell erfassen. Risiken identifizieren.</div><div class="agent-time">⚡ Vertrag lesen in 2 min</div></div>
-        <div class="agent-card"><div class="agent-icon">👥</div><div class="agent-title">HR & Personal</div><div class="agent-text">Bewerbungsunterlagen, Arbeitszeugnisse und Arbeitsverträge strukturiert auswerten.</div><div class="agent-time">⚡ Bewerbung in 90 Sek.</div></div>
-        <div class="agent-card"><div class="agent-icon">📊</div><div class="agent-title">Steuerberater</div><div class="agent-text">Jahresabschlüsse und Bescheide automatisch aufbereiten. Mandanten besser beraten.</div><div class="agent-time">⚡ Bescheid in 4 min</div></div>
-        <div class="agent-card"><div class="agent-icon">💼</div><div class="agent-title">Freiberufler</div><div class="agent-text">Angebote, Briefings und Projektdokumente schnell verstehen. Summaries auf Knopfdruck.</div><div class="agent-time">⚡ Briefing in 2 min</div></div>
-        <div class="agent-card"><div class="agent-icon">🏗️</div><div class="agent-title">Bau & Handwerk</div><div class="agent-text">Ausschreibungen und Leistungsverzeichnisse effizient auswerten. Mehr Zeit auf der Baustelle.</div><div class="agent-time">⚡ Ausschreibung in 5 min</div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── SOLUTIONS / WHY DIFFERENT ── -->
-  <section class="solutions-section" id="solutions">
-    <div class="container">
-      <div class="solutions-split">
-        <div class="reveal">
-          <div class="section-eyebrow">Warum AI Employee?</div>
-          <h2 class="section-title">Nicht ChatGPT.<br>Nicht noch ein Abo.</h2>
-          <p class="section-sub">AI Employee ist kein allgemeiner Chatbot — spezialisiert auf Büro- und Dokumentenaufgaben, DSGVO-konform, ohne Monatsvertrag.</p>
-          <ul class="solutions-list">
-            <li class="solutions-list-item"><div class="solutions-list-icon">📄</div><div><div class="solutions-list-title">Spezialisiert auf Dokumente</div><div class="solutions-list-text">Versteht PDFs, erkennt Strukturen, liefert Business-Antworten.</div></div></li>
-            <li class="solutions-list-item"><div class="solutions-list-icon">💶</div><div><div class="solutions-list-title">Bezahle was du nutzt</div><div class="solutions-list-text">Ab €0,99 pro Aufgabe, kein Abo. Ideal wenn du nicht täglich analysierst.</div></div></li>
-            <li class="solutions-list-item"><div class="solutions-list-icon">🇩🇪</div><div><div class="solutions-list-title">Deutsch & datenschutzkonform</div><div class="solutions-list-text">Betrieben aus Düsseldorf. DSGVO. Kein Training mit deinen Daten.</div></div></li>
-            <li class="solutions-list-item"><div class="solutions-list-icon">⚡</div><div><div class="solutions-list-title">Sofort starten</div><div class="solutions-list-text">Browser öffnen, hochladen, fertig. Keine Installation, keine Lernkurve.</div></div></li>
-          </ul>
-        </div>
-        <div class="solutions-visual reveal" style="transition-delay:0.12s">
-          <table class="compare-table">
-            <thead><tr><th>Feature</th><th style="text-align:center">AI Employee</th><th style="text-align:center">Andere</th></tr></thead>
-            <tbody>
-              <tr><td>DSGVO-konform</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
-              <tr><td>Kein Abo nötig</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
-              <tr><td>Erste Aufgabe gratis</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
-              <tr><td>Auf Deutsch optimiert</td><td><span class="cmp-yes">✓</span></td><td style="color:var(--text-tertiary);text-align:center">~</td></tr>
-              <tr><td>Keine Datenspeicherung</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
-              <tr><td>Sofort nutzbar</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-yes">✓</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── SECURITY ── -->
-  <section class="security-section" id="security">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Sicherheit & Datenschutz</div>
-        <h2 class="section-title">Deine Daten bleiben deine Daten.</h2>
-        <p class="section-sub" style="margin:0 auto">Datenschutz by Design — nicht als Compliance-Häkchen, sondern als Grundprinzip.</p>
-      </div>
-      <div class="security-grid reveal" style="transition-delay:0.1s">
-        <div class="security-card"><div class="security-card-icon">🔒</div><div class="security-card-title">Keine dauerhafte Datenspeicherung</div><div class="security-card-text">Hochgeladene Dokumente werden nach der Analyse nicht dauerhaft gespeichert.</div></div>
-        <div class="security-card"><div class="security-card-icon">🛡️</div><div class="security-card-title">DSGVO Art. 6 Abs. 1 lit. b</div><div class="security-card-text">Klarer Rechtsgrundlagenpfad, Standardvertragsklauseln, EU-U.S. Data Privacy Framework.</div></div>
-        <div class="security-card"><div class="security-card-icon">🤝</div><div class="security-card-title">Google Gemini als AVV-Partner</div><div class="security-card-text">AVV nach Art. 28 DSGVO. Kein Training von KI-Modellen mit deinen Daten.</div></div>
-        <div class="security-card"><div class="security-card-icon">🏢</div><div class="security-card-title">Betreiber in Deutschland</div><div class="security-card-text">AI Employee GbR, Neusser Str. 82, 40219 Düsseldorf. Deutsches Recht.</div></div>
-        <div class="security-card"><div class="security-card-icon">👁️</div><div class="security-card-title">Volle Transparenz</div><div class="security-card-text">Was mit deinen Daten passiert, erklären wir genau — im Cookie-Banner und in der Datenschutzerklärung.</div></div>
-        <div class="security-card"><div class="security-card-icon">⚡</div><div class="security-card-title">Nur notwendige Cookies</div><div class="security-card-text">Keine Tracking-Cookies, kein Marketing-Pixel, nur technisch Notwendiges nach § 25 TDDDG.</div></div>
-      </div>
-      <div class="security-certifications reveal" style="transition-delay:0.2s">
-        <span class="security-cert">🇩🇪 Deutsches Unternehmen</span>
-        <span class="security-cert">🛡️ DSGVO-konform</span>
-        <span class="security-cert">📋 AVV nach Art. 28</span>
-        <span class="security-cert">🔐 EU-U.S. DPF</span>
-        <span class="security-cert">🚫 Kein KI-Training</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── PRICING ── -->
-  <section class="pricing-section" id="pricing">
-    <div class="container">
-      <div class="section-header-center reveal">
-        <div class="section-eyebrow">Transparente Preise</div>
-        <h2 class="section-title" style="margin:0 auto 18px;max-width:640px">Kein Abo-Dschungel. Kein Risiko.</h2>
-        <p class="section-sub" style="margin:0 auto">Starte kostenlos und bezahle nur für das, was du wirklich nutzt.</p>
-      </div>
-      <div class="pricing-grid reveal" style="transition-delay:0.1s">
-        <div class="pricing-card">
-          <div class="pricing-eyebrow">Einstieg</div>
-          <div class="pricing-name">Starter</div>
-          <div class="pricing-price"><sup>€</sup>0</div>
-          <div class="pricing-price-note">Erste Analyse komplett kostenlos</div>
-          <div class="pricing-divider"></div>
-          <ul class="pricing-features">
-            <li>1 Aufgabe gratis testen</li>
-            <li>PDF-Analyse bis 20 Seiten</li>
-            <li>Zusammenfassung & Top-Erkenntnisse</li>
-            <li>Kein Konto erforderlich</li>
-          </ul>
-          <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-outline">Kostenlos starten</a>
-        </div>
-        <div class="pricing-card pricing-card-featured">
-          <div class="pricing-eyebrow">Beliebteste Option</div>
-          <div class="pricing-name">Pay-per-Task</div>
-          <div class="pricing-price"><sup>€</sup>0<span style="font-size:28px;vertical-align:baseline">,99</span></div>
-          <div class="pricing-price-note">pro Aufgabe — kein Abo, kein Vertrag</div>
-          <div class="pricing-divider"></div>
-          <ul class="pricing-features">
-            <li>PDF-Analyse bis 50 Seiten</li>
-            <li>Professionelle Berichterstellung</li>
-            <li>Immobilienbewertung</li>
-            <li>PDF-Download des Ergebnisses</li>
-            <li>Ausführlicher oder kompakter Bericht</li>
-            <li>DSGVO-konform, keine Datenspeicherung</li>
-          </ul>
-          <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-white">Jetzt starten →</a>
-        </div>
-        <div class="pricing-card">
-          <div class="pricing-eyebrow">Demnächst</div>
-          <div class="pricing-name">Teams</div>
-          <div class="pricing-price" style="font-size:32px;margin:20px 0 6px;letter-spacing:-0.02em">Bald</div>
-          <div class="pricing-price-note">Für Teams & Unternehmen</div>
-          <div class="pricing-divider"></div>
-          <ul class="pricing-features">
-            <li>Mehrere Nutzer</li>
-            <li>Unbegrenzte Aufgaben</li>
-            <li>E-Mail-Sortierung (Beta)</li>
-            <li>Eigener KI-Mitarbeiter-Name</li>
-            <li>API-Zugang</li>
-          </ul>
-          <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-outline">Interesse melden</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── FINAL CTA ── -->
-  <section class="cta-section" id="cta">
-    <div class="container">
-      <h2 class="cta-headline reveal">Starte heute.<br>Spare ab morgen.</h2>
-      <p class="cta-sub reveal" style="transition-delay:0.08s">Die erste Analyse ist kostenlos. Kein Konto, keine Kreditkarte, keine Einrichtung.</p>
-      <div class="cta-actions reveal" style="transition-delay:0.14s">
-        <a href="https://a-i-employee.de" class="btn-primary" style="font-size:17px;padding:16px 32px">Kostenlos ausprobieren →</a>
-        <a href="mailto:hallo@a-i-employee.de" class="btn-secondary">Fragen? Schreib uns</a>
-      </div>
-      <div class="cta-note reveal" style="transition-delay:0.2s">Keine Kreditkarte · DSGVO-konform · Made in Germany</div>
-    </div>
-  </section>
-
-  <!-- ── FOOTER ── -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <div class="footer-brand-logo">AI<span>Employee</span></div>
-          <div class="footer-brand-text">Dein KI-Mitarbeiter für Büroarbeit. PDFs analysieren, Berichte erstellen, Immobilien bewerten — DSGVO-konform, ohne Abo.</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.3)">AI Employee GbR · Düsseldorf</div>
-        </div>
-        <div>
-          <div class="footer-col-title">Produkt</div>
-          <ul class="footer-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#workflow">So geht's</a></li>
-            <li><a href="#pricing">Preise</a></li>
-            <li><a href="https://a-i-employee.de">Zur App</a></li>
-          </ul>
-        </div>
-        <div>
-          <div class="footer-col-title">Anwendungen</div>
-          <ul class="footer-links">
-            <li><a href="#use-cases">Immobilienmakler</a></li>
-            <li><a href="#use-cases">Kanzleien</a></li>
-            <li><a href="#use-cases">HR & Personal</a></li>
-            <li><a href="#use-cases">Steuerberater</a></li>
-          </ul>
-        </div>
-        <div>
-          <div class="footer-col-title">Rechtliches</div>
-          <ul class="footer-links">
-            <li><a href="#" onclick="openModal('impressum');return false">Impressum</a></li>
-            <li><a href="#" onclick="openModal('datenschutz');return false">Datenschutz</a></li>
-            <li><a href="mailto:hallo@a-i-employee.de">Kontakt</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <div class="footer-bottom-copy">© 2025 AI Employee GbR · Neusser Str. 82, 40219 Düsseldorf</div>
-        <div class="footer-bottom-links">
-          <a href="#" onclick="openModal('impressum');return false">Impressum</a>
-          <a href="#" onclick="openModal('datenschutz');return false">Datenschutz</a>
-          <a href="mailto:datenschutz@a-i-employee.de">datenschutz@a-i-employee.de</a>
-        </div>
-      </div>
-    </div>
-  </footer>
-
-  <!-- ── MODAL: Impressum ── -->
-  <div class="modal-overlay" id="modal-impressum" onclick="if(event.target===this)closeModal('impressum')">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">Impressum</div>
-        <button class="modal-close" onclick="closeModal('impressum')">✕</button>
-      </div>
-      <div class="modal-body">
-        <h3>Angaben gemäß § 5 TMG</h3>
-        <p><strong>AI Employee GbR</strong><br>Doris Greinert<br>Neusser Str. 82<br>40219 Düsseldorf</p>
-        <h3>Kontakt</h3>
-        <p>E-Mail: <a href="mailto:hallo@a-i-employee.de">hallo@a-i-employee.de</a></p>
-        <h3>Verantwortlich für den Inhalt</h3>
-        <p>Doris Greinert, Neusser Str. 82, 40219 Düsseldorf</p>
-        <h3>Haftungsausschluss</h3>
-        <p>Die durch die Seitenbetreiber erstellten Inhalte unterliegen dem deutschen Urheberrecht. Die Vervielfältigung bedarf der schriftlichen Zustimmung des Erstellers.</p>
-        <h3>KI-generierte Inhalte</h3>
-        <p>Die durch AI Employee erstellten Analysen und Berichte werden durch KI generiert und stellen keine Rechts-, Steuer- oder Finanzberatung dar. Sie dienen ausschließlich der Unterstützung und ersetzen keine professionelle Beratung.</p>
-      </div>
+<!-- ═══ TRUST STRIP ═══ -->
+<div class="trust-strip">
+  <div class="container">
+    <div class="trust-label">Vertrauen von Unternehmern in Deutschland</div>
+    <div class="trust-badges">
+      <span class="trust-badge"><span class="trust-badge-icon">🇩🇪</span> Deutsches Unternehmen</span>
+      <span class="trust-badge"><span class="trust-badge-icon">🛡️</span> DSGVO-konform</span>
+      <span class="trust-badge"><span class="trust-badge-icon">🔒</span> Keine Datenspeicherung</span>
+      <span class="trust-badge"><span class="trust-badge-icon">⚡</span> Kein Abo-Zwang</span>
+      <span class="trust-badge"><span class="trust-badge-icon">🆓</span> Erste Aufgabe kostenlos</span>
     </div>
   </div>
+</div>
 
-  <!-- ── MODAL: Datenschutz ── -->
-  <div class="modal-overlay" id="modal-datenschutz" onclick="if(event.target===this)closeModal('datenschutz')">
-    <div class="modal-box">
-      <div class="modal-header">
-        <div class="modal-title">Datenschutzerklärung</div>
-        <button class="modal-close" onclick="closeModal('datenschutz')">✕</button>
+<!-- ═══ BENTO / PRODUKT ═══ -->
+<section id="produkt" class="bento-section">
+  <div class="container-wide">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Produkt</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:660px">Ein Mitarbeiter.<br>Viele Aufgaben.</h2>
+      <p class="sec-sub">Kein Monatsabo. Keine Installation. Die erste Analyse ist kostenlos.</p>
+    </div>
+    <div class="bento-grid reveal" style="transition-delay:.10s">
+      <!-- A: large — PDF -->
+      <div class="bento-card bento-a bento-card-accent">
+        <div class="bento-label">PDF-Analyse</div>
+        <h3 class="bento-title">48-seitige Verträge in 2 Minuten verstehen</h3>
+        <p class="bento-text">Lade ein beliebiges Dokument hoch — Verträge, Gutachten, Berichte — und dein KI-Mitarbeiter fasst zusammen, beantwortet Fragen und markiert kritische Stellen.</p>
+        <div class="bento-tags">
+          <span class="bento-tag">PDF-Upload</span>
+          <span class="bento-tag">Zusammenfassung</span>
+          <span class="bento-tag">Fragen stellen</span>
+          <span class="bento-tag">Kritische Stellen</span>
+        </div>
+        <div style="margin-top:18px;">
+          <div class="bento-progress-row"><span class="bento-progress-label">Executive Summary</span><span class="bento-progress-val">✓</span></div>
+          <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:100%"></div></div>
+          <div class="bento-progress-row"><span class="bento-progress-label">Top-3-Risiken</span><span class="bento-progress-val">✓</span></div>
+          <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:100%"></div></div>
+          <div class="bento-progress-row"><span class="bento-progress-label">Handlungsempfehlungen</span><span class="bento-progress-val">87%</span></div>
+          <div class="bento-progress-bar"><div class="bento-progress-fill" style="width:87%"></div></div>
+        </div>
       </div>
-      <div class="modal-body">
-        <h3>1. Verantwortlicher</h3>
-        <p>AI Employee GbR, Doris Greinert, Neusser Str. 82, 40219 Düsseldorf<br>E-Mail: <a href="mailto:datenschutz@a-i-employee.de">datenschutz@a-i-employee.de</a></p>
-        <h3>2. Erhobene Daten</h3>
-        <p>Nur technisch notwendige Daten: Sitzungs-Cookies für Anmeldung und Einstellungen (lokal im Browser, keine Server-Übertragung).</p>
-        <h3>3. KI-Verarbeitung</h3>
-        <p>Dokumente werden zur Verarbeitung an die Google Gemini API übertragen. Google agiert als Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Keine dauerhafte Datenspeicherung. Kein Training mit deinen Daten.</p>
-        <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO. Google ist nach dem EU-U.S. Data Privacy Framework zertifiziert.</p>
-        <h3>4. Cookies (§ 25 TDDDG)</h3>
-        <ul>
-          <li><strong>ai_agent_user</strong> — Anmeldestatus lokal</li>
-          <li><strong>ai_character, currentLang</strong> — Einstellungen lokal</li>
-          <li><strong>ai_last_activity</strong> — Inaktive Sitzungen erkennen</li>
+      <!-- B: dark — time saved -->
+      <div class="bento-card bento-b bento-dark">
+        <div class="bento-label">Zeitersparnis</div>
+        <div class="bento-num">5+</div>
+        <h3 class="bento-title">Stunden pro Woche zurückgewonnen</h3>
+        <p class="bento-text">Statt stundenlanger manueller Arbeit erledigst du dieselbe Aufgabe in Minuten — und kannst dich auf das Wesentliche konzentrieren.</p>
+        <div class="bento-tags" style="margin-top:16px">
+          <span class="bento-tag">Immer online</span>
+          <span class="bento-tag">24/7 verfügbar</span>
+        </div>
+      </div>
+      <!-- C: Immobilien -->
+      <div class="bento-card bento-c bento-card-accent">
+        <div class="bento-label">Immobilien</div>
+        <h3 class="bento-title">Objekt­bewertung in Minuten</h3>
+        <p class="bento-text">Unterlagen hochladen, Vergleichsobjekte analysieren lassen, Bewertung erhalten.</p>
+        <div class="bento-tags" style="margin-top:14px">
+          <span class="bento-tag">€487.000 Schätzwert</span>
+        </div>
+      </div>
+      <!-- D: Berichte -->
+      <div class="bento-card bento-d">
+        <div class="bento-label">Berichte</div>
+        <h3 class="bento-title">Professionell auf Knopfdruck</h3>
+        <p class="bento-text">Aus Rohdaten oder Notizen erstellt dein KI-Mitarbeiter strukturierte Berichte als PDF.</p>
+        <ul class="bento-checklist" style="margin-top:14px">
+          <li><span class="bento-check-icon">✓</span>Executive Summary</li>
+          <li><span class="bento-check-icon">✓</span>Tabellen & Kennzahlen</li>
+          <li><span class="bento-check-icon">✓</span>PDF-Download</li>
         </ul>
-        <h3>5. Deine Rechte</h3>
-        <p>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch. Kontakt: <a href="mailto:datenschutz@a-i-employee.de">datenschutz@a-i-employee.de</a></p>
-        <h3>6. Beschwerderecht</h3>
-        <p>Du kannst dich beim Landesbeauftragten für Datenschutz und Informationsfreiheit NRW beschweren.</p>
+      </div>
+      <!-- E: Preis -->
+      <div class="bento-card bento-e">
+        <div class="bento-label">Preis</div>
+        <div class="bento-num" style="font-size:54px;">€0</div>
+        <h3 class="bento-title">Erste Aufgabe gratis — danach ab €0,99</h3>
+        <p class="bento-text">Kein Abo, kein Vertrag. Du zahlst nur für das, was du nutzt.</p>
+      </div>
+      <!-- F: DSGVO -->
+      <div class="bento-card bento-f">
+        <div class="bento-label">Datenschutz</div>
+        <h3 class="bento-title">DSGVO-konform von Anfang an</h3>
+        <p class="bento-text">Betrieben von AI Employee GbR, Düsseldorf. Keine dauerhafte Datenspeicherung. Kein Training mit deinen Dokumenten.</p>
+        <ul class="bento-checklist">
+          <li><span class="bento-check-icon">✓</span>Betreiber: AI Employee GbR, Düsseldorf</li>
+          <li><span class="bento-check-icon">✓</span>Google Gemini als Auftragsverarbeiter (AVV)</li>
+          <li><span class="bento-check-icon">✓</span>Kein KI-Training mit deinen Daten</li>
+        </ul>
+      </div>
+      <!-- G: dark — availability -->
+      <div class="bento-card bento-g bento-dark">
+        <div class="bento-label">Verfügbarkeit</div>
+        <h3 class="bento-title">24/7 bereit — kein Urlaub, keine Krankheit</h3>
+        <p class="bento-text">Dein KI-Mitarbeiter ist immer da. Morgens um 3 Uhr, am Wochenende, zwischen zwei Terminen. Einfach hochladen und Ergebnis abholen.</p>
+        <div class="bento-tags" style="margin-top:16px">
+          <span class="bento-tag">Immer online</span>
+          <span class="bento-tag">Keine Installation</span>
+          <span class="bento-tag">Im Browser</span>
+        </div>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- ── JS ── -->
-  <script>
-    var nav = document.getElementById('main-nav');
-    window.addEventListener('scroll', function() {
-      nav.classList.toggle('scrolled', window.scrollY > 20);
-    }, { passive: true });
+<!-- ═══ WORKFLOW ═══ -->
+<section id="workflow" class="workflow-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Funktionen</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:640px">Von Upload zu Ergebnis in 4 Schritten</h2>
+      <p class="sec-sub" style="color:rgba(255,255,255,0.50)">Keine Einrichtung. Kein Onboarding. Einfach anfangen.</p>
+    </div>
+    <div class="workflow-steps reveal" style="transition-delay:.10s">
+      <div class="workflow-step"><div class="workflow-step-num">Schritt 01</div><div class="workflow-step-icon-wrap">📂</div><div class="workflow-step-title">Aufgabe wählen</div><div class="workflow-step-text">Wähle aus PDF-Analyse, Berichterstellung oder Immobilienbewertung.</div><span class="workflow-step-badge">&lt;10 Sekunden</span></div>
+      <div class="workflow-step"><div class="workflow-step-num">Schritt 02</div><div class="workflow-step-icon-wrap">⬆️</div><div class="workflow-step-title">Dokument hochladen</div><div class="workflow-step-text">Ziehe dein PDF in den Browser oder klicke zum Hochladen. Bis zu 50 Seiten.</div><span class="workflow-step-badge">Drag &amp; Drop</span></div>
+      <div class="workflow-step"><div class="workflow-step-num">Schritt 03</div><div class="workflow-step-icon-wrap">🤖</div><div class="workflow-step-title">KI arbeitet</div><div class="workflow-step-text">Dein KI-Mitarbeiter liest, versteht und analysiert — sicher, schnell, ohne Datenspeicherung.</div><span class="workflow-step-badge">Ø 2 Minuten</span></div>
+      <div class="workflow-step"><div class="workflow-step-num">Schritt 04</div><div class="workflow-step-icon-wrap">📥</div><div class="workflow-step-title">Ergebnis laden</div><div class="workflow-step-text">Strukturierter Bericht im Browser oder direkt als PDF-Download.</div><span class="workflow-step-badge">PDF-Download</span></div>
+    </div>
+  </div>
+</section>
 
-    var revealObs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); }
+<!-- ═══ TEAM ═══ -->
+<section id="team" class="team-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Dein Team</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:640px">Dein digitales Team.</h2>
+      <p class="sec-sub">Spezialisierte KI-Mitarbeiter für unterschiedliche Aufgaben.</p>
+    </div>
+    <div class="team-grid reveal" style="transition-delay:.10s">
+      <div class="team-card">
+        <div class="team-avatar"><img src="https://a-i-employee.de/alex.png" alt="Alex"/></div>
+        <div class="team-info">
+          <div class="team-name">Alex</div>
+          <div class="team-role">Analytisch &amp; präzise</div>
+          <div class="team-desc">Spezialisiert auf das gründliche Lesen und Analysieren von Dokumenten. Liefert strukturierte Zusammenfassungen, erkennt Risiken und erstellt professionelle Berichte.</div>
+          <div class="team-skills"><span class="team-skill">Dokumente</span><span class="team-skill">Analyse</span><span class="team-skill">Recherche</span><span class="team-skill">Berichte</span></div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar"><img src="https://a-i-employee.de/emma.png" alt="Emma"/></div>
+        <div class="team-info">
+          <div class="team-name">Emma</div>
+          <div class="team-role">Effizient &amp; kommunikativ</div>
+          <div class="team-desc">Stark in Kommunikation und Organisation. Sortiert E-Mails, plant Aufgaben und hält deinen Büroalltag strukturiert — schnell und verlässlich.</div>
+          <div class="team-skills"><span class="team-skill">E-Mail</span><span class="team-skill">Organisation</span><span class="team-skill">Support</span><span class="team-skill">Planung</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LÖSUNGEN ═══ -->
+<section id="loesungen" class="agents-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Lösungen</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:680px">Überall dort, wo Dokumente Zeit kosten.</h2>
+      <p class="sec-sub">Von der Einzelkanzlei bis zum mittelständischen Makler.</p>
+    </div>
+    <div class="agents-grid reveal" style="transition-delay:.10s">
+      <div class="agent-card"><div class="agent-icon-wrap">🏠</div><div class="agent-title">Immobilienmakler</div><div class="agent-text">Exposés, Grundbuchauszüge und Kaufverträge in Minuten analysieren. Objekte automatisch bewerten.</div><div class="agent-time">⚡ Exposé in 3 min</div></div>
+      <div class="agent-card"><div class="agent-icon-wrap">⚖️</div><div class="agent-title">Kanzleien &amp; Notare</div><div class="agent-text">Verträge und juristische Dokumente schnell erfassen. Risiken identifizieren.</div><div class="agent-time">⚡ Vertrag in 2 min</div></div>
+      <div class="agent-card"><div class="agent-icon-wrap">👥</div><div class="agent-title">HR &amp; Personal</div><div class="agent-text">Bewerbungsunterlagen und Arbeitsverträge strukturiert auswerten.</div><div class="agent-time">⚡ Bewerbung in 90 Sek.</div></div>
+      <div class="agent-card"><div class="agent-icon-wrap">📊</div><div class="agent-title">Steuerberater</div><div class="agent-text">Jahresabschlüsse und Bescheide automatisch aufbereiten.</div><div class="agent-time">⚡ Bescheid in 4 min</div></div>
+      <div class="agent-card"><div class="agent-icon-wrap">💼</div><div class="agent-title">Freiberufler</div><div class="agent-text">Angebote, Briefings und Projektdokumente schnell verstehen.</div><div class="agent-time">⚡ Briefing in 2 min</div></div>
+      <div class="agent-card"><div class="agent-icon-wrap">🏗️</div><div class="agent-title">Bau &amp; Handwerk</div><div class="agent-text">Ausschreibungen und Leistungsverzeichnisse effizient auswerten.</div><div class="agent-time">⚡ Ausschreibung in 5 min</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ IMMOBILIEN ═══ -->
+<section id="immobilien" class="immo-section">
+  <div class="container">
+    <div class="immo-split">
+      <div class="reveal">
+        <div class="sec-label">AI Employee für Immobilien</div>
+        <h2 class="sec-title">Bewerte jedes Objekt.<br>In Minuten.</h2>
+        <p class="sec-sub" style="font-size:16px">Unterlagen hochladen, Vergleichsobjekte analysieren lassen, Marktwert erhalten.</p>
+        <ul class="immo-list">
+          <li><span class="immo-list-icon">✓</span>Exposés und Gutachten automatisch auswerten</li>
+          <li><span class="immo-list-icon">✓</span>Vergleichsobjekte aus Unterlagen analysieren</li>
+          <li><span class="immo-list-icon">✓</span>Strukturierter Bewertungsbericht als PDF</li>
+          <li><span class="immo-list-icon">✓</span>Für Makler, Investoren &amp; Verwalter</li>
+        </ul>
+        <a href="https://a-i-employee.de" class="btn-primary">Immobilie bewerten →</a>
+      </div>
+      <div class="reveal" style="transition-delay:.12s">
+        <div class="immo-dashboard">
+          <div class="immo-dash-header"><div class="immo-dash-title">🏠 Immobilienbewertung</div><div class="immo-dash-status">✓ Analyse abgeschlossen</div></div>
+          <div class="immo-marktwert">€ 487.000</div>
+          <div class="immo-range">Preisspanne: € 440.000 – € 530.000</div>
+          <div class="immo-metrics">
+            <div class="immo-metric"><div class="immo-metric-label">Lagebewertung</div><div class="immo-metric-val">8.2 <span style="font-size:13px;font-weight:400;color:var(--text-secondary)">/10</span></div><div class="immo-metric-sub">Sehr gut</div></div>
+            <div class="immo-metric"><div class="immo-metric-label">Investitionsscore</div><div class="immo-metric-val">7.4 <span style="font-size:13px;font-weight:400;color:var(--text-secondary)">/10</span></div><div class="immo-metric-sub">Empfehlenswert</div></div>
+            <div class="immo-metric"><div class="immo-metric-label">Substanz</div><div class="immo-metric-val">85%</div><div class="immo-metric-sub">Baujahr 1998</div></div>
+            <div class="immo-metric"><div class="immo-metric-label">Ertragspotenzial</div><div class="immo-metric-val">+24%</div><div class="immo-metric-sub">über Marktschnitt</div></div>
+          </div>
+          <div class="immo-compare">Verglichen mit <strong>12 ähnlichen Objekten</strong> · Analyse in 3 min 48 sek</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SOLUTIONS ═══ -->
+<section class="solutions-section">
+  <div class="container">
+    <div class="solutions-split">
+      <div class="reveal">
+        <div class="sec-label">Warum AI Employee?</div>
+        <h2 class="sec-title">Nicht ChatGPT.<br>Nicht noch ein Abo.</h2>
+        <p class="sec-sub" style="font-size:16px">AI Employee ist kein allgemeiner Chatbot — spezialisiert auf Dokumente, DSGVO-konform, ohne Monatsvertrag.</p>
+        <ul class="solutions-list">
+          <li class="sol-item"><div class="sol-icon">📄</div><div><div class="sol-title">Spezialisiert auf Dokumente</div><div class="sol-text">Versteht PDFs, erkennt Strukturen, liefert Business-Antworten.</div></div></li>
+          <li class="sol-item"><div class="sol-icon">💶</div><div><div class="sol-title">Bezahle was du nutzt</div><div class="sol-text">Ab €0,99 pro Aufgabe, kein Abo. Ideal wenn du nicht täglich analysierst.</div></div></li>
+          <li class="sol-item"><div class="sol-icon">🇩🇪</div><div><div class="sol-title">Deutsch &amp; DSGVO-konform</div><div class="sol-text">Betrieben aus Düsseldorf. Kein Training mit deinen Daten.</div></div></li>
+          <li class="sol-item"><div class="sol-icon">⚡</div><div><div class="sol-title">Sofort starten</div><div class="sol-text">Browser öffnen, hochladen, fertig. Keine Installation, keine Lernkurve.</div></div></li>
+        </ul>
+      </div>
+      <div class="solutions-visual reveal" style="transition-delay:.12s">
+        <table class="compare-table">
+          <thead><tr><th>Feature</th><th>AI Employee</th><th>Andere</th></tr></thead>
+          <tbody>
+            <tr><td>DSGVO-konform</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
+            <tr><td>Kein Abo nötig</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
+            <tr><td>Erste Aufgabe gratis</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
+            <tr><td>Auf Deutsch</td><td><span class="cmp-yes">✓</span></td><td style="color:var(--text-tertiary);text-align:center">~</td></tr>
+            <tr><td>Keine Datenspeicherung</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-no">✗</span></td></tr>
+            <tr><td>Sofort nutzbar</td><td><span class="cmp-yes">✓</span></td><td><span class="cmp-yes">✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECURITY ═══ -->
+<section id="sicherheit" class="security-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Sicherheit</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:640px">Deine Daten sind deine Daten.</h2>
+      <p class="sec-sub">Datenschutz by Design — kein nachträgliches Compliance-Häkchen, sondern Grundprinzip.</p>
+    </div>
+    <div class="security-grid reveal" style="transition-delay:.10s">
+      <div class="security-card"><div class="security-icon">🇩🇪</div><div><div class="security-title">Deutscher Anbieter</div><div class="security-text">AI Employee GbR, Neusser Str. 82, 40219 Düsseldorf. Deutsches Recht, direkter Kontakt.</div></div></div>
+      <div class="security-card"><div class="security-icon">🚫</div><div><div class="security-title">Kein Training mit Kundendaten</div><div class="security-text">Laut Googles bezahlter API-Bedingungen findet kein Training von KI-Modellen mit deinen Daten statt.</div></div></div>
+      <div class="security-card"><div class="security-icon">🔒</div><div><div class="security-title">Keine dauerhafte Datenspeicherung</div><div class="security-text">Hochgeladene Dokumente werden nach der Analyse nicht dauerhaft gespeichert.</div></div></div>
+      <div class="security-card"><div class="security-icon">🔐</div><div><div class="security-title">SSL &amp; sichere Übertragung</div><div class="security-text">Alle Daten werden verschlüsselt übertragen. Google Gemini als Auftragsverarbeiter (Art. 28 DSGVO).</div></div></div>
+    </div>
+    <div class="security-more reveal" style="transition-delay:.20s">
+      <a href="#" onclick="openModal('datenschutz');return false">Mehr über Datenschutz erfahren →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PRICING ═══ -->
+<section id="pricing" class="pricing-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">Preise</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:640px">Kein Abo-Dschungel. Kein Risiko.</h2>
+      <p class="sec-sub">Starte kostenlos und bezahle nur für das, was du wirklich nutzt.</p>
+    </div>
+    <div class="pricing-grid reveal" style="transition-delay:.10s">
+      <div class="pricing-card">
+        <div class="pricing-eyebrow">Einstieg</div>
+        <div class="pricing-name">Starter</div>
+        <div class="pricing-price"><sup>€</sup>0</div>
+        <div class="pricing-note">Erste Analyse komplett kostenlos</div>
+        <div class="pricing-div"></div>
+        <ul class="pricing-features">
+          <li>1 Aufgabe gratis testen</li><li>PDF-Analyse bis 20 Seiten</li>
+          <li>Zusammenfassung &amp; Top-Erkenntnisse</li><li>Kein Konto erforderlich</li>
+        </ul>
+        <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-outline">Kostenlos starten</a>
+      </div>
+      <div class="pricing-card pricing-featured">
+        <div class="pricing-eyebrow">Beliebteste Option</div>
+        <div class="pricing-name">Pay-per-Task</div>
+        <div class="pricing-price"><sup>€</sup>0<span style="font-size:26px;vertical-align:baseline">,99</span></div>
+        <div class="pricing-note">pro Aufgabe — kein Abo, kein Vertrag</div>
+        <div class="pricing-div"></div>
+        <ul class="pricing-features">
+          <li>PDF-Analyse bis 50 Seiten</li><li>Professionelle Berichterstellung</li>
+          <li>Immobilienbewertung</li><li>PDF-Download des Ergebnisses</li>
+          <li>Kurzer oder ausführlicher Bericht</li><li>DSGVO-konform, keine Datenspeicherung</li>
+        </ul>
+        <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-white">Jetzt starten →</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-eyebrow">Demnächst</div>
+        <div class="pricing-name">Teams</div>
+        <div class="pricing-price" style="font-size:30px;margin:18px 0 6px;letter-spacing:-0.02em;color:var(--text-secondary)">Bald</div>
+        <div class="pricing-note">Für Teams &amp; Unternehmen</div>
+        <div class="pricing-div"></div>
+        <ul class="pricing-features">
+          <li>Mehrere Nutzer</li><li>Unbegrenzte Aufgaben</li>
+          <li>E-Mail-Sortierung (Beta)</li><li>Eigener KI-Mitarbeiter-Name</li><li>API-Zugang</li>
+        </ul>
+        <a href="https://a-i-employee.de" class="pricing-cta pricing-cta-outline">Interesse melden</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section id="faq" class="faq-section">
+  <div class="container">
+    <div class="sec-header-center reveal">
+      <div class="sec-label">FAQ</div>
+      <h2 class="sec-title" style="margin:0 auto 16px;max-width:640px">Häufige Fragen.</h2>
+      <p class="sec-sub">Alles was du vor dem Start wissen solltest.</p>
+    </div>
+    <div class="faq-list reveal" style="transition-delay:.10s">
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Kann KI wirklich meine PDFs lesen?<span class="faq-arrow">▾</span></div><div class="faq-answer">Ja. AI Employee nutzt Google Gemini — eines der fortschrittlichsten Sprachmodelle — um den vollständigen Text deines PDFs zu analysieren. Funktioniert mit Verträgen, Gutachten, Berichten und Exposés.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Muss ich etwas installieren?<span class="faq-arrow">▾</span></div><div class="faq-answer">Nein. AI Employee läuft vollständig im Browser. Keine App, kein Plugin, keine Installation. Einfach öffnen und loslegen.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Was passiert wenn das Dokument auf Englisch ist?<span class="faq-arrow">▾</span></div><div class="faq-answer">AI Employee verarbeitet Dokumente in Deutsch und Englisch. Du kannst wählen in welcher Sprache das Ergebnis ausgegeben werden soll.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Wo werden meine Daten gespeichert?<span class="faq-arrow">▾</span></div><div class="faq-answer">Hochgeladene Dokumentinhalte werden nicht dauerhaft gespeichert. Verarbeitung über Google Gemini API (Auftragsverarbeiter nach Art. 28 DSGVO). Kein Training mit deinen Daten laut API-Bedingungen.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Wie funktioniert die Abrechnung?<span class="faq-arrow">▾</span></div><div class="faq-answer">Erste Analyse kostenlos. Danach ab €0,99 pro Aufgabe — kein Abo, kein Vertrag. Du zahlst nur für das, was du nutzt.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Ist AI Employee DSGVO-konform?<span class="faq-arrow">▾</span></div><div class="faq-answer">Ja. Betrieben von AI Employee GbR, Düsseldorf. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Details in der Datenschutzerklärung.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Was ist der Unterschied zwischen Alex und Emma?<span class="faq-arrow">▾</span></div><div class="faq-answer">Alex ist auf Analyse und Berichte spezialisiert — ideal für Dokumente und Immobilien. Emma ist auf Kommunikation und Organisation ausgerichtet — für E-Mails und Planung. Beide sind wählbar.</div></div>
+      <div class="faq-item"><div class="faq-question" onclick="toggleFaq(this)">Wie detailliert ist der Bericht?<span class="faq-arrow">▾</span></div><div class="faq-answer">Du wählst: kurz (Executive Summary + Top 3), mittel (strukturierter Bericht) oder ausführlich (vollständige Analyse mit Handlungsempfehlungen). Alle als PDF-Download verfügbar.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="cta-section">
+  <div class="container">
+    <h2 class="cta-headline reveal">Starte heute.<br>Spare ab morgen.</h2>
+    <p class="cta-sub reveal" style="transition-delay:.08s">Die erste Analyse ist kostenlos. Kein Konto, keine Kreditkarte, keine Einrichtung.</p>
+    <div class="cta-actions reveal" style="transition-delay:.14s">
+      <a href="https://a-i-employee.de" class="btn-primary-dark" style="font-size:17px;padding:16px 32px">AI Employee starten →</a>
+      <a href="mailto:hallo@a-i-employee.de" class="btn-ghost">Fragen? Schreib uns</a>
+    </div>
+    <div class="cta-note reveal" style="transition-delay:.20s">Keine Kreditkarte · DSGVO-konform · Made in Germany · ab €0,99</div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-logo">
+          <img src="https://a-i-employee.de/logo.png" alt="AI Employee" style="filter:brightness(0) invert(1);opacity:.80;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+          <span style="display:none;font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.02em">AI<span style="color:var(--brand-cyan)">Employee</span></span>
+        </div>
+        <p class="footer-tagline">Digitale KI-Mitarbeiter für Aufgaben, die sonst Zeit kosten.</p>
+      </div>
+      <div>
+        <div class="footer-col-title">Produkt</div>
+        <ul class="footer-links">
+          <li><a href="#produkt">Produkt</a></li><li><a href="#pricing">Preise</a></li>
+          <li><a href="#faq">FAQ</a></li><li><a href="https://a-i-employee.de">Zur App</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Lösungen</div>
+        <ul class="footer-links">
+          <li><a href="#loesungen">Immobilienmakler</a></li><li><a href="#loesungen">Kanzleien</a></li>
+          <li><a href="#loesungen">HR &amp; Personal</a></li><li><a href="#loesungen">Steuerberater</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Kontakt</div>
+        <ul class="footer-links">
+          <li><a href="#" onclick="openModal('impressum');return false">Impressum</a></li>
+          <li><a href="#" onclick="openModal('datenschutz');return false">Datenschutz</a></li>
+          <li><a href="mailto:hallo@a-i-employee.de">hallo@a-i-employee.de</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 AI Employee GbR · Neusser Str. 82, 40219 Düsseldorf</div>
+      <div class="footer-bottom-links">
+        <a href="#" onclick="openModal('impressum');return false">Impressum</a>
+        <a href="#" onclick="openModal('datenschutz');return false">Datenschutz</a>
+        <a href="mailto:datenschutz@a-i-employee.de">Datenschutz-Kontakt</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══ MODAL: Impressum ═══ -->
+<div class="modal-overlay" id="modal-impressum" onclick="if(event.target===this)closeModal('impressum')">
+  <div class="modal-box">
+    <div class="modal-header"><div class="modal-title">Impressum</div><button class="modal-close" onclick="closeModal('impressum')">✕</button></div>
+    <div class="modal-body">
+      <h3>Angaben gemäß § 5 TMG</h3>
+      <p><strong>AI Employee GbR</strong><br>Doris Greinert<br>Neusser Str. 82<br>40219 Düsseldorf</p>
+      <h3>Kontakt</h3><p>E-Mail: <a href="mailto:hallo@a-i-employee.de">hallo@a-i-employee.de</a></p>
+      <h3>Verantwortlich für den Inhalt</h3><p>Doris Greinert, Neusser Str. 82, 40219 Düsseldorf</p>
+      <h3>Haftungsausschluss</h3>
+      <p>KI-generierte Analysen und Berichte stellen keine Rechts-, Steuer- oder Finanzberatung dar und ersetzen keine professionelle Beratung.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Datenschutz ═══ -->
+<div class="modal-overlay" id="modal-datenschutz" onclick="if(event.target===this)closeModal('datenschutz')">
+  <div class="modal-box">
+    <div class="modal-header"><div class="modal-title">Datenschutzerklärung</div><button class="modal-close" onclick="closeModal('datenschutz')">✕</button></div>
+    <div class="modal-body">
+      <h3>1. Verantwortlicher</h3>
+      <p>AI Employee GbR, Doris Greinert, Neusser Str. 82, 40219 Düsseldorf — <a href="mailto:datenschutz@a-i-employee.de">datenschutz@a-i-employee.de</a></p>
+      <h3>2. Erhobene Daten</h3>
+      <p>Nur technisch notwendige Daten: Sitzungs-Cookies lokal im Browser nach § 25 TDDDG — keine Server-Übertragung.</p>
+      <h3>3. KI-Verarbeitung</h3>
+      <p>Dokumente werden zur Verarbeitung an die Google Gemini API übertragen. Google agiert als Auftragsverarbeiter (AVV nach Art. 28 DSGVO). Keine dauerhafte Datenspeicherung. Kein Training mit deinen Daten.</p>
+      <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO i.V.m. Art. 46 Abs. 2 lit. c DSGVO. Google zertifiziert nach EU-U.S. Data Privacy Framework.</p>
+      <h3>4. Cookies</h3>
+      <ul>
+        <li><strong>ai_agent_user</strong> — Anmeldestatus lokal</li>
+        <li><strong>ai_character, currentLang</strong> — Einstellungen lokal</li>
+        <li><strong>ai_last_activity</strong> — Inaktive Sitzungen erkennen</li>
+      </ul>
+      <h3>5. Deine Rechte</h3>
+      <p>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerspruch — <a href="mailto:datenschutz@a-i-employee.de">datenschutz@a-i-employee.de</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ JS ═══ -->
+<script>
+var nav = document.getElementById('main-nav');
+window.addEventListener('scroll', function() {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+/* Active section */
+var sObs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) {
+      var id = e.target.id;
+      document.querySelectorAll('.nav-link[data-section]').forEach(function(l) {
+        l.classList.toggle('active', l.dataset.section === id);
       });
-    }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
-    document.querySelectorAll('.reveal').forEach(function(el) { revealObs.observe(el); });
+    }
+  });
+}, { threshold: 0.20, rootMargin: '-64px 0px -40% 0px' });
+['start','produkt','loesungen','sicherheit','pricing','faq'].forEach(function(id) {
+  var el = document.getElementById(id); if (el) sObs.observe(el);
+});
 
-    function animateCount(id, target, ms) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      var step = target / (ms / 16), cur = 0;
-      var t = setInterval(function() {
-        cur = Math.min(cur + step, target);
-        el.textContent = Math.round(cur);
-        if (cur >= target) clearInterval(t);
-      }, 16);
-    }
-    var heroObs = new IntersectionObserver(function(entries) {
-      if (entries[0].isIntersecting) {
-        animateCount('counter-hours', 5, 1200);
-        animateCount('counter-min', 2, 900);
-        heroObs.disconnect();
-      }
-    }, { threshold: 0.3 });
-    var heroEl = document.getElementById('hero');
-    if (heroEl) heroObs.observe(heroEl);
+/* Reveal */
+var rObs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) {
+    if (e.isIntersecting) { e.target.classList.add('visible'); rObs.unobserve(e.target); }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(function(el) { rObs.observe(el); });
 
-    function openModal(n) {
-      var el = document.getElementById('modal-' + n);
-      if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
-    }
-    function closeModal(n) {
-      var el = document.getElementById('modal-' + n);
-      if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
-    }
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay.open').forEach(function(el) { el.classList.remove('open'); });
-        document.body.style.overflow = '';
-      }
-    });
-    document.querySelectorAll('a[href^="#"]').forEach(function(a) {
-      a.addEventListener('click', function(e) {
-        var t = document.querySelector(this.getAttribute('href'));
-        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-      });
-    });
-  </script>
+/* Counters */
+function animCount(id, target, ms) {
+  var el = document.getElementById(id); if (!el) return;
+  var step = target / (ms / 16), cur = 0;
+  var t = setInterval(function() {
+    cur = Math.min(cur + step, target); el.textContent = Math.round(cur);
+    if (cur >= target) clearInterval(t);
+  }, 16);
+}
+var hObs = new IntersectionObserver(function(e) {
+  if (e[0].isIntersecting) { animCount('c-hours', 5, 1200); animCount('c-min', 2, 900); hObs.disconnect(); }
+}, { threshold: 0.20 });
+var hEl = document.getElementById('start'); if (hEl) hObs.observe(hEl);
+
+/* Mobile nav */
+function openMobileNav() { document.getElementById('mobile-nav').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeMobileNav() { document.getElementById('mobile-nav').classList.remove('open'); document.body.style.overflow=''; }
+
+/* Modals */
+function openModal(n) { var el=document.getElementById('modal-'+n); if(el){el.classList.add('open');document.body.style.overflow='hidden';} }
+function closeModal(n) { var el=document.getElementById('modal-'+n); if(el){el.classList.remove('open');document.body.style.overflow='';} }
+document.addEventListener('keydown', function(e) {
+  if (e.key==='Escape') {
+    document.querySelectorAll('.modal-overlay.open,.mobile-nav.open').forEach(function(el){el.classList.remove('open');});
+    document.body.style.overflow='';
+  }
+});
+
+/* FAQ */
+function toggleFaq(btn) {
+  var item = btn.parentElement;
+  var isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(function(i){i.classList.remove('open');});
+  if (!isOpen) item.classList.add('open');
+}
+
+/* Smooth scroll */
+document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+  a.addEventListener('click', function(e) {
+    var t = document.querySelector(this.getAttribute('href'));
+    if (t) { e.preventDefault(); window.scrollTo({top: t.getBoundingClientRect().top + window.scrollY - 76, behavior:'smooth'}); }
+  });
+});
+</script>
 </body>
 </html>
