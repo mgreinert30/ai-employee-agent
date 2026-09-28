@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'AI Employee Agent <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL || 'AI Employee Agent <onboarding@resend.dev>',
       to: [toEmail],
       subject: `[Support] ${label} von ${name}`,
       html: `<p><strong>Name:</strong> ${name}</p>

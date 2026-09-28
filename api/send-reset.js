@@ -35,8 +35,9 @@ export default async function handler(req, res) {
   const token   = `${payload}.${sig}`;
   const link    = `${siteUrl}?reset=${encodeURIComponent(token)}`;
 
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'AI Employee <onboarding@resend.dev>';
   const emailBody = {
-    from: 'AI Employee <onboarding@resend.dev>',
+    from: fromAddr,
     to: [email],
     subject: 'Passwort zurücksetzen — AI Employee',
     html: `
