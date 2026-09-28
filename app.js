@@ -6,6 +6,28 @@
 // =====================
 const APP_VERSION = '1.1';
 
+// =====================
+// SERVER-SIDE USER API — mit localStorage-Fallback
+// Wenn /api/users antwortet mit error:'supabase_not_configured',
+// fällt das System transparent auf localStorage zurück.
+// =====================
+let _useServerAuth = null; // null = noch nicht getestet, true/false = Ergebnis
+
+async function callUsersApi(body) {
+  const res = await fetch('/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok && data?.error === 'supabase_not_configured') {
+    _useServerAuth = false;
+    return { serverUnavailable: true };
+  }
+  _useServerAuth = true;
+  return { ok: res.ok, status: res.status, data };
+}
+
 // Test-Accounts — können alle Features unbegrenzt kostenlos nutzen
 const FREE_ACCOUNTS = ['test@demo.de'];
 
@@ -188,10 +210,28 @@ async function handleLogin(e) {
     return;
   }
 
-  // Regular user login
+  // Regular user login — Server zuerst, localStorage als Fallback
+  const errEl = document.getElementById('login-error');
+  try {
+    const result = await callUsersApi({ action: 'login', email, password });
+    if (!result.serverUnavailable) {
+      if (!result.ok) {
+        errEl.textContent = result.data?.error || (currentLang === 'de' ? 'E-Mail oder Passwort falsch.' : 'Incorrect email or password.');
+        return;
+      }
+      currentUser = result.data.user;
+      if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+      updateActivity();
+      hideAuthModal();
+      showLoggedIn();
+      return;
+    }
+  } catch (_) {}
+
+  // Fallback: localStorage
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
   const user = users.find(u => u.email === email && u.password === password);
-  if (!user) { document.getElementById('login-error').textContent = currentLang === 'de' ? 'E-Mail oder Passwort falsch.' : 'Incorrect email or password.'; return; }
+  if (!user) { errEl.textContent = currentLang === 'de' ? 'E-Mail oder Passwort falsch.' : 'Incorrect email or password.'; return; }
   currentUser = { name: user.name, email: user.email };
   if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
   updateActivity();
@@ -273,11 +313,27 @@ async function handleVerifyCode() {
     const { name, email, password } = window._pendingSignup || {};
     if (!name || !email || !password) throw new Error(currentLang === 'de' ? 'Sitzung abgelaufen. Bitte nochmal registrieren.' : 'Session expired. Please sign up again.');
 
-    const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
-    if (!users.find(u => u.email.toLowerCase() === email)) {
-      users.push({ name, email, password, verified: true });
-      localStorage.setItem('ai_agent_users', JSON.stringify(users));
+    // Server zuerst, localStorage als Fallback
+    let registeredViaServer = false;
+    try {
+      const result = await callUsersApi({ action: 'register', email, name, password });
+      if (!result.serverUnavailable) {
+        if (!result.ok) throw new Error(result.data?.error || 'Registrierung fehlgeschlagen');
+        registeredViaServer = true;
+      }
+    } catch (apiErr) {
+      if (apiErr.message !== 'supabase_not_configured') throw apiErr;
     }
+
+    if (!registeredViaServer) {
+      // Fallback: localStorage
+      const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+      if (!users.find(u => u.email.toLowerCase() === email)) {
+        users.push({ name, email, password, verified: true });
+        localStorage.setItem('ai_agent_users', JSON.stringify(users));
+      }
+    }
+
     window._pendingSignup = null;
     window._verifyToken   = null;
 
@@ -482,19 +538,38 @@ function saveAccountEmail() {
   setTimeout(() => { msg.style.display = 'none'; }, 2500);
 }
 
-function saveAccountPassword() {
+async function saveAccountPassword() {
   const oldPw = document.getElementById('account-password-old').value;
   const newPw = document.getElementById('account-password-new').value;
   const msg = document.getElementById('account-password-msg');
+  if (newPw.length < 8) {
+    msg.textContent = currentLang === 'de' ? '❌ Neues Passwort muss mindestens 8 Zeichen haben.' : '❌ New password must be at least 8 characters.';
+    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+  }
+
+  // Server-seitig prüfen und speichern
+  try {
+    const result = await callUsersApi({ action: 'update-password', email: currentUser.email, oldPassword: oldPw, newPassword: newPw });
+    if (!result.serverUnavailable) {
+      if (!result.ok) {
+        msg.textContent = '❌ ' + (result.data?.error || (currentLang === 'de' ? 'Fehler beim Speichern.' : 'Error saving.'));
+        msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
+      }
+      msg.textContent = currentLang === 'de' ? '✓ Passwort geändert!' : '✓ Password changed!';
+      msg.style.color = '#10b981'; msg.style.display = 'block';
+      document.getElementById('account-password-old').value = '';
+      document.getElementById('account-password-new').value = '';
+      setTimeout(() => { msg.style.display = 'none'; }, 2500);
+      return;
+    }
+  } catch (_) {}
+
+  // Fallback: localStorage
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
   const idx = users.findIndex(u => u.email === currentUser.email);
   if (idx === -1) return;
   if (users[idx].password !== oldPw) {
     msg.textContent = currentLang === 'de' ? '❌ Aktuelles Passwort falsch.' : '❌ Current password incorrect.';
-    msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
-  }
-  if (newPw.length < 8) {
-    msg.textContent = currentLang === 'de' ? '❌ Neues Passwort muss mindestens 8 Zeichen haben.' : '❌ New password must be at least 8 characters.';
     msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
   }
   users[idx].password = newPw;
@@ -5324,15 +5399,23 @@ async function handleResetPassword() {
     const email = data.email.toLowerCase();
     if (currentUser?.isOwner) throw new Error('Owner-Passwort kann hier nicht geändert werden.');
 
-    const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
-    const idx   = users.findIndex(u => u.email.toLowerCase() === email);
-    if (idx === -1) {
-      // User not in this device's localStorage yet — add them with new password
-      users.push({ name: email.split('@')[0], email, password: newPw });
-    } else {
-      users[idx].password = newPw;
+    // Server zuerst, localStorage als Fallback
+    let savedViaServer = false;
+    try {
+      const result = await callUsersApi({ action: 'reset-password', email, newPassword: newPw });
+      if (!result.serverUnavailable && result.ok) savedViaServer = true;
+    } catch (_) {}
+
+    if (!savedViaServer) {
+      const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+      const idx   = users.findIndex(u => u.email.toLowerCase() === email);
+      if (idx === -1) {
+        users.push({ name: email.split('@')[0], email, password: newPw });
+      } else {
+        users[idx].password = newPw;
+      }
+      localStorage.setItem('ai_agent_users', JSON.stringify(users));
     }
-    localStorage.setItem('ai_agent_users', JSON.stringify(users));
 
     msgEl.style.color = '#4ade80';
     msgEl.textContent = '✓ Passwort gespeichert! Du wirst jetzt angemeldet…';
