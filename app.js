@@ -2410,9 +2410,9 @@ async function goToPayment() {
   if (new URLSearchParams(window.location.search).get('test') === '1') {
     try {
       const sessionId = 'test-' + Date.now();
-      const r = await fetch('/api/free-trial', {
+      const r = await fetch('/api/users', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ action: 'get-trial-token', sessionId }),
       });
       const d = await r.json();
       if (r.ok) setAnalysisToken(d.token);
@@ -2435,9 +2435,9 @@ async function goToPayment() {
         sessionStorage.setItem('ai_session_id', id);
         return id;
       })();
-      const r = await fetch('/api/free-trial', {
+      const r = await fetch('/api/users', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ action: 'get-trial-token', sessionId }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Free-Trial nicht verfügbar');

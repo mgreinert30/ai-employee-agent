@@ -22,10 +22,26 @@
 //      SUPABASE_SERVICE_KEY=<service_role key>   (nicht der anon key!)
 
 import { createHash } from 'crypto';
+import { issueToken } from './_token.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '4kb' } } };
 
 const rateLimitMap = new Map();
+
+// Free-Trial Rate-Limiting (aus free-trial.js zusammengeführt)
+const _usedSessions = new Map();
+const _ipCounts = new Map();
+function _isIpLimited(ip) {
+  const now = Date.now();
+  const rec = _ipCounts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    _ipCounts.set(ip, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 });
+    return false;
+  }
+  if (rec.count >= 3) return true;
+  rec.count++;
+  return false;
+}
 function isRateLimited(ip, max = 15, windowMs = 60000) {
   const now = Date.now();
   const rec = rateLimitMap.get(ip);
@@ -168,6 +184,27 @@ export default async function handler(req, res) {
       });
     }
     return res.status(200).json({ ok: true });
+  }
+
+  // ── FREE TRIAL TOKEN ─────────────────────────────────────────────────────────
+  if (action === 'get-trial-token') {
+    const { sessionId } = req.body || {};
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length < 8) {
+      return res.status(400).json({ error: 'sessionId fehlt' });
+    }
+    if (_usedSessions.has(sessionId)) {
+      return res.status(409).json({ error: 'Free Trial bereits genutzt.' });
+    }
+    if (_isIpLimited(ip)) {
+      return res.status(429).json({ error: 'Free-Trial-Limit erreicht. Bitte wähle einen Tarif.' });
+    }
+    try {
+      const token = issueToken({ use: 'analyse', sessionId, amount: '0' });
+      _usedSessions.set(sessionId, Date.now());
+      return res.status(200).json({ token });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
   }
 
   return res.status(400).json({ error: 'Unbekannte Aktion' });
