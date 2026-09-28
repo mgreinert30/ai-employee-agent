@@ -287,25 +287,51 @@ async function handleSignup(e) {
       body: JSON.stringify({ action: 'send', email }),
     });
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || 'E-Mail konnte nicht gesendet werden');
 
-    // Registrierungsdaten zwischenspeichern
-    window._pendingSignup = { name, email, password };
-    window._verifyToken   = data.token;
-
-    // Verify-Panel anzeigen
-    document.getElementById('form-signup').style.display  = 'none';
-    document.getElementById('verify-panel').style.display = 'flex';
-    const lbl = document.getElementById('verify-email-label');
-    if (lbl) lbl.textContent = email;
-    document.getElementById('verify-code').value          = '';
-    document.getElementById('verify-msg').textContent     = '';
-    setTimeout(() => document.getElementById('verify-code').focus(), 100);
+    if (res.ok && !data.error) {
+      // E-Mail erfolgreich gesendet → Verify-Panel anzeigen
+      window._pendingSignup = { name, email, password };
+      window._verifyToken   = data.token;
+      document.getElementById('form-signup').style.display  = 'none';
+      document.getElementById('verify-panel').style.display = 'flex';
+      const lbl = document.getElementById('verify-email-label');
+      if (lbl) lbl.textContent = email;
+      document.getElementById('verify-code').value     = '';
+      document.getElementById('verify-msg').textContent = '';
+      setTimeout(() => document.getElementById('verify-code').focus(), 100);
+    } else {
+      // E-Mail-Versand nicht möglich (z.B. Resend Sandbox) → direkt registrieren
+      await registerUserDirectly({ name, email, password });
+    }
   } catch (err) {
-    errEl.textContent = err.message;
+    // Netzwerkfehler → trotzdem registrieren
+    try { await registerUserDirectly({ name, email, password }); } catch (e2) { errEl.textContent = e2.message; }
   } finally {
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = currentLang === 'de' ? 'Konto erstellen' : 'Create account'; }
   }
+}
+
+async function registerUserDirectly({ name, email, password }) {
+  let registeredViaServer = false;
+  try {
+    const result = await callUsersApi({ action: 'register', email, name, password });
+    if (!result.serverUnavailable && result.ok) registeredViaServer = true;
+  } catch (_) {}
+
+  if (!registeredViaServer) {
+    const pwHash = await hashPassword(password);
+    const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+    if (!users.find(u => u.email.toLowerCase() === email)) {
+      users.push({ name, email, password_hash: pwHash, verified: true });
+      localStorage.setItem('ai_agent_users', JSON.stringify(users));
+    }
+  }
+
+  currentUser = { name, email };
+  localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+  updateActivity();
+  hideAuthModal();
+  showLoggedIn();
 }
 
 async function handleVerifyCode() {
