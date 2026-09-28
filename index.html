@@ -173,8 +173,9 @@
   </div>
 
   <!-- USER LOGIN / SIGNUP MODAL -->
-  <div id="auth-overlay" class="overlay hidden">
-    <div class="modal">
+  <div id="auth-overlay" class="overlay hidden" onclick="if(event.target===this)hideAuthModal()">
+    <div class="modal" style="position:relative;">
+      <button onclick="hideAuthModal()" aria-label="Schließen" style="position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--gray,#94a3b8);font-size:22px;line-height:1;padding:4px 8px;border-radius:6px;transition:color .15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--gray,#94a3b8)'">✕</button>
       <div class="modal-logo">AI<span>Employee</span></div>
       <div id="auth-reason" class="auth-reason" style="display:none;"></div>
       <div class="auth-tabs">
