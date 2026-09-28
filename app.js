@@ -7,6 +7,15 @@
 const APP_VERSION = '1.1';
 
 // =====================
+// CLIENT-SIDE PASSWORD HASHING (Web Crypto API)
+// Verhindert Klartext-Passwörter im localStorage-Fallback.
+// =====================
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// =====================
 // SERVER-SIDE USER API — mit localStorage-Fallback
 // Wenn /api/users antwortet mit error:'supabase_not_configured',
 // fällt das System transparent auf localStorage zurück.
@@ -228,10 +237,17 @@ async function handleLogin(e) {
     }
   } catch (_) {}
 
-  // Fallback: localStorage
+  // Fallback: localStorage (mit gehashetem Vergleich)
+  const pwHash = await hashPassword(password);
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
-  const user = users.find(u => u.email === email && u.password === password);
+  const user = users.find(u => u.email === email && (u.password_hash === pwHash || u.password === password));
   if (!user) { errEl.textContent = currentLang === 'de' ? 'E-Mail oder Passwort falsch.' : 'Incorrect email or password.'; return; }
+  // Alten Klartext-Eintrag automatisch migrieren
+  if (user.password && !user.password_hash) {
+    user.password_hash = pwHash;
+    delete user.password;
+    localStorage.setItem('ai_agent_users', JSON.stringify(users));
+  }
   currentUser = { name: user.name, email: user.email };
   if (remember) localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
   updateActivity();
@@ -326,10 +342,11 @@ async function handleVerifyCode() {
     }
 
     if (!registeredViaServer) {
-      // Fallback: localStorage
+      // Fallback: localStorage — Passwort gehasht speichern
+      const pwHash = await hashPassword(password);
       const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
       if (!users.find(u => u.email.toLowerCase() === email)) {
-        users.push({ name, email, password, verified: true });
+        users.push({ name, email, password_hash: pwHash, verified: true });
         localStorage.setItem('ai_agent_users', JSON.stringify(users));
       }
     }
@@ -564,15 +581,19 @@ async function saveAccountPassword() {
     }
   } catch (_) {}
 
-  // Fallback: localStorage
+  // Fallback: localStorage (gehashter Vergleich + gehashtes Speichern)
+  const oldHash = await hashPassword(oldPw);
+  const newHash = await hashPassword(newPw);
   const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
   const idx = users.findIndex(u => u.email === currentUser.email);
   if (idx === -1) return;
-  if (users[idx].password !== oldPw) {
+  const stored = users[idx].password_hash || (users[idx].password ? await hashPassword(users[idx].password) : null);
+  if (stored !== oldHash) {
     msg.textContent = currentLang === 'de' ? '❌ Aktuelles Passwort falsch.' : '❌ Current password incorrect.';
     msg.style.color = '#ef4444'; msg.style.display = 'block'; return;
   }
-  users[idx].password = newPw;
+  users[idx].password_hash = newHash;
+  delete users[idx].password;
   localStorage.setItem('ai_agent_users', JSON.stringify(users));
   msg.textContent = currentLang === 'de' ? '✓ Passwort geändert!' : '✓ Password changed!';
   msg.style.color = '#10b981'; msg.style.display = 'block';
@@ -5407,12 +5428,14 @@ async function handleResetPassword() {
     } catch (_) {}
 
     if (!savedViaServer) {
+      const pwHash = await hashPassword(newPw);
       const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
       const idx   = users.findIndex(u => u.email.toLowerCase() === email);
       if (idx === -1) {
-        users.push({ name: email.split('@')[0], email, password: newPw });
+        users.push({ name: email.split('@')[0], email, password_hash: pwHash, verified: true });
       } else {
-        users[idx].password = newPw;
+        users[idx].password_hash = pwHash;
+        delete users[idx].password;
       }
       localStorage.setItem('ai_agent_users', JSON.stringify(users));
     }
