@@ -2380,23 +2380,46 @@ function cancelTask() { showStep('step-form'); }
 // =====================
 async function goToPayment() {
   clearAnalysisToken();
-  // Test-Modus (?test=1) — Zahlung komplett überspringen, keine echte KI
+  // Test-Modus (?test=1) — Zahlung überspringen, Token trotzdem ausstellen
   if (new URLSearchParams(window.location.search).get('test') === '1') {
-    setAnalysisToken('free-trial');
+    try {
+      const sessionId = 'test-' + Date.now();
+      const r = await fetch('/api/free-trial', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const d = await r.json();
+      if (r.ok) setAnalysisToken(d.token);
+    } catch (_) {}
     window.skippedSetup = true;
     showStep('step-progress');
     startTask();
     return;
   }
-  // Free trial — skip payment entirely
+  // Free trial — Token serverseitig ausstellen lassen
   if (currentEstimate?.isFree) {
     markFreeTrialUsed();
     updateHeroCTA();
     const desc = document.getElementById('task-description').value;
     saveSale(desc, '0.00', 'free_trial');
     saveTaskToHistory(desc, '0.00');
-    // Free trial doesn't need a real token — use a special marker
-    setAnalysisToken('free-trial');
+    try {
+      const sessionId = sessionStorage.getItem('ai_session_id') || (() => {
+        const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        sessionStorage.setItem('ai_session_id', id);
+        return id;
+      })();
+      const r = await fetch('/api/free-trial', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Free-Trial nicht verfügbar');
+      setAnalysisToken(d.token);
+    } catch (err) {
+      alert(err.message);
+      return;
+    }
     const resolvedType = currentShortcutType || detectTaskType(desc);
     if (resolvedType === 'email') {
       window.skippedSetup = true;

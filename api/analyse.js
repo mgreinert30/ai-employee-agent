@@ -44,11 +44,10 @@ export default async function handler(req, res) {
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
 
   // Token-Prüfung: nur gültige, serverseitig signierte Tokens dürfen Analysen starten
+  // Free-Trial-Token wird von /api/free-trial.js ausgestellt — kein hartcodierter String mehr
   const token = req.headers['x-analysis-token'] || req.body?.analysisToken;
-  if (token !== 'free-trial') {
-    const tokenCheck = verifyToken(token, 'analyse');
-    if (!tokenCheck.valid) return rejectToken(res, tokenCheck.reason);
-  }
+  const tokenCheck = verifyToken(token, 'analyse');
+  if (!tokenCheck.valid) return rejectToken(res, tokenCheck.reason);
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

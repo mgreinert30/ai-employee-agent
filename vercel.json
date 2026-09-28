@@ -9,6 +9,7 @@
     "api/verify.js":           { "maxDuration": 15 },
     "api/admin-auth.js":       { "maxDuration": 10 },
     "api/users.js":            { "maxDuration": 15 },
+    "api/free-trial.js":       { "maxDuration": 10 },
     "api/chat.js":             { "maxDuration": 15 },
     "api/learn.js":            { "maxDuration": 20 }
   },
