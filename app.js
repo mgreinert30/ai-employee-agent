@@ -410,16 +410,13 @@ function requireLogin(action) {
 
 function handleLogout() {
   if (currentUser) {
-    // Clear all user-specific data on logout (#10)
     ['ai_payment_', 'ai_tasks_', 'ai_sales_'].forEach(prefix => {
       localStorage.removeItem(prefix + currentUser.email);
     });
   }
   localStorage.removeItem('ai_agent_user');
   currentUser = null;
-  document.getElementById('header-username').textContent = '';
-  document.getElementById('auth-nav-logged-in').innerHTML = '';
-  showAuthModal(null);
+  showGuest();
 }
 
 // =====================
