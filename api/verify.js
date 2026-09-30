@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
 
-  const { action, email, code, token } = req.body || {};
+  const { action, email, code, token, name, passwordHash } = req.body || {};
   const secret = process.env.RESET_SECRET || 'fallback-secret-change-me';
 
   // ── SEND: Code generieren, signieren, per E-Mail senden ──────────────────────
@@ -103,5 +103,80 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, email: emailOut });
   }
 
-  return res.status(400).json({ error: 'Unbekannte Aktion. Erwartet: send oder check' });
+  // ── SEND-LINK: Magic-Link senden (neues System) ──────────────────────────────
+  if (action === 'send-link') {
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'Ungültige E-Mail-Adresse' });
+    if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Name fehlt' });
+    if (!passwordHash || typeof passwordHash !== 'string' || passwordHash.length !== 64) {
+      return res.status(400).json({ error: 'Ungültiger Password-Hash' });
+    }
+
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return res.status(500).json({ error: 'E-Mail-Dienst nicht konfiguriert' });
+
+    const expiry  = Date.now() + 24 * 60 * 60 * 1000; // 24h gültig
+    const payload = Buffer.from(JSON.stringify({ e: email.toLowerCase(), n: name, h: passwordHash, x: expiry })).toString('base64url');
+    const sig     = await hmacSign(`${secret}:link`, payload);
+    const vToken  = `${payload}.${sig}`;
+
+    const siteUrl = process.env.SITE_URL || 'https://ai-employee-agent.vercel.app';
+    const link    = `${siteUrl}?verify=${encodeURIComponent(vToken)}`;
+
+    const fromAddr = process.env.RESEND_FROM_EMAIL || 'AI Employee <onboarding@resend.dev>';
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: fromAddr,
+        to:   [email],
+        subject: 'Konto bestätigen — AI Employee',
+        html: `
+          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#0f172a;color:#e2e8f0;border-radius:16px;">
+            <div style="font-size:22px;font-weight:800;margin-bottom:8px;">AI<span style="color:#2563eb;">Employee</span></div>
+            <h2 style="font-size:18px;margin:24px 0 8px;">Willkommen, ${name}!</h2>
+            <p style="color:#94a3b8;font-size:14px;line-height:1.6;">Klicke auf den Button, um dein Konto bei <strong style="color:#e2e8f0;">AI Employee</strong> zu aktivieren.</p>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${link}" style="display:inline-block;padding:16px 32px;background:#2563eb;color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;">✅ Konto bestätigen →</a>
+            </div>
+            <p style="color:#64748b;font-size:12px;line-height:1.7;">Dieser Link ist <strong>24 Stunden</strong> gültig und kann nur einmal verwendet werden.<br>Falls du kein Konto erstellt hast, ignoriere diese E-Mail einfach.</p>
+            <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0;">
+            <p style="color:#475569;font-size:11px;">Registriert für: ${email}</p>
+          </div>
+        `,
+      }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      return res.status(500).json({ error: err.message || 'E-Mail konnte nicht gesendet werden' });
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // ── CONFIRM-LINK: Magic-Link-Token bestätigen ─────────────────────────────────
+  if (action === 'confirm-link') {
+    if (!token) return res.status(400).json({ error: 'Token fehlt' });
+
+    const dotIdx = token.lastIndexOf('.');
+    if (dotIdx === -1) return res.status(400).json({ error: 'Ungültiger Verifizierungslink' });
+
+    const payload    = token.slice(0, dotIdx);
+    const sig        = token.slice(dotIdx + 1);
+    const expectedSig = await hmacSign(`${secret}:link`, payload);
+    if (sig !== expectedSig) return res.status(400).json({ error: 'Verifizierungslink ungültig oder manipuliert.' });
+
+    let parsed;
+    try {
+      parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    } catch {
+      return res.status(400).json({ error: 'Link konnte nicht gelesen werden' });
+    }
+
+    if (Date.now() > parsed.x) {
+      return res.status(400).json({ error: 'Verifizierungslink abgelaufen (24h). Bitte erneut registrieren.' });
+    }
+
+    return res.status(200).json({ ok: true, email: parsed.e, name: parsed.n, passwordHash: parsed.h });
+  }
+
+  return res.status(400).json({ error: 'Unbekannte Aktion. Erwartet: send, check, send-link oder confirm-link' });
 }

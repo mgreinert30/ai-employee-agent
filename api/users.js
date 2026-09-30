@@ -186,6 +186,28 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  // ── REGISTER-HASHED: Nutzer mit vorgeberechnetem Hash anlegen ────────────────
+  // Wird nach Magic-Link-Bestätigung aufgerufen — Hash kommt aus dem signierten Token.
+  if (action === 'register-hashed') {
+    const { email: rEmail, name: rName, passwordHash: rHash } = req.body || {};
+    if (!rEmail || !rName || !rHash || rHash.length !== 64) {
+      return res.status(400).json({ error: 'Fehlende oder ungültige Felder' });
+    }
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      return res.status(503).json({ error: 'supabase_not_configured' });
+    }
+    const check = await sbFetch(`/users?email=eq.${encodeURIComponent(rEmail.toLowerCase())}&select=id`);
+    if (!check.ok) return res.status(500).json({ error: 'Datenbankfehler' });
+    if (check.data?.length > 0) return res.status(200).json({ ok: true }); // bereits registriert
+    const insert = await sbFetch('/users', {
+      method: 'POST',
+      body: JSON.stringify({ email: rEmail.toLowerCase(), name: rName, password_hash: rHash, verified: true }),
+    });
+    if (!insert.ok) return res.status(500).json({ error: 'Registrierung fehlgeschlagen' });
+    const user = insert.data?.[0];
+    return res.status(200).json({ ok: true, user: { name: user.name, email: user.email } });
+  }
+
   // ── FREE TRIAL TOKEN ─────────────────────────────────────────────────────────
   if (action === 'get-trial-token') {
     const { sessionId } = req.body || {};

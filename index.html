@@ -212,16 +212,19 @@
         <button onclick="handleResetPassword()" class="btn-primary full-width">Passwort speichern</button>
         <p id="reset-msg" style="font-size:13px;margin:0;"></p>
       </div>
-      <!-- EMAIL VERIFY PANEL — step after signup: enter 6-digit code -->
-      <div id="verify-panel" style="display:none;flex-direction:column;gap:14px;text-align:center;">
-        <div style="font-size:32px;margin-bottom:4px;">📬</div>
-        <p style="font-size:13px;color:var(--gray);margin:0 0 4px;" data-de="Code gesendet an" data-en="Code sent to">Code gesendet an</p>
+      <!-- EMAIL VERIFY PANEL — Magic-Link gesendet -->
+      <div id="verify-panel" style="display:none;flex-direction:column;gap:16px;text-align:center;padding:8px 0;">
+        <div style="font-size:48px;margin-bottom:4px;">📧</div>
+        <h3 style="font-size:18px;font-weight:800;margin:0;" data-de="E-Mail gesendet!" data-en="Email sent!">E-Mail gesendet!</h3>
+        <p style="font-size:13px;color:var(--gray);margin:0;" data-de="Wir haben einen Bestätigungs-Link an" data-en="We sent a confirmation link to">Wir haben einen Bestätigungs-Link an</p>
         <strong id="verify-email-label" style="color:white;font-size:14px;word-break:break-all;"></strong>
-        <label style="text-align:left;" data-de="6-stelliger Code" data-en="6-digit code">6-stelliger Code</label>
-        <input type="text" id="verify-code" placeholder="123456" maxlength="6" pattern="\d{6}" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:10px;text-align:center;font-size:26px;font-weight:700;" oninput="this.value=this.value.replace(/\D/g,'')" onkeydown="if(event.key==='Enter'){event.preventDefault();handleVerifyCode();}" />
-        <button onclick="handleVerifyCode()" class="btn-primary full-width" data-de="Code bestätigen" data-en="Confirm code">Code bestätigen</button>
+        <p style="font-size:13px;color:var(--gray);margin:0;line-height:1.6;" data-de="Bitte öffne deine E-Mails und klicke auf den Button. Du wirst danach automatisch angemeldet." data-en="Please open your email and click the button. You will be logged in automatically.">Bitte öffne deine E-Mails und klicke auf den Button. Du wirst danach automatisch angemeldet.</p>
         <p id="verify-msg" style="font-size:13px;margin:0;"></p>
-        <p style="text-align:center;margin-top:4px;"><a href="#" onclick="resendVerifyCode();return false;" class="forgot-link" data-de="Code erneut senden" data-en="Resend code">Code erneut senden</a> &nbsp;·&nbsp; <a href="#" onclick="switchTab('signup');return false;" class="forgot-link" data-de="← Zurück" data-en="← Back">← Zurück</a></p>
+        <p style="text-align:center;margin-top:4px;">
+          <a href="#" onclick="resendVerifyLink();return false;" class="forgot-link" data-de="Link erneut senden" data-en="Resend link">Link erneut senden</a>
+          &nbsp;·&nbsp;
+          <a href="#" onclick="switchTab('signup');return false;" class="forgot-link" data-de="← Zurück" data-en="← Back">← Zurück</a>
+        </p>
       </div>
       <form id="form-signup" onsubmit="handleSignup(event)" style="display:none;flex-direction:column;gap:14px;">
         <label data-de="Dein Name" data-en="Your name">Dein Name</label>

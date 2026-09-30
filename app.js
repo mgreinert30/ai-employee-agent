@@ -282,29 +282,27 @@ async function handleSignup(e) {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = currentLang === 'de' ? 'Sende Code…' : 'Sending code…'; }
 
   try {
-    const res  = await fetch('/api/verify', {
+    const pwHash = await hashPassword(password);
+    const res    = await fetch('/api/verify', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send', email }),
+      body: JSON.stringify({ action: 'send-link', email, name, passwordHash: pwHash }),
     });
     const data = await res.json();
 
     if (res.ok && !data.error) {
-      // E-Mail erfolgreich gesendet → Verify-Panel anzeigen
-      window._pendingSignup = { name, email, password };
-      window._verifyToken   = data.token;
+      // Magic-Link erfolgreich gesendet → Verify-Panel anzeigen
+      window._pendingSignup = { name, email, passwordHash: pwHash };
       document.getElementById('form-signup').style.display  = 'none';
       document.getElementById('verify-panel').style.display = 'flex';
       const lbl = document.getElementById('verify-email-label');
       if (lbl) lbl.textContent = email;
-      document.getElementById('verify-code').value     = '';
-      document.getElementById('verify-msg').textContent = '';
-      setTimeout(() => document.getElementById('verify-code').focus(), 100);
+      const msg = document.getElementById('verify-msg');
+      if (msg) msg.textContent = '';
     } else {
       // E-Mail-Versand nicht möglich (z.B. Resend Sandbox) → direkt registrieren
       await registerUserDirectly({ name, email, password });
     }
   } catch (err) {
-    // Netzwerkfehler → trotzdem registrieren
     try { await registerUserDirectly({ name, email, password }); } catch (e2) { errEl.textContent = e2.message; }
   } finally {
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = currentLang === 'de' ? 'Konto erstellen' : 'Create account'; }
@@ -393,24 +391,21 @@ async function handleVerifyCode() {
   }
 }
 
-async function resendVerifyCode() {
-  const email = window._pendingSignup?.email;
+async function resendVerifyLink() {
+  const { email, name, passwordHash } = window._pendingSignup || {};
   const msgEl = document.getElementById('verify-msg');
   if (!email) return;
   msgEl.style.color = '#94a3b8';
-  msgEl.textContent = currentLang === 'de' ? 'Sende neuen Code…' : 'Sending new code…';
+  msgEl.textContent = currentLang === 'de' ? 'Sende neuen Link…' : 'Sending new link…';
   try {
     const res  = await fetch('/api/verify', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send', email }),
+      body: JSON.stringify({ action: 'send-link', email, name, passwordHash }),
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error);
-    window._verifyToken = data.token;
     msgEl.style.color = '#4ade80';
-    msgEl.textContent = currentLang === 'de' ? '✓ Neuer Code gesendet!' : '✓ New code sent!';
-    document.getElementById('verify-code').value = '';
-    document.getElementById('verify-code').focus();
+    msgEl.textContent = currentLang === 'de' ? '✓ Neuer Link gesendet!' : '✓ New link sent!';
   } catch (err) {
     msgEl.style.color = '#f87171';
     msgEl.textContent = err.message;
@@ -5534,6 +5529,62 @@ function checkResetToken() {
   return true; // signals DOMContentLoaded to skip loadAuth()
 }
 
+// Prüft ?verify=TOKEN — automatische Anmeldung nach Magic-Link-Klick
+async function checkVerifyToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('verify');
+  if (!token) return false;
+
+  // URL sofort bereinigen (Token aus Adresszeile entfernen)
+  window.history.replaceState({}, '', window.location.pathname);
+
+  try {
+    const res  = await fetch('/api/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm-link', token }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      // Ungültiger/abgelaufener Link → Registrierungs-Modal öffnen
+      setTimeout(() => {
+        showAuthModal(currentLang === 'de'
+          ? (data.error || 'Verifizierungslink ungültig. Bitte erneut registrieren.')
+          : (data.error || 'Verification link invalid. Please sign up again.'));
+        switchTab('signup');
+      }, 200);
+      return false;
+    }
+
+    const { email, name, passwordHash } = data;
+
+    // Nutzer in Supabase oder localStorage registrieren
+    let registeredViaServer = false;
+    try {
+      const result = await callUsersApi({ action: 'register-hashed', email, name, passwordHash });
+      if (!result.serverUnavailable && result.ok) registeredViaServer = true;
+    } catch (_) {}
+
+    if (!registeredViaServer) {
+      const users = JSON.parse(localStorage.getItem('ai_agent_users') || '[]');
+      if (!users.find(u => u.email.toLowerCase() === email)) {
+        users.push({ name, email, password_hash: passwordHash, verified: true });
+        localStorage.setItem('ai_agent_users', JSON.stringify(users));
+      }
+    }
+
+    currentUser = { name, email };
+    localStorage.setItem('ai_agent_user', JSON.stringify(currentUser));
+    updateActivity();
+    showLoggedIn();
+
+  } catch (err) {
+    console.error('Verify-Link Fehler:', err);
+  }
+
+  return false; // Seite normal laden
+}
+
 // =====================
 // QUALITÄTSKONTROLLE (QC) — PDF-Extraktion prüfen
 // 8 Prüfpunkte: Seiten-Abdeckung, leere Seiten, Zeichen-Qualität,
@@ -8279,6 +8330,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const hasResetToken = checkResetToken();
   if (!hasResetToken) {
+    // Magic-Link-Bestätigung prüfen (?verify=TOKEN)
+    checkVerifyToken();
     const saved = localStorage.getItem('ai_agent_user');
     if (saved) {
       loadAuth();
