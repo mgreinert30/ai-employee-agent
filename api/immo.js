@@ -293,7 +293,8 @@ export default async function handler(req, res) {
   if (isRateLimited(ip)) return res.status(429).json({ error: 'Zu viele Anfragen. Bitte warte eine Minute.' });
 
   const token = req.headers['x-analysis-token'];
-  if (token !== 'free-trial') {
+  const FREE_TOKENS = ['free-trial', 'DEMO'];
+  if (!FREE_TOKENS.includes(token)) {
     const tokenCheck = verifyToken(token, 'analyse');
     if (!tokenCheck.valid) return rejectToken(res, tokenCheck.reason);
   }

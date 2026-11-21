@@ -395,6 +395,16 @@
   </div>
 </header>
 
+<!-- DEMO BANNER (nur bei ?demo=true sichtbar) -->
+<div id="demo-banner" style="display:none;background:linear-gradient(90deg,#16a34a,#15803d);color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:700;letter-spacing:.3px;">
+  🎁 Demo-Modus — Diese Bewertung ist für dich <strong>kostenlos</strong>. Kein Konto erforderlich.
+</div>
+<script>
+  if (new URLSearchParams(window.location.search).get('demo') === 'true') {
+    document.getElementById('demo-banner').style.display = 'block';
+  }
+</script>
+
 <!-- HERO -->
 <div class="hero">
   <div class="hero-badge">🏠 KI-Immobilienbewertung</div>
@@ -1636,6 +1646,8 @@ function collectFormData() {
 }
 
 /* ===== SUBMIT ===== */
+const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
+
 function showImmoPrice() {
   const stadtEl = document.getElementById('stadt');
   if (!stadtEl || !stadtEl.value.trim()) {
@@ -1645,6 +1657,10 @@ function showImmoPrice() {
   }
   document.getElementById('step-4').style.display = 'none';
   document.getElementById('step-indicator').style.display = 'none';
+  if (IS_DEMO) {
+    submitForm('DEMO');
+    return;
+  }
   document.getElementById('immo-price-step').style.display = 'block';
 }
 
