@@ -395,14 +395,17 @@
   </div>
 </header>
 
-<!-- DEMO BANNER (nur bei ?demo=true sichtbar) -->
+<!-- DEMO BANNER (nur für kostenlose Test-Accounts sichtbar) -->
 <div id="demo-banner" style="display:none;background:linear-gradient(90deg,#16a34a,#15803d);color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:700;letter-spacing:.3px;">
-  🎁 Demo-Modus — Diese Bewertung ist für dich <strong>kostenlos</strong>. Kein Konto erforderlich.
+  🎁 Demo-Account — Diese Bewertung ist für dich <strong>kostenlos</strong>.
 </div>
 <script>
-  if (new URLSearchParams(window.location.search).get('demo') === 'true') {
-    document.getElementById('demo-banner').style.display = 'block';
-  }
+  try {
+    const _u = JSON.parse(localStorage.getItem('ai_agent_user') || 'null');
+    if (_u && ['test@demo.de'].includes((_u.email || '').toLowerCase())) {
+      document.getElementById('demo-banner').style.display = 'block';
+    }
+  } catch {}
 </script>
 
 <!-- HERO -->
@@ -1646,7 +1649,16 @@ function collectFormData() {
 }
 
 /* ===== SUBMIT ===== */
-const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
+const IMMO_FREE_ACCOUNTS = ['test@demo.de'];
+
+function isImmoCostFree() {
+  try {
+    const saved = localStorage.getItem('ai_agent_user');
+    if (!saved) return false;
+    const user = JSON.parse(saved);
+    return IMMO_FREE_ACCOUNTS.includes((user.email || '').toLowerCase());
+  } catch { return false; }
+}
 
 function showImmoPrice() {
   const stadtEl = document.getElementById('stadt');
@@ -1657,7 +1669,7 @@ function showImmoPrice() {
   }
   document.getElementById('step-4').style.display = 'none';
   document.getElementById('step-indicator').style.display = 'none';
-  if (IS_DEMO) {
+  if (isImmoCostFree()) {
     submitForm('DEMO');
     return;
   }
